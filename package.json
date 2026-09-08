@@ -1,0 +1,18 @@
+{
+  "name": "alphabet-adventure",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Phase 1 prototype: 7x7 letter-tile match-3 board (swap, match, clear, fall, score).",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "phaser": "^3.80.1"
+  },
+  "devDependencies": {
+    "vite": "^5.4.10"
+  }
+}
