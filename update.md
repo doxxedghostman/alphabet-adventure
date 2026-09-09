@@ -110,24 +110,105 @@ recognizable as a straight run instead of a zigzag.
   read as plain straight runs), so no board that was fine before is
   broken by this change.
 
+### Milestone 3 — reverted to Word-Swap, permanently this time
+
+The core mechanic had drifted back to drag-to-trace in the shipped
+build (unclear exactly when/how — possibly a stale rebuild, possibly a
+regression during the Milestone 2 work above). Replaced it with
+**Word-Swap**, confirmed as the mechanic going forward: tap-tap or
+swipe two orthogonally-adjacent tiles to swap them; the whole board
+(every row + column) is then scanned for any 3-5 letter word the swap
+created — a single swap can complete more than one word at once, and
+all of them clear together. No word anywhere -> the swap reverts
+(tiles flash red, bounce back to original positions). Both tap-tap and
+swipe are supported as input so it works equally well with mouse
+clicks or touch drags.
+
+- Rewrote the board's solvability check: the old `hasValidWord()`
+  asked "does a word already exist on the board" (correct for
+  drag-trace, since you need an existing word to trace). That's the
+  wrong question for swap mechanics — completed words auto-clear
+  immediately anyway, so a board can look word-free while still having
+  zero legal swaps. Replaced with `hasValidSwap()` /
+  `wouldSwapCreateWord()`, which simulates every adjacent pair's swap
+  and checks whether *that* would create a word. Used by both the
+  silent auto-reshuffle safety net and Shuffle's retry loop.
+- Removed all now-dead drag-path code (`path`, `pathKeys`,
+  `pathGraphics`, `pathText`, `PREFIX_SET` usage, `startPath` /
+  `extendPathTo` / `endPath` / `cancelPath`).
+- Header instructions updated to "Swap two adjacent tiles to spell a
+  3-5 letter word."
+- Verified with a build pass, a standalone script replaying the
+  DOG/RUG example the design was built against, and a 200-trial
+  stress test (0 boards failed to find a valid swap).
+
+### Full A-Z alphabet restored
+
+The tile pool had been temporarily reduced to 10 letters
+(A/E/I/O/U/R/S/T/L/N) at some point, dropping G/D/W/C/etc. entirely.
+Restored the full 26-letter alphabet, weighted by standard English/
+Scrabble-style letter frequency (E/A/I/O most common, Q/X/Z/J/K
+rarest) instead of hand-picking a reduced set. Colors are now
+auto-generated as 26 evenly-spaced hues around the color wheel rather
+than hand-picked one at a time, so every letter gets its own distinct
+flat/bright "candy" color automatically. Dividing the alphabet into
+progressive stages (common letters first, rest unlocked later) is a
+deliberate follow-up, not done here — full alphabet went in first, per
+plan.
+
+- Verified: build passes, and a 200-trial stress test shows a valid
+  swap exists on the first random 7x7 board every time with the full
+  pool — word density unaffected by the switch from 10 to 26 letters.
+
+### Board resized to 6x6, word range extended to 3-6, Shuffle bug fixed
+
+Three changes landed together:
+
+- **6x6 board** (was 7x7). At 6x6 a full 6-letter word can span an
+  entire row/column edge-to-edge.
+- **3-6 letter word range** (was 3-5). Added `WORDS_6`: 4,985 six-letter
+  words, sourced from ENABLE1, cross-referenced against a 50k-word
+  English frequency list (common everyday words, not obscure
+  Scrabble-legal ones), then passed through a profanity/slur/
+  inappropriate-word filter (automated blocklist + manual spot-check of
+  substring-flagged false positives). Dictionary is now ~8.9k words
+  across 3-6 letters (was ~3.9k at 3-5). Replaced every hardcoded `3`
+  / `5` length bound scattered across the matching functions with
+  shared `MIN_WORD_LENGTH` / `MAX_WORD_LENGTH` constants in
+  `config.js` so the bounds can't drift out of sync with each other
+  again.
+- **Shuffle bug fixed:** Shuffle could leave an already-completed word
+  sitting on the board uncleared (e.g. a "SON" that just sat there
+  after a shuffle, only getting swept up later as an unrelated bonus
+  when the player's next swap happened to trigger a full-board
+  rescan). Root cause: the post-shuffle check only verified a *future*
+  swap could create a word, never that the shuffle itself hadn't
+  already handed one out for free. Fixed by running the same
+  clear/cascade pass after Shuffle that already runs after every other
+  board change.
+- Verified: build passes; 500-trial stress test confirms a valid swap
+  exists within the retry cap on every random 6x6 board using the full
+  alphabet and the new 3-6 word range (0 failures).
+
 ---
 
 ## Next up
 
-1. **Hint feature** (lower priority now). Briefly highlight one valid
-   line on demand — nice-to-have polish now that straight-line-only
-   dragging already makes most words visually recognizable on their
-   own.
+1. **Divide the alphabet into progressive stages** — e.g. common
+   letters unlocked first, rarer ones added in later worlds/levels,
+   now that the full A-Z pool is confirmed working.
 2. **Phase 2 — level objectives & structure**, replacing today's
    endless free-play scoring:
    - Target word per level (e.g. "Find: LION").
-   - Trace-limit structure (the drag-trace equivalent of a move limit).
+   - Swap-limit structure (a move-limit equivalent).
    - Win/lose conditions.
    - Goal / moves / stars header UI (stars row, move counter, goal
      icons like the reference mockup), plus a bottom booster toolbar.
 3. **Target-word solvability**, called out in `PLAN.md`: once levels
-   have a specific target word + trace limit, today's "does *a* word
+   have a specific target word + swap limit, today's "does *a* word
    exist" solver isn't enough — need "is *the target word* reachable
-   within N traces, accounting for obstacles/wildcards." Needs a
+   within N swaps, accounting for obstacles/wildcards." Needs a
    level-specific solver/simulator or a manual playtest step before
    Phase 6 content production scales up.
+4. Revisit Special Tiles' length thresholds (`PLAN.md` §4) now that 6
+   is the max word length, not 5.
