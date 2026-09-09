@@ -1,7 +1,9 @@
 // Phase 1 prototype config: 7x7 board, swap -> match 3 -> clear -> fall -> score.
 // No target words, no special tiles, no obstacles yet (those are Phase 2/3).
 
-export const BOARD_SIZE = 7;
+export const BOARD_SIZE = 6;
+export const MIN_WORD_LENGTH = 3;
+export const MAX_WORD_LENGTH = 6;
 export const TILE_SIZE = 72;
 export const TILE_GAP = 6;
 export const BOARD_TOP_MARGIN = 132; // room for title/subtitle/current-word/score UI above the grid
@@ -16,7 +18,7 @@ export const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 // Full-alphabet pool, weighted by standard English/Scrabble-style letter
 // frequency so common letters (vowels, R/S/T/N/L) still come up often
-// enough to form 3-5 letter words, while rare ones (Q/X/Z/J/K) show up
+// enough to form 3-6 letter words, while rare ones (Q/X/Z/J/K) show up
 // only occasionally - present, but not so often they choke word density.
 // NOTE: this is the full A-Z pool for now. Splitting it into progressive
 // stages (e.g. Stage 1 = vowels + common consonants, later stages unlock

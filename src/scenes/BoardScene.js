@@ -7,6 +7,8 @@ import {
   BOARD_SIDE_MARGIN,
   BOARD_PIXEL_SIZE,
   LETTER_COLORS,
+  MIN_WORD_LENGTH,
+  MAX_WORD_LENGTH,
   randomLetter,
 } from '../config.js';
 import { WORD_SET } from '../data/wordlist.js';
@@ -15,7 +17,7 @@ import { WORD_SET } from '../data/wordlist.js';
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
 //   diagonals) to swap them.
 // - After the swap, the WHOLE board is scanned (every row + every column)
-//   for any 3-5 letter straight-line word. A single swap can create more
+//   for any 3-6 letter straight-line word. A single swap can create more
 //   than one word at once (e.g. finishes a word in its row AND a
 //   different word in its column) - both clear.
 // - If the swap creates no word anywhere on the board, it reverts -
@@ -54,7 +56,7 @@ export class BoardScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 56, 'Swap two adjacent tiles to spell a 3-5 letter word', {
+      .text(BOARD_PIXEL_SIZE.width / 2, 56, 'Swap two adjacent tiles to spell a 3-6 letter word', {
         fontSize: '13px',
         color: '#a79ccf',
         fontFamily: 'system-ui, sans-serif',
@@ -118,8 +120,8 @@ export class BoardScene extends Phaser.Scene {
 
   lineHasWord(letters) {
     for (let i = 0; i < letters.length; i++) {
-      const maxLen = Math.min(5, letters.length - i);
-      for (let len = 3; len <= maxLen; len++) {
+      const maxLen = Math.min(MAX_WORD_LENGTH, letters.length - i);
+      for (let len = MIN_WORD_LENGTH; len <= maxLen; len++) {
         const forward = letters.slice(i, i + len).join('');
         if (WORD_SET.has(forward)) return true;
         const backward = forward.split('').reverse().join('');
@@ -241,6 +243,14 @@ export class BoardScene extends Phaser.Scene {
     );
 
     if (!silent) this.showWordToast('Shuffled!', '#6bc9ef');
+
+    // The retry loop above only guarantees a FUTURE swap could create a
+    // word - it says nothing about whether the shuffle itself just handed
+    // out a word for free. Run the same full-board clear/cascade pass that
+    // follows every other board change so an accidental word never just
+    // sits there unclaimed (see attemptSwap/collapseAndRefill).
+    await this.resolveAutoMatches(1);
+    await this.ensureSolvable();
     this.isBusy = false;
   }
 
@@ -286,7 +296,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   wouldFormWordAt(row, col, letter) {
-    for (let len = 3; len <= 5; len++) {
+    for (let len = MIN_WORD_LENGTH; len <= MAX_WORD_LENGTH; len++) {
       if (col - len + 1 >= 0) {
         let word = '';
         for (let c = col - len + 1; c <= col; c++) {
@@ -515,8 +525,8 @@ export class BoardScene extends Phaser.Scene {
     let i = 0;
     while (i < letters.length) {
       let matchedLen = 0;
-      const maxLen = Math.min(5, letters.length - i);
-      for (let len = maxLen; len >= 3; len--) {
+      const maxLen = Math.min(MAX_WORD_LENGTH, letters.length - i);
+      for (let len = maxLen; len >= MIN_WORD_LENGTH; len--) {
         const word = letters.slice(i, i + len).join('');
         if (WORD_SET.has(word)) {
           found.push({ start: i, length: len, word });
