@@ -398,16 +398,43 @@ export class BoardScene extends Phaser.Scene {
 
   cancelPath() {
     const tiles = [...this.path];
+    const failColor = 0xff4757;
+
+    // Redraw the traced line in red (instead of leaving it white/vanishing
+    // instantly) so the cancel is visible on the path itself, not just the
+    // tiles.
+    this.pathGraphics.clear();
+    if (tiles.length > 1) {
+      this.pathGraphics.lineStyle(6, failColor, 0.9);
+      this.pathGraphics.beginPath();
+      this.pathGraphics.moveTo(tiles[0].container.x, tiles[0].container.y);
+      for (let i = 1; i < tiles.length; i++) {
+        this.pathGraphics.lineTo(tiles[i].container.x, tiles[i].container.y);
+      }
+      this.pathGraphics.strokePath();
+    }
+    this.pathText.setColor('#ff4757');
+
     tiles.forEach((tile) => {
       this.tweens.add({
         targets: tile.bg,
-        fillColor: 0xff6b6b,
+        fillColor: failColor,
         duration: 90,
         yoyo: true,
         onComplete: () => this.setTileHighlight(tile, false),
       });
     });
-    this.resetPathState();
+
+    // Path/selection state clears right away so a new drag can start
+    // immediately, but the red line + text hold on screen briefly before
+    // fading so the cancel actually reads as feedback.
+    this.path = [];
+    this.pathKeys.clear();
+    this.time.delayedCall(180, () => {
+      this.pathGraphics.clear();
+      this.pathText.setText('');
+      this.pathText.setColor('#ffffff');
+    });
   }
 
   resetPathState() {
@@ -429,8 +456,11 @@ export class BoardScene extends Phaser.Scene {
 
   updatePathVisuals() {
     this.pathGraphics.clear();
+    const word = this.path.map((t) => t.letter).join('');
+    const isReady = word.length >= 3 && WORD_SET.has(word);
+
     if (this.path.length > 1) {
-      this.pathGraphics.lineStyle(6, 0xffffff, 0.85);
+      this.pathGraphics.lineStyle(6, isReady ? 0x7cfc9a : 0xffffff, 0.85);
       this.pathGraphics.beginPath();
       this.pathGraphics.moveTo(this.path[0].container.x, this.path[0].container.y);
       for (let i = 1; i < this.path.length; i++) {
@@ -439,8 +469,6 @@ export class BoardScene extends Phaser.Scene {
       this.pathGraphics.strokePath();
     }
 
-    const word = this.path.map((t) => t.letter).join('');
-    const isReady = word.length >= 3 && WORD_SET.has(word);
     this.pathText.setText(word);
     this.pathText.setColor(isReady ? '#7CFC9A' : '#ffffff');
   }
