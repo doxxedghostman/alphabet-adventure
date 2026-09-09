@@ -72,12 +72,160 @@ export class BoardScene extends Phaser.Scene {
       })
       .setOrigin(0.5, 0);
 
+    this.createShuffleButton();
+
     // Drawn once, redrawn on every path change to trace the drag as a line
     // through tile centers.
     this.pathGraphics = this.add.graphics();
 
     this.createInitialBoard();
     this.setupInput();
+    this.ensureSolvable();
+  }
+
+  // ---------- shuffle / solvability ----------
+
+  createShuffleButton() {
+    const bg = this.add
+      .rectangle(BOARD_PIXEL_SIZE.width - 20, 20, 84, 30, 0xffffff, 0.12)
+      .setOrigin(1, 0)
+      .setStrokeStyle(1.5, 0xffffff, 0.4);
+
+    const label = this.add
+      .text(BOARD_PIXEL_SIZE.width - 20 - 42, 20 + 15, '⟳ Shuffle', {
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        fontFamily: 'system-ui, sans-serif',
+      })
+      .setOrigin(0.5);
+
+    bg.setInteractive({ useHandCursor: true }).on('pointerup', () => {
+      if (this.isBusy) return;
+      this.shuffleBoard(false);
+    });
+
+    this.shuffleButtonBg = bg;
+    this.shuffleButtonLabel = label;
+  }
+
+  // Silent safety net: called after the board first appears and after every
+  // fall/cascade settles. If literally no valid word exists anywhere on the
+  // board, the player has no legal move — so we reshuffle automatically,
+  // without a toast, before they'd ever notice. This is what makes the
+  // manual Shuffle button "optional" rather than load-bearing.
+  async ensureSolvable() {
+    if (!this.hasValidWord()) {
+      await this.shuffleBoard(true);
+    }
+  }
+
+  // DFS from every cell, reusing the same PREFIX_SET pruning as the live
+  // drag-trace input, to check whether any 3-5 letter dictionary word can
+  // currently be traced anywhere on the board.
+  hasValidWord() {
+    for (let row = 0; row < BOARD_SIZE; row++) {
+      for (let col = 0; col < BOARD_SIZE; col++) {
+        const tile = this.grid[row][col];
+        if (!tile) continue;
+        if (this.dfsHasWord(row, col, tile.letter, new Set([`${row},${col}`]))) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
+  dfsHasWord(row, col, word, visited) {
+    if (word.length >= 3 && WORD_SET.has(word)) return true;
+    if (word.length >= 5) return false;
+    if (!PREFIX_SET.has(word)) return false;
+
+    const deltas = [
+      [-1, 0],
+      [1, 0],
+      [0, -1],
+      [0, 1],
+    ];
+    for (const [dr, dc] of deltas) {
+      const r = row + dr;
+      const c = col + dc;
+      if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) continue;
+      const key = `${r},${c}`;
+      if (visited.has(key)) continue;
+      const tile = this.grid[r][c];
+      if (!tile) continue;
+
+      visited.add(key);
+      if (this.dfsHasWord(r, c, word + tile.letter, visited)) {
+        visited.delete(key);
+        return true;
+      }
+      visited.delete(key);
+    }
+    return false;
+  }
+
+  shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+  }
+
+  // Reassigns existing tiles' letters (no new tiles, no re-layout) to a
+  // shuffled arrangement that's guaranteed solvable, retrying a bounded
+  // number of times before giving up and accepting whatever it landed on.
+  async shuffleBoard(silent = false) {
+    if (this.isDragging) this.cancelPath();
+    this.isBusy = true;
+
+    const tiles = [];
+    for (let row = 0; row < BOARD_SIZE; row++) {
+      for (let col = 0; col < BOARD_SIZE; col++) {
+        tiles.push(this.grid[row][col]);
+      }
+    }
+    const originalLetters = tiles.map((t) => t.letter);
+
+    let candidate = [...originalLetters];
+    let attempts = 0;
+    do {
+      candidate = [...originalLetters];
+      this.shuffleArray(candidate);
+      tiles.forEach((t, i) => {
+        t.letter = candidate[i];
+      });
+      attempts += 1;
+    } while (!this.hasValidWord() && attempts < 50);
+
+    await Promise.all(
+      tiles.map((tile, i) =>
+        this.tweenPromise({
+          targets: tile.container,
+          scale: 0,
+          duration: 110,
+          ease: 'Sine.easeIn',
+          onComplete: () => {
+            tile.text.setText(candidate[i]);
+            tile.bg.setFillStyle(LETTER_COLORS[candidate[i]] ?? 0xffffff);
+          },
+        })
+      )
+    );
+    await Promise.all(
+      tiles.map((tile) =>
+        this.tweenPromise({
+          targets: tile.container,
+          scale: 1,
+          duration: 140,
+          ease: 'Back.easeOut',
+        })
+      )
+    );
+
+    if (!silent) this.showWordToast('Shuffled!', '#6bc9ef');
+    this.isBusy = false;
   }
 
   // ---------- geometry ----------
@@ -313,6 +461,7 @@ export class BoardScene extends Phaser.Scene {
     await this.clearTiles(matchedKeys);
     await this.collapseAndRefill();
     await this.resolveAutoMatches(1);
+    await this.ensureSolvable();
     this.isBusy = false;
   }
 

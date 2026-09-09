@@ -8,22 +8,40 @@
       html, body {
         margin: 0;
         padding: 0;
-        background: #1b1030;
+        background: #100a1e;
         overflow: hidden;
         height: 100%;
         font-family: system-ui, -apple-system, sans-serif;
       }
-      #game-container {
+      body {
         display: flex;
         align-items: center;
         justify-content: center;
-        width: 100vw;
-        height: 100vh;
+      }
+      /* Phone-sized bordered frame. The canvas (594x702) scales to FIT
+         inside this box via Phaser's Scale Manager, so on wide desktop
+         windows it stays a phone-shaped panel instead of stretching
+         edge-to-edge. */
+      #game-frame {
+        width: min(94vw, 420px);
+        aspect-ratio: 594 / 702;
+        max-height: 94vh;
+        border: 4px solid rgba(255, 255, 255, 0.18);
+        border-radius: 22px;
+        overflow: hidden;
+        box-shadow: 0 12px 40px rgba(0, 0, 0, 0.5);
+        background: #241a3d;
+      }
+      #game-container {
+        width: 100%;
+        height: 100%;
       }
     </style>
   </head>
   <body>
-    <div id="game-container"></div>
+    <div id="game-frame">
+      <div id="game-container"></div>
+    </div>
     <script type="module" src="/src/main.js"></script>
   </body>
 </html>
