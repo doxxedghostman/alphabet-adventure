@@ -44,7 +44,7 @@ export class BoardScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 52, 'Drag adjacent letters (no diagonals) to spell a 3-5 letter word', {
+      .text(BOARD_PIXEL_SIZE.width / 2, 52, 'Drag in a straight line (row or column) to spell a 3-5 letter word', {
         fontSize: '13px',
         color: '#a79ccf',
         fontFamily: 'system-ui, sans-serif',
@@ -120,48 +120,32 @@ export class BoardScene extends Phaser.Scene {
     }
   }
 
-  // DFS from every cell, reusing the same PREFIX_SET pruning as the live
-  // drag-trace input, to check whether any 3-5 letter dictionary word can
-  // currently be traced anywhere on the board.
+  // Straight-line-only check (matches what the player can now actually
+  // drag): true if any row or column contains a 3-5 letter run, read in
+  // either direction, that's a real dictionary word.
   hasValidWord() {
     for (let row = 0; row < BOARD_SIZE; row++) {
-      for (let col = 0; col < BOARD_SIZE; col++) {
-        const tile = this.grid[row][col];
-        if (!tile) continue;
-        if (this.dfsHasWord(row, col, tile.letter, new Set([`${row},${col}`]))) {
-          return true;
-        }
-      }
+      const letters = [];
+      for (let col = 0; col < BOARD_SIZE; col++) letters.push(this.grid[row][col]?.letter);
+      if (this.lineHasWord(letters)) return true;
+    }
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      const letters = [];
+      for (let row = 0; row < BOARD_SIZE; row++) letters.push(this.grid[row][col]?.letter);
+      if (this.lineHasWord(letters)) return true;
     }
     return false;
   }
 
-  dfsHasWord(row, col, word, visited) {
-    if (word.length >= 3 && WORD_SET.has(word)) return true;
-    if (word.length >= 5) return false;
-    if (!PREFIX_SET.has(word)) return false;
-
-    const deltas = [
-      [-1, 0],
-      [1, 0],
-      [0, -1],
-      [0, 1],
-    ];
-    for (const [dr, dc] of deltas) {
-      const r = row + dr;
-      const c = col + dc;
-      if (r < 0 || r >= BOARD_SIZE || c < 0 || c >= BOARD_SIZE) continue;
-      const key = `${r},${c}`;
-      if (visited.has(key)) continue;
-      const tile = this.grid[r][c];
-      if (!tile) continue;
-
-      visited.add(key);
-      if (this.dfsHasWord(r, c, word + tile.letter, visited)) {
-        visited.delete(key);
-        return true;
+  lineHasWord(letters) {
+    for (let i = 0; i < letters.length; i++) {
+      const maxLen = Math.min(5, letters.length - i);
+      for (let len = 3; len <= maxLen; len++) {
+        const forward = letters.slice(i, i + len).join('');
+        if (WORD_SET.has(forward)) return true;
+        const backward = forward.split('').reverse().join('');
+        if (WORD_SET.has(backward)) return true;
       }
-      visited.delete(key);
     }
     return false;
   }
@@ -373,6 +357,20 @@ export class BoardScene extends Phaser.Scene {
     const key = this.keyOf(tile);
     if (this.pathKeys.has(key)) return; // no reusing a tile in the same word
     if (!this.isOrthogonallyAdjacent(last, tile)) return; // must be a legal orthogonal step
+
+    // Candy Crush style: once a direction is set by the first two tiles,
+    // every further tile must continue in that same straight line — no
+    // corners, no zigzags. Only the very first step (path length 1) is free
+    // to go any of the 4 directions.
+    if (this.path.length >= 2) {
+      const first = this.path[0];
+      const second = this.path[1];
+      const dirRow = second.row - first.row;
+      const dirCol = second.col - first.col;
+      const stepRow = tile.row - last.row;
+      const stepCol = tile.col - last.col;
+      if (stepRow !== dirRow || stepCol !== dirCol) return; // would turn a corner — reject
+    }
 
     const candidate = this.path.map((t) => t.letter).join('') + tile.letter;
     if (candidate.length > 5) return; // dictionary caps at 5 letters

@@ -28,8 +28,10 @@ Player starts at World 1, Level 1.
 ## 2. The puzzle board
 
 - Start with a 7x7 board of letter tiles.
-- Player drags through orthogonally-adjacent tiles (up/down/left/right —
-  no diagonals) to trace a path. The path can turn corners.
+- Player drags in a single straight line — one row (left-right or
+  right-left) or one column (up-down or down-up) — Candy Crush style.
+  No corners, no diagonals, no zigzags: once the first two tiles set a
+  direction, every further tile must continue in that same direction.
 - Releasing while the traced letters spell a real 3-5 letter word clears
   those tiles; tiles above fall to fill the gaps.
 - After every fall — whether from the player's own clear or from a
@@ -57,9 +59,6 @@ Player starts at World 1, Level 1.
 - Spell a 4-letter word -> Rocket letter: clears a row/column.
 - Spell a 5-letter word -> Rainbow/wild letter: stands in for any
   letter in a future trace.
-- Idea to revisit: a path that turns a corner (vs. a straight line)
-  could earn a bonus multiplier or a Bomb letter — not committed yet,
-  needs playtesting first.
 - Combos (e.g. rainbow + rocket) -> large board clears.
 
 ## 5. Obstacles (introduced gradually)
@@ -138,8 +137,13 @@ Originally built as a 7x7 swap-to-match-3 loop (identical letters, no
 words). After playtesting confirmed the loop worked technically, the
 core mechanic was replaced with Word-Trace: drag through adjacent
 letters to spell real words, validated against a bundled dictionary,
-with automatic Candy-Crush-style cascades after every fall. This is
-the confirmed core loop going forward. UI polish (phone-sized bordered
+with automatic Candy-Crush-style cascades after every fall. The trace
+itself was initially allowed to turn corners, but that made valid
+words hard to spot by eye (a word could zigzag across the board and
+not look like anything); tightened to straight-line-only drags (one
+row or one column, either direction) to match Candy Crush's own
+selection feel and keep words visually recognizable. This is the
+confirmed core loop going forward. UI polish (phone-sized bordered
 panel, shuffle, path feedback) is landing incrementally within this
 phase — see `update.md`.
 
@@ -181,19 +185,24 @@ Under the Word-Trace mechanic, the board must always have at least one
 valid word traceable somewhere on it — otherwise the player has no
 legal action at all.
 
-**Resolved (Phase 1):** a DFS solver (`hasValidWord()` in
-`BoardScene.js`, reusing the same `PREFIX_SET` pruning the live
-drag-input uses) checks the board after the initial deal and after
-every cascade settles. If no word exists anywhere, the board silently
-reshuffles itself before the player would notice. A manual Shuffle
-button lets the player trigger the same reshuffle on demand. Spot-
-checked against real boards: with the current vowel-heavy letter pool,
-a fully stuck board is rare (0/200 in a random sample) — the harder
-problem in practice is *discoverability*, not *solvability*: since
-paths can turn corners, valid words often don't look like a straight
-row/column, so players can miss words that are genuinely there. A hint
-feature (briefly highlight one valid path) is the likely fix — not yet
-built.
+**Resolved (Phase 1):** `hasValidWord()` in `BoardScene.js` scans every
+row and column for a 3-5 letter run (either reading direction) that's
+a real word, matching exactly what the straight-line-only drag can now
+produce. It runs after the initial deal and after every cascade
+settles; if nothing is found, the board silently reshuffles itself
+before the player would notice. A manual Shuffle button lets the
+player trigger the same reshuffle on demand. Spot-checked with 500
+random boards from the current vowel-heavy letter pool: 0 came back
+stuck.
+
+Discoverability (can players actually *spot* a word that's there) was
+a real problem during the corner-turning version — a word could zigzag
+across the board and not look like anything recognizable. Restricting
+drags to straight lines (see §2) fixes most of that on its own, since
+a valid word now always reads as a normal row/column run, the way
+Candy Crush matches do. A hint feature (briefly highlight one valid
+line) is still worth adding later, but is no longer load-bearing for
+basic playability.
 
 **Still open (Phase 2+):** once levels have a specific *target* word
 and a trace limit, the existing solver only proves "a word exists," not

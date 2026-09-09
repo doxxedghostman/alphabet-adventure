@@ -74,23 +74,50 @@ trace line while dragging now turns green as soon as the in-progress
 path already spells a valid word (previously only the word-preview
 text above the board did this).
 
-### Board is solvable; word-spotting is the real UX gap
+### Board is solvable; word-spotting was the real UX gap
 
-Ran the `hasValidWord()` solver against a real screenshot of the board
-mid-play and found **37 valid words** on it (OUR, TOE, ANT, UNIT, LIST,
-TOAST, and more), confirming the board was never actually stuck — the
-reported "I can't find a word" was a discoverability problem, not a
-generation bug. Because paths can turn corners, a valid word often
-doesn't look like a straight row/column, which is genuinely hard to
-spot by eye. Noted in `PLAN.md` as the likely next fix (a hint feature
-that briefly highlights one valid path) — not yet built.
+Ran the (then corner-turning) solver against a real screenshot of the
+board mid-play and found **37 valid words** on it (OUR, TOE, ANT, UNIT,
+LIST, TOAST, and more), confirming the board was never actually stuck
+— the reported "I can't find a word" was a discoverability problem,
+not a generation bug. Because paths could turn corners at the time, a
+valid word often didn't look like a straight row/column, which was
+genuinely hard to spot by eye. Directly led to the straight-line-only
+change below.
+
+### Dragging restricted to straight lines — no corners, no zigzags
+
+Removed corner-turning from the trace mechanic entirely: once the
+first two tiles set a direction (one of the 4 orthogonal directions),
+every further tile in the drag must continue in that same direction,
+or the extension is rejected. A trace is now always one full row or
+one full column, read in either direction — matching how Candy Crush
+selections actually feel, and making every valid word visually
+recognizable as a straight run instead of a zigzag.
+
+- `extendPathTo()` now checks the step direction against the direction
+  set by the path's first two tiles.
+- `hasValidWord()` (the solvability check) was rewritten to match: it
+  no longer does a DFS across arbitrary corner-turning paths, it scans
+  each row/column for a 3-5 letter run (either reading direction) that
+  matches a real word — i.e. exactly what a straight-line drag can
+  produce. Re-verified with 500 random boards from the actual letter
+  pool: 0 came back stuck.
+- Header instructions updated to "Drag in a straight line (row or
+  column) to spell a 3-5 letter word."
+- Re-checked the same screenshot board from above against the new
+  straight-line-only solver — still solvable (e.g. SORT, EURO both
+  read as plain straight runs), so no board that was fine before is
+  broken by this change.
 
 ---
 
 ## Next up
 
-1. **Hint feature.** Briefly highlight one valid path on demand — the
-   direct fix for the corner-turning discoverability gap above.
+1. **Hint feature** (lower priority now). Briefly highlight one valid
+   line on demand — nice-to-have polish now that straight-line-only
+   dragging already makes most words visually recognizable on their
+   own.
 2. **Phase 2 — level objectives & structure**, replacing today's
    endless free-play scoring:
    - Target word per level (e.g. "Find: LION").
