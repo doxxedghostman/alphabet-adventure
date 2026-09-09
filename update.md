@@ -1,217 +1,106 @@
-# Alphabet Adventure
+# Alphabet Adventure — Progress Log
 
-A match-3 puzzle game where players match, combine, and manipulate letter
-tiles to discover words, while completing objectives and progressing
-through an adventure world.
-
-Think: Candy Crush + Word Puzzle + Adventure.
-
-Stack: Phaser + Capacitor (reusing patterns from Kid Number Adventure),
-Next.js if a web/PWA build is wanted later.
+Chronological changelog of what's shipped, on `main`. See `PLAN.md` for
+the design doc / where this is headed.
 
 ---
 
-## 1. Main menu
+## Phase 1 — Prototype
 
-- Play
-- World map
-- Daily challenge
-- Achievements
-- Settings
+### Milestone 1 — swap-to-match-3 loop (superseded)
 
-Player starts at World 1, Level 1.
+First playable: 7x7 board, click a tile then an adjacent tile to
+attempt a swap, commits only if it produces a 3+ match, chain
+reactions on refill with per-chain score multiplier. Built to answer
+one question — is a match-3 loop technically sound end to end (board
+gen, swap, match, clear, fall, cascade, score)? It was. But it wasn't
+word-aware at all: matches were "3 identical letters in a row," not
+"3-5 letters spelling something real." Superseded by Milestone 2 below
+before any further phases were built on top of it.
 
-## 2. The puzzle board
+### Milestone 2 — pivot to Word-Trace (current core loop)
 
-- Start with a 7x7 board of letter tiles.
-- Player swaps adjacent tiles.
-- Matching 3+ identical letters clears them; tiles above fall to fill gaps.
-- Matching is a means to an end, not the goal itself — the goal is
-  building toward a target word.
+Replaced swap-to-match with drag-to-trace: player drags through
+orthogonally-adjacent tiles (no diagonals, path can turn corners) to
+spell a real 3-5 letter word, validated against a bundled dictionary
+(`src/data/wordlist.js`, `WORD_SET` + `PREFIX_SET` for live dead-end
+pruning while dragging). Releasing on a valid word clears those tiles;
+tiles fall to fill gaps; after every fall the board auto-scans every
+row/column for any straight-line word that landed there by chance and
+clears it too, chaining further cascades Candy-Crush style. This is
+the confirmed core loop going forward (see `PLAN.md` §2).
 
-## 3. Creating words
+- No target words, no special tiles (rocket/rainbow), no obstacles, no
+  trace limits yet — intentionally out of scope for Phase 1.
+- Initial board generation avoids spawning a free word by chance.
 
-- Each level gives a target word (e.g. "Find: LION").
-- Player manipulates the board via matches to produce the needed letters,
-  then connects them (e.g. L -> I -> O -> N) to complete the word.
+### Board fits a phone-sized panel instead of stretching full-bleed
 
-## 4. Special tiles
+The canvas was a fixed 594x702px with no Scale Manager config, so it
+rendered at native size and either overflowed or stretched to fill
+whatever window it was in — not phone-shaped. Fixed by:
 
-- Match 4 -> Rocket letter: clears a row/column.
-- Match 5 -> Rainbow/wild letter: stands in for any letter.
-- T/L-shape match -> Bomb letter: clears surrounding tiles.
-- Combos (e.g. rainbow + rocket) -> large board clears.
+- `index.html`: canvas now sits inside a bordered, rounded `#game-frame`
+  (`min(94vw, 420px)` wide, board's aspect ratio, centered).
+- `main.js`: added Phaser `Scale.FIT` + `CENTER_BOTH` so the
+  fixed-resolution board scales to fit `#game-frame` instead of
+  overflowing it.
 
-## 5. Obstacles (introduced gradually)
+### Shuffle: manual button + silent auto-safety-net
 
-- Early: locked letters, ice, vines.
-- Mid: bombs, moving tiles, rocks.
-- Advanced: disappearing letters, timed tiles, rotating boards, wrong-letter traps.
+Added a `hasValidWord()` DFS solver (reuses the same `PREFIX_SET`
+pruning as the live drag input) that checks whether any 3-5 letter
+word is currently traceable anywhere on the board.
 
-## 6. Level objective variety
+- **Manual:** a Shuffle button in the header reassigns existing tiles'
+  letters to a new, guaranteed-solvable arrangement on demand.
+- **Automatic:** the same check + reshuffle runs silently after the
+  initial deal and after every cascade fully settles, so the board can
+  never truly have zero legal moves — the manual button is a
+  convenience, not the only thing standing between the player and a
+  dead board.
+- Verified with a standalone script: 200 random boards from the actual
+  in-game letter pool, 0 came back fully stuck (the vowel-heavy pool
+  makes a truly dead board rare in practice).
 
-Avoid "find a word" as the only objective. Mix in:
+### Cancelled trace now reads as a cancel, not a glitch
 
-- Collect N of a given letter.
-- Find multiple words in one level.
-- Clear all obstacles + find a longer word.
-- Complete the word within a move limit.
-- Find a hidden themed word (e.g. an animal).
+`cancelPath()` was clearing the drawn trace line immediately (via
+`resetPathState()`), so an invalid word's line vanished instantly while
+only the individual tiles flashed red a moment later — looked like a
+rendering bug. Fixed: the traced line now redraws in red and holds
+~180ms before fading, in sync with the tile flash. Bonus: the live
+trace line while dragging now turns green as soon as the in-progress
+path already spells a valid word (previously only the word-preview
+text above the board did this).
 
-## 7. Kids mode
+### Board is solvable; word-spotting is the real UX gap
 
-- Categories: animals, fruits, colors, vehicles, objects, numbers.
-- Picture clues, voice pronunciation, simpler words, hints, larger tap targets.
-
-## 8. Adult mode
-
-- Categories: science, technology, geography, vocabulary.
-- Later additions: synonyms, antonyms, riddles, definitions, anagrams, word chains.
-
-## 9. World map
-
-Real adventure structure instead of a flat level list:
-
-1. Alphabet Forest — levels 1-30
-2. Animal Kingdom — levels 31-60
-3. Ocean — levels 61-90
-4. Desert — levels 91-120
-5. Ice Kingdom — levels 121-150
-6. Space — levels 151-180
-
-Each world gets its own art, music, obstacle set, and vocabulary.
-
-## 10. Characters
-
-- Lumi — main character. The Alphabet Kingdom has been corrupted; the
-  player restores it by solving puzzles.
-- Per-world characters: Forest Guardian, Lion King, Mermaid, Penguin
-  explorer, Robot, etc.
-
-## 11. Rewards
-
-- 1-3 stars per level, coins, gems, boosters on completion.
-
-## 12. Daily challenge
-
-- One special puzzle per day (e.g. "Today's word: VOLCANO").
-- Rewards: coins, gems, boosters. Consider a weekly challenge too.
-
-## 13. Achievements
-
-Examples: solve 100 words, create 50 combos, complete World 1, solve a
-10-letter word, finish a level without boosters.
-
-## 14. Monetization
-
-- Free: hundreds of levels, limited boosters, ads between some levels,
-  daily rewards.
-- Optional purchases: gem packs, booster packs, remove ads, premium
-  progression.
-- Not pay-to-win.
-
-## 15. Build phases
-
-**Phase 1 — Prototype**
-7x7 board -> letter tiles -> swap -> match 3 -> clear -> tiles fall ->
-basic scoring. Goal: confirm the core loop is fun in 5-10 minutes of play
-before building anything else.
-
-**Phase 2 — Word system**
-Target word, letter collection tracking, word validation, word
-completion, level objectives.
-
-**Phase 3 — Special mechanics**
-Rocket, bomb, wildcard, ice, locks.
-
-**Phase 4 — Progression**
-Levels, stars, coins, world map, unlock system, save progress.
-
-**Phase 5 — Art & audio**
-Characters, animated letters, particle effects, explosions, sound
-effects, music, level-complete animations.
-
-**Phase 6 — Content**
-Target: ~5 worlds x 30 levels = 150 levels. Build a level-data format
-so levels are defined as data, not hand-coded, e.g.:
-
-```
-Level: 27
-Board: 7x7
-Target: ELEPHANT
-Moves: 25
-Obstacle: ICE
-Goal: Find word
-Stars: 10000 / 15000 / 20000
-```
-
-This is what makes generating hundreds of levels tractable.
-
-## Open technical risk: solvability
-
-Every level needs a guarantee that the target word is actually
-constructible within the given move limit, accounting for obstacles and
-wildcards. This needs either:
-
-- A solver/simulator that validates a level before it ships, or
-- Manual playtesting per level as part of the content pipeline.
-
-This should be decided before Phase 6 content production scales up.
-
-## Game loop
-
-Open game -> choose level -> match letters -> create combos -> discover
-word -> complete objective -> earn stars -> earn rewards -> unlock next
-location -> continue adventure -> come back tomorrow for daily challenge.
-
-## First milestone
-
-Can we make a 7x7 board where the player can swap letters, match them,
-create special tiles, and use those mechanics to solve a word? If that's
-fun after 5-10 minutes of play, build worlds, characters, story,
-monetization, and levels around it.
+Ran the `hasValidWord()` solver against a real screenshot of the board
+mid-play and found **37 valid words** on it (OUR, TOE, ANT, UNIT, LIST,
+TOAST, and more), confirming the board was never actually stuck — the
+reported "I can't find a word" was a discoverability problem, not a
+generation bug. Because paths can turn corners, a valid word often
+doesn't look like a straight row/column, which is genuinely hard to
+spot by eye. Noted in `PLAN.md` as the likely next fix (a hint feature
+that briefly highlights one valid path) — not yet built.
 
 ---
 
-## Progress log
+## Next up
 
-### Done — Phase 1 prototype
-
-Built and pushed to `main`: a Phaser + Vite scaffold implementing the
-core Phase 1 loop end to end.
-
-- 7x7 board, tiles drawn from a vowel/common-consonant-weighted letter
-  pool (not yet word-aware — that's Phase 2).
-- Click a tile, click an adjacent tile to attempt a swap; the swap only
-  commits if it produces a match, otherwise it animates back.
-- Match detection for horizontal/vertical runs of 3+.
-- Matched tiles clear, columns collapse, new tiles fall in from above.
-- Chain reactions: after a refill, the board re-checks for new matches
-  and keeps resolving, with each chain level multiplying the score for
-  that cascade.
-- Initial board generation avoids spawning a pre-made match.
-- No target words, no special tiles (rocket/bomb/wildcard), no
-  obstacles, no move limits yet — intentionally out of scope for this
-  milestone.
-
-Stack used: Phaser 3 + Vite (plain JS, no Capacitor/Next.js wrapper yet
-— those get added once the loop is confirmed fun and worth building on
-top of).
-
-### Next — playtest, then Phase 2
-
-1. **Playtest the prototype as-is.** This is the actual first-milestone
-   question from the plan: is swap -> match -> clear -> fall fun for
-   5-10 minutes on its own, before anything else gets built on top of
-   it? Tune tile size, letter pool weighting, and animation speed based
-   on how it feels.
-2. **Phase 2 — word system**, once the core loop earns its keep:
+1. **Hint feature.** Briefly highlight one valid path on demand — the
+   direct fix for the corner-turning discoverability gap above.
+2. **Phase 2 — level objectives & structure**, replacing today's
+   endless free-play scoring:
    - Target word per level (e.g. "Find: LION").
-   - Letter collection tracking as matches happen.
-   - Word validation + completion detection.
-   - Level objective structure (replacing the current endless/free-play
-     scoring loop).
-3. Revisit the **solvability risk** called out above — once levels have
-   a target word and move limit, we need either a solver/simulator that
-   validates a level before it ships, or a manual playtest step in the
-   content pipeline. Needs a decision before Phase 6 content scales.
+   - Trace-limit structure (the drag-trace equivalent of a move limit).
+   - Win/lose conditions.
+   - Goal / moves / stars header UI (stars row, move counter, goal
+     icons like the reference mockup), plus a bottom booster toolbar.
+3. **Target-word solvability**, called out in `PLAN.md`: once levels
+   have a specific target word + trace limit, today's "does *a* word
+   exist" solver isn't enough — need "is *the target word* reachable
+   within N traces, accounting for obstacles/wildcards." Needs a
+   level-specific solver/simulator or a manual playtest step before
+   Phase 6 content production scales up.

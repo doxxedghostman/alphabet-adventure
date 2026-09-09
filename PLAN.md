@@ -1,13 +1,17 @@
 # Alphabet Adventure
 
-A match-3 puzzle game where players match, combine, and manipulate letter
-tiles to discover words, while completing objectives and progressing
-through an adventure world.
+A word-connect puzzle game where players drag through adjacent letter
+tiles to spell real words, while automatic Candy-Crush-style cascades
+reward lucky board arrangements too — all while completing objectives
+and progressing through an adventure world.
 
-Think: Candy Crush + Word Puzzle + Adventure.
+Think: Bookworm + Candy Crush + Adventure.
 
 Stack: Phaser + Capacitor (reusing patterns from Kid Number Adventure),
 Next.js if a web/PWA build is wanted later.
+
+> **Status:** Phase 1 prototype, live on `main`. See `update.md` for the
+> detailed progress log — this file is the design doc, not the changelog.
 
 ---
 
@@ -24,22 +28,38 @@ Player starts at World 1, Level 1.
 ## 2. The puzzle board
 
 - Start with a 7x7 board of letter tiles.
-- Player swaps adjacent tiles.
-- Matching 3+ identical letters clears them; tiles above fall to fill gaps.
-- Matching is a means to an end, not the goal itself — the goal is
-  building toward a target word.
+- Player drags through orthogonally-adjacent tiles (up/down/left/right —
+  no diagonals) to trace a path. The path can turn corners.
+- Releasing while the traced letters spell a real 3-5 letter word clears
+  those tiles; tiles above fall to fill the gaps.
+- After every fall — whether from the player's own clear or from a
+  cascade — the board automatically re-scans every row and column for
+  any straight-line 3-5 letter word that landed there by chance. If one
+  did, it clears automatically too, without the player touching
+  anything, and can keep chaining further cascades, exactly like a
+  Candy Crush combo chain.
+- Spelling words is the core action, not a means to an end anymore —
+  the player is always directly forming words; incidental cascades are
+  a bonus on top.
 
-## 3. Creating words
+## 3. Target words & objectives
 
-- Each level gives a target word (e.g. "Find: LION").
-- Player manipulates the board via matches to produce the needed letters,
-  then connects them (e.g. L -> I -> O -> N) to complete the word.
+- A level can still hand the player an explicit goal on top of free
+  word-tracing (e.g. "Find: LION" somewhere on the board), rather than
+  every level being open-ended scoring.
+- Since the player is already spelling real words as the core loop,
+  target-word objectives become "notice and trace this *specific* word
+  among the various valid ones available" rather than "assemble letters
+  via matches first."
 
 ## 4. Special tiles
 
-- Match 4 -> Rocket letter: clears a row/column.
-- Match 5 -> Rainbow/wild letter: stands in for any letter.
-- T/L-shape match -> Bomb letter: clears surrounding tiles.
+- Spell a 4-letter word -> Rocket letter: clears a row/column.
+- Spell a 5-letter word -> Rainbow/wild letter: stands in for any
+  letter in a future trace.
+- Idea to revisit: a path that turns a corner (vs. a straight line)
+  could earn a bonus multiplier or a Bomb letter — not committed yet,
+  needs playtesting first.
 - Combos (e.g. rainbow + rocket) -> large board clears.
 
 ## 5. Obstacles (introduced gradually)
@@ -55,7 +75,8 @@ Avoid "find a word" as the only objective. Mix in:
 - Collect N of a given letter.
 - Find multiple words in one level.
 - Clear all obstacles + find a longer word.
-- Complete the word within a move limit.
+- Complete the objective within a limited number of word-traces (the
+  drag-trace equivalent of a "move limit").
 - Find a hidden themed word (e.g. an animal).
 
 ## 7. Kids mode
@@ -112,17 +133,24 @@ Examples: solve 100 words, create 50 combos, complete World 1, solve a
 
 ## 15. Build phases
 
-**Phase 1 — Prototype**
-7x7 board -> letter tiles -> swap -> match 3 -> clear -> tiles fall ->
-basic scoring. Goal: confirm the core loop is fun in 5-10 minutes of play
-before building anything else.
+**Phase 1 — Prototype (in progress, pivoted mid-phase)**
+Originally built as a 7x7 swap-to-match-3 loop (identical letters, no
+words). After playtesting confirmed the loop worked technically, the
+core mechanic was replaced with Word-Trace: drag through adjacent
+letters to spell real words, validated against a bundled dictionary,
+with automatic Candy-Crush-style cascades after every fall. This is
+the confirmed core loop going forward. UI polish (phone-sized bordered
+panel, shuffle, path feedback) is landing incrementally within this
+phase — see `update.md`.
 
-**Phase 2 — Word system**
-Target word, letter collection tracking, word validation, word
-completion, level objectives.
+**Phase 2 — Level objectives & structure**
+Specific target word per level, a limited-traces or time-limit
+structure (replacing today's endless free-play scoring), win/lose
+conditions, the goal/moves/stars header shown in early mockups.
 
 **Phase 3 — Special mechanics**
-Rocket, bomb, wildcard, ice, locks.
+Rocket, bomb, wildcard, ice, locks (see section 4, triggers now based
+on word length rather than match length).
 
 **Phase 4 — Progression**
 Levels, stars, coins, world map, unlock system, save progress.
@@ -139,7 +167,7 @@ so levels are defined as data, not hand-coded, e.g.:
 Level: 27
 Board: 7x7
 Target: ELEPHANT
-Moves: 25
+Traces: 25
 Obstacle: ICE
 Goal: Find word
 Stars: 10000 / 15000 / 20000
@@ -147,26 +175,42 @@ Stars: 10000 / 15000 / 20000
 
 This is what makes generating hundreds of levels tractable.
 
-## Open technical risk: solvability
+## Open technical risk: solvability — resolved for free-play, open for target-word levels
 
-Every level needs a guarantee that the target word is actually
-constructible within the given move limit, accounting for obstacles and
-wildcards. This needs either:
+Under the Word-Trace mechanic, the board must always have at least one
+valid word traceable somewhere on it — otherwise the player has no
+legal action at all.
 
-- A solver/simulator that validates a level before it ships, or
-- Manual playtesting per level as part of the content pipeline.
+**Resolved (Phase 1):** a DFS solver (`hasValidWord()` in
+`BoardScene.js`, reusing the same `PREFIX_SET` pruning the live
+drag-input uses) checks the board after the initial deal and after
+every cascade settles. If no word exists anywhere, the board silently
+reshuffles itself before the player would notice. A manual Shuffle
+button lets the player trigger the same reshuffle on demand. Spot-
+checked against real boards: with the current vowel-heavy letter pool,
+a fully stuck board is rare (0/200 in a random sample) — the harder
+problem in practice is *discoverability*, not *solvability*: since
+paths can turn corners, valid words often don't look like a straight
+row/column, so players can miss words that are genuinely there. A hint
+feature (briefly highlight one valid path) is the likely fix — not yet
+built.
 
-This should be decided before Phase 6 content production scales up.
+**Still open (Phase 2+):** once levels have a specific *target* word
+and a trace limit, the existing solver only proves "a word exists," not
+"the target word is reachable within N traces, accounting for
+obstacles/wildcards." That needs either a level-specific solver/
+simulator run before a level ships, or a manual playtest step in the
+content pipeline. Decide before Phase 6 content production scales up.
 
 ## Game loop
 
-Open game -> choose level -> match letters -> create combos -> discover
-word -> complete objective -> earn stars -> earn rewards -> unlock next
+Open game -> choose level -> drag to spell words -> trigger cascades ->
+complete objective -> earn stars -> earn rewards -> unlock next
 location -> continue adventure -> come back tomorrow for daily challenge.
 
 ## First milestone
 
-Can we make a 7x7 board where the player can swap letters, match them,
-create special tiles, and use those mechanics to solve a word? If that's
-fun after 5-10 minutes of play, build worlds, characters, story,
+Can we make a 7x7 board where the player drags through letters to spell
+real words, with satisfying automatic cascades on top? If that's fun
+after 5-10 minutes of play, build worlds, characters, story,
 monetization, and levels around it.
