@@ -9,11 +9,18 @@ import {
   LETTER_COLORS,
   randomLetter,
 } from '../config.js';
+import { WORD_SET, PREFIX_SET } from '../data/wordlist.js';
 
-// Phase 1 milestone (per PLAN.md):
-// 7x7 board -> letter tiles -> swap -> match 3 -> clear -> tiles fall ->
-// basic scoring. No target words, no special tiles, no obstacles yet —
-// those come in Phase 2/3 once this core loop is confirmed to be fun.
+// Word-Trace mechanic:
+// - Drag through orthogonally-adjacent letters (up/down/left/right, no
+//   diagonals) to trace a 3-5 letter word. The path can turn corners.
+// - Release on a valid word -> those tiles clear, score, and the board
+//   collapses/refills like match-3.
+// - After every fall (both from the player's clear AND from cascades),
+//   the board is auto-scanned for any straight-line 3-5 letter word that
+//   landed by chance -> it auto-clears too, Candy-Crush style, and can
+//   keep chaining until the board settles.
+
 export class BoardScene extends Phaser.Scene {
   constructor() {
     super('BoardScene');
@@ -21,12 +28,14 @@ export class BoardScene extends Phaser.Scene {
 
   create() {
     this.isBusy = false;
-    this.selected = null;
+    this.isDragging = false;
     this.score = 0;
     this.grid = [];
+    this.path = [];
+    this.pathKeys = new Set();
 
     this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 30, 'Alphabet Adventure', {
+      .text(BOARD_PIXEL_SIZE.width / 2, 26, 'Alphabet Adventure', {
         fontSize: '26px',
         fontStyle: 'bold',
         color: '#ffffff',
@@ -35,23 +44,40 @@ export class BoardScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 58, 'Phase 1 prototype — swap tiles to match 3+', {
-        fontSize: '14px',
+      .text(BOARD_PIXEL_SIZE.width / 2, 52, 'Drag adjacent letters (no diagonals) to spell a 3-5 letter word', {
+        fontSize: '13px',
         color: '#a79ccf',
         fontFamily: 'system-ui, sans-serif',
+        align: 'center',
+        wordWrap: { width: BOARD_PIXEL_SIZE.width - 40 },
+      })
+      .setOrigin(0.5);
+
+    this.pathText = this.add
+      .text(BOARD_PIXEL_SIZE.width / 2, 90, '', {
+        fontSize: '26px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        fontFamily: 'system-ui, sans-serif',
+        letterSpacing: 4,
       })
       .setOrigin(0.5);
 
     this.scoreText = this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 80, 'Score: 0', {
-        fontSize: '18px',
+      .text(BOARD_PIXEL_SIZE.width / 2, 114, 'Score: 0', {
+        fontSize: '16px',
         fontStyle: 'bold',
         color: '#ffd93d',
         fontFamily: 'system-ui, sans-serif',
       })
       .setOrigin(0.5, 0);
 
+    // Drawn once, redrawn on every path change to trace the drag as a line
+    // through tile centers.
+    this.pathGraphics = this.add.graphics();
+
     this.createInitialBoard();
+    this.setupInput();
   }
 
   // ---------- geometry ----------
@@ -61,6 +87,13 @@ export class BoardScene extends Phaser.Scene {
       x: BOARD_SIDE_MARGIN + col * (TILE_SIZE + TILE_GAP) + TILE_SIZE / 2,
       y: BOARD_TOP_MARGIN + row * (TILE_SIZE + TILE_GAP) + TILE_SIZE / 2,
     };
+  }
+
+  cellFromPixel(x, y) {
+    const col = Math.floor((x - BOARD_SIDE_MARGIN) / (TILE_SIZE + TILE_GAP));
+    const row = Math.floor((y - BOARD_TOP_MARGIN) / (TILE_SIZE + TILE_GAP));
+    if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return null;
+    return { row, col };
   }
 
   // ---------- board setup ----------
@@ -75,29 +108,35 @@ export class BoardScene extends Phaser.Scene {
     }
   }
 
-  // Avoids spawning an already-matched run so the board isn't pre-solved
-  // the moment it appears. Falls back after a few tries in case a very
-  // unlucky pool ever fights itself into a corner.
+  // Avoids spawning a real word by chance so the board isn't handing out a
+  // free auto-clear the moment it appears. Only needs to look backward
+  // (left/up) since forward cells don't exist yet during generation.
   pickNonMatchingLetter(row, col) {
     let letter = randomLetter();
     let attempts = 0;
-    while (this.wouldMatchAt(row, col, letter) && attempts < 20) {
+    while (this.wouldFormWordAt(row, col, letter) && attempts < 30) {
       letter = randomLetter();
       attempts += 1;
     }
     return letter;
   }
 
-  wouldMatchAt(row, col, letter) {
-    if (col >= 2) {
-      const l1 = this.grid[row][col - 1]?.letter;
-      const l2 = this.grid[row][col - 2]?.letter;
-      if (l1 === letter && l2 === letter) return true;
-    }
-    if (row >= 2) {
-      const l1 = this.grid[row - 1][col]?.letter;
-      const l2 = this.grid[row - 2][col]?.letter;
-      if (l1 === letter && l2 === letter) return true;
+  wouldFormWordAt(row, col, letter) {
+    for (let len = 3; len <= 5; len++) {
+      if (col - len + 1 >= 0) {
+        let word = '';
+        for (let c = col - len + 1; c <= col; c++) {
+          word += c === col ? letter : this.grid[row][c]?.letter ?? '';
+        }
+        if (word.length === len && WORD_SET.has(word)) return true;
+      }
+      if (row - len + 1 >= 0) {
+        let word = '';
+        for (let r = row - len + 1; r <= row; r++) {
+          word += r === row ? letter : this.grid[r][col]?.letter ?? '';
+        }
+        if (word.length === len && WORD_SET.has(word)) return true;
+      }
     }
     return false;
   }
@@ -122,52 +161,115 @@ export class BoardScene extends Phaser.Scene {
 
     container.add([bg, text]);
     container.setSize(TILE_SIZE, TILE_SIZE);
-    container.setInteractive(
-      new Phaser.Geom.Rectangle(-TILE_SIZE / 2, -TILE_SIZE / 2, TILE_SIZE, TILE_SIZE),
-      Phaser.Geom.Rectangle.Contains
-    );
 
     const tile = { row, col, letter, container, bg, text };
-    container.on('pointerdown', () => this.onTileClick(tile.row, tile.col));
     return tile;
   }
 
-  // ---------- input ----------
+  // ---------- input (drag-to-trace) ----------
 
-  onTileClick(row, col) {
-    if (this.isBusy) return;
-    const tile = this.grid[row][col];
-    if (!tile) return;
-
-    if (!this.selected) {
-      this.selected = tile;
-      this.setHighlight(tile, true);
-      return;
-    }
-
-    if (this.selected === tile) {
-      this.setHighlight(tile, false);
-      this.selected = null;
-      return;
-    }
-
-    if (this.areAdjacent(this.selected, tile)) {
-      const previouslySelected = this.selected;
-      this.setHighlight(previouslySelected, false);
-      this.selected = null;
-      this.trySwap(previouslySelected, tile);
-    } else {
-      this.setHighlight(this.selected, false);
-      this.selected = tile;
-      this.setHighlight(tile, true);
-    }
+  setupInput() {
+    this.input.on('pointerdown', (pointer) => this.handlePointerDown(pointer));
+    this.input.on('pointermove', (pointer) => this.handlePointerMove(pointer));
+    this.input.on('pointerup', () => this.endPath());
+    this.input.on('pointerupoutside', () => this.endPath());
   }
 
-  areAdjacent(a, b) {
+  handlePointerDown(pointer) {
+    if (this.isBusy) return;
+    const cell = this.cellFromPixel(pointer.x, pointer.y);
+    if (!cell) return;
+    const tile = this.grid[cell.row][cell.col];
+    if (!tile) return;
+    this.startPath(tile);
+  }
+
+  handlePointerMove(pointer) {
+    if (!this.isDragging || this.isBusy) return;
+    const cell = this.cellFromPixel(pointer.x, pointer.y);
+    if (!cell) return;
+    const tile = this.grid[cell.row][cell.col];
+    if (!tile) return;
+    this.extendPathTo(tile);
+  }
+
+  keyOf(tile) {
+    return `${tile.row},${tile.col}`;
+  }
+
+  isOrthogonallyAdjacent(a, b) {
     return Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1;
   }
 
-  setHighlight(tile, on) {
+  startPath(tile) {
+    this.path = [tile];
+    this.pathKeys = new Set([this.keyOf(tile)]);
+    this.isDragging = true;
+    this.setTileHighlight(tile, true);
+    this.updatePathVisuals();
+  }
+
+  extendPathTo(tile) {
+    const last = this.path[this.path.length - 1];
+    if (tile === last) return;
+
+    // Dragging back onto the previous tile undoes the last step.
+    if (this.path.length >= 2 && tile === this.path[this.path.length - 2]) {
+      const removed = this.path.pop();
+      this.pathKeys.delete(this.keyOf(removed));
+      this.setTileHighlight(removed, false);
+      this.updatePathVisuals();
+      return;
+    }
+
+    const key = this.keyOf(tile);
+    if (this.pathKeys.has(key)) return; // no reusing a tile in the same word
+    if (!this.isOrthogonallyAdjacent(last, tile)) return; // must be a legal orthogonal step
+
+    const candidate = this.path.map((t) => t.letter).join('') + tile.letter;
+    if (candidate.length > 5) return; // dictionary caps at 5 letters
+    if (!PREFIX_SET.has(candidate)) return; // dead end — no word starts this way
+
+    this.path.push(tile);
+    this.pathKeys.add(key);
+    this.setTileHighlight(tile, true);
+    this.updatePathVisuals();
+  }
+
+  endPath() {
+    if (!this.isDragging) return;
+    this.isDragging = false;
+
+    const word = this.path.map((t) => t.letter).join('');
+    if (word.length >= 3 && WORD_SET.has(word)) {
+      this.commitPath(word);
+    } else {
+      this.cancelPath();
+    }
+  }
+
+  cancelPath() {
+    const tiles = [...this.path];
+    tiles.forEach((tile) => {
+      this.tweens.add({
+        targets: tile.bg,
+        fillColor: 0xff6b6b,
+        duration: 90,
+        yoyo: true,
+        onComplete: () => this.setTileHighlight(tile, false),
+      });
+    });
+    this.resetPathState();
+  }
+
+  resetPathState() {
+    this.path = [];
+    this.pathKeys.clear();
+    this.pathGraphics.clear();
+    this.pathText.setText('');
+  }
+
+  setTileHighlight(tile, on) {
     tile.bg.setStrokeStyle(on ? 5 : 3, on ? 0xffffff : 0x1b1030, on ? 1 : 0.35);
     this.tweens.add({
       targets: tile.container,
@@ -177,93 +279,173 @@ export class BoardScene extends Phaser.Scene {
     });
   }
 
-  // ---------- swap / match / resolve loop ----------
-
-  async trySwap(tileA, tileB) {
-    this.isBusy = true;
-    this.swapGridPositions(tileA, tileB);
-    await this.animateSwap(tileA, tileB);
-
-    const matches = this.findMatches();
-    if (matches.size === 0) {
-      // Not a legal move — swap back.
-      this.swapGridPositions(tileA, tileB);
-      await this.animateSwap(tileA, tileB);
-      this.isBusy = false;
-      return;
+  updatePathVisuals() {
+    this.pathGraphics.clear();
+    if (this.path.length > 1) {
+      this.pathGraphics.lineStyle(6, 0xffffff, 0.85);
+      this.pathGraphics.beginPath();
+      this.pathGraphics.moveTo(this.path[0].container.x, this.path[0].container.y);
+      for (let i = 1; i < this.path.length; i++) {
+        this.pathGraphics.lineTo(this.path[i].container.x, this.path[i].container.y);
+      }
+      this.pathGraphics.strokePath();
     }
 
-    await this.resolveMatches(1);
+    const word = this.path.map((t) => t.letter).join('');
+    const isReady = word.length >= 3 && WORD_SET.has(word);
+    this.pathText.setText(word);
+    this.pathText.setColor(isReady ? '#7CFC9A' : '#ffffff');
+  }
+
+  // ---------- commit / cascade loop ----------
+
+  async commitPath(word) {
+    this.isBusy = true;
+    const wordTiles = [...this.path];
+    wordTiles.forEach((tile) => this.setTileHighlight(tile, false));
+    this.resetPathState();
+
+    this.score += word.length * 20;
+    this.updateScoreText();
+    this.showWordToast(word, '#7CFC9A');
+
+    const matchedKeys = new Set(wordTiles.map((t) => `${t.row},${t.col}`));
+    await this.clearTiles(matchedKeys);
+    await this.collapseAndRefill();
+    await this.resolveAutoMatches(1);
     this.isBusy = false;
   }
 
-  swapGridPositions(tileA, tileB) {
-    const { row: rowA, col: colA } = tileA;
-    const { row: rowB, col: colB } = tileB;
-    this.grid[rowA][colA] = tileB;
-    this.grid[rowB][colB] = tileA;
-    tileA.row = rowB;
-    tileA.col = colB;
-    tileB.row = rowA;
-    tileB.col = colA;
+  // Scans a full row/column of letters left-to-right (or top-to-bottom) and
+  // greedily takes the longest dictionary word at each position, then jumps
+  // past it — so overlapping substrings don't all score separately.
+  scanLineForWords(letters) {
+    const found = [];
+    let i = 0;
+    while (i < letters.length) {
+      let matchedLen = 0;
+      const maxLen = Math.min(5, letters.length - i);
+      for (let len = maxLen; len >= 3; len--) {
+        const word = letters.slice(i, i + len).join('');
+        if (WORD_SET.has(word)) {
+          found.push({ start: i, length: len, word });
+          matchedLen = len;
+          break;
+        }
+      }
+      i += matchedLen > 0 ? matchedLen : 1;
+    }
+    return found;
   }
 
-  animateSwap(tileA, tileB) {
-    const posA = this.cellToPixel(tileA.row, tileA.col);
-    const posB = this.cellToPixel(tileB.row, tileB.col);
-    return Promise.all([
-      this.tweenPromise({ targets: tileA.container, x: posA.x, y: posA.y, duration: 160, ease: 'Sine.easeInOut' }),
-      this.tweenPromise({ targets: tileB.container, x: posB.x, y: posB.y, duration: 160, ease: 'Sine.easeInOut' }),
-    ]);
-  }
+  findWordMatches() {
+    const matchedCells = new Set();
+    const wordsFound = [];
 
-  findMatches() {
-    const matched = new Set();
-
-    // Horizontal runs.
     for (let row = 0; row < BOARD_SIZE; row++) {
-      let runStart = 0;
-      for (let col = 1; col <= BOARD_SIZE; col++) {
-        const prevLetter = this.grid[row][col - 1]?.letter;
-        const curLetter = col < BOARD_SIZE ? this.grid[row][col]?.letter : null;
-        if (curLetter !== prevLetter) {
-          if (col - runStart >= 3) {
-            for (let c = runStart; c < col; c++) matched.add(`${row},${c}`);
-          }
-          runStart = col;
-        }
+      const letters = [];
+      for (let col = 0; col < BOARD_SIZE; col++) letters.push(this.grid[row][col].letter);
+      for (const m of this.scanLineForWords(letters)) {
+        wordsFound.push(m.word);
+        for (let c = m.start; c < m.start + m.length; c++) matchedCells.add(`${row},${c}`);
       }
     }
 
-    // Vertical runs.
     for (let col = 0; col < BOARD_SIZE; col++) {
-      let runStart = 0;
-      for (let row = 1; row <= BOARD_SIZE; row++) {
-        const prevLetter = this.grid[row - 1][col]?.letter;
-        const curLetter = row < BOARD_SIZE ? this.grid[row][col]?.letter : null;
-        if (curLetter !== prevLetter) {
-          if (row - runStart >= 3) {
-            for (let r = runStart; r < row; r++) matched.add(`${r},${col}`);
-          }
-          runStart = row;
-        }
+      const letters = [];
+      for (let row = 0; row < BOARD_SIZE; row++) letters.push(this.grid[row][col].letter);
+      for (const m of this.scanLineForWords(letters)) {
+        wordsFound.push(m.word);
+        for (let r = m.start; r < m.start + m.length; r++) matchedCells.add(`${r},${col}`);
       }
     }
 
-    return matched;
+    return { matchedCells, wordsFound };
   }
 
-  async resolveMatches(chainLevel) {
-    const matched = this.findMatches();
-    if (matched.size === 0) return;
+  async resolveAutoMatches(chainLevel) {
+    const { matchedCells, wordsFound } = this.findWordMatches();
+    if (matchedCells.size === 0) return;
 
-    const points = matched.size * 10 * chainLevel;
+    const points = wordsFound.reduce((sum, w) => sum + w.length * 10, 0) * chainLevel;
     this.score += points;
     this.updateScoreText();
 
-    await this.clearTiles(matched);
+    if (chainLevel > 1) {
+      this.showComboText(chainLevel, wordsFound);
+    } else {
+      wordsFound.forEach((w, i) => {
+        this.time.delayedCall(i * 120, () => this.showWordToast(w, '#ffd93d'));
+      });
+    }
+
+    await this.clearTiles(matchedCells);
     await this.collapseAndRefill();
-    await this.resolveMatches(chainLevel + 1);
+    await this.resolveAutoMatches(chainLevel + 1);
+  }
+
+  showWordToast(word, color) {
+    const label = this.add
+      .text(BOARD_PIXEL_SIZE.width / 2, BOARD_TOP_MARGIN + 30, word, {
+        fontSize: '22px',
+        fontStyle: 'bold',
+        color,
+        fontFamily: 'system-ui, sans-serif',
+      })
+      .setOrigin(0.5)
+      .setAlpha(0);
+
+    this.tweens.add({
+      targets: label,
+      alpha: 1,
+      y: label.y - 20,
+      duration: 200,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: label,
+          alpha: 0,
+          y: label.y - 16,
+          delay: 300,
+          duration: 300,
+          onComplete: () => label.destroy(),
+        });
+      },
+    });
+  }
+
+  showComboText(chainLevel, wordsFound) {
+    const label = this.add
+      .text(BOARD_PIXEL_SIZE.width / 2, BOARD_TOP_MARGIN + 40, `Chain x${chainLevel}! ${wordsFound.join(', ')}`, {
+        fontSize: '20px',
+        fontStyle: 'bold',
+        color: '#ffd93d',
+        fontFamily: 'system-ui, sans-serif',
+        align: 'center',
+        wordWrap: { width: BOARD_PIXEL_SIZE.width - 30 },
+      })
+      .setOrigin(0.5)
+      .setAlpha(0)
+      .setScale(0.7);
+
+    this.cameras.main.shake(120, 0.004);
+
+    this.tweens.add({
+      targets: label,
+      alpha: 1,
+      scale: 1,
+      duration: 200,
+      ease: 'Back.easeOut',
+      onComplete: () => {
+        this.tweens.add({
+          targets: label,
+          alpha: 0,
+          delay: 350,
+          duration: 300,
+          onComplete: () => label.destroy(),
+        });
+      },
+    });
   }
 
   async clearTiles(matchedKeys) {
@@ -304,11 +486,9 @@ export class BoardScene extends Phaser.Scene {
       const emptyCount = BOARD_SIZE - existing.length;
       const newColumn = new Array(BOARD_SIZE).fill(null);
 
-      // Existing tiles keep their relative order and settle at the bottom.
       for (let i = 0; i < existing.length; i++) {
         newColumn[emptyCount + i] = existing[i];
       }
-      // Fresh tiles spawn above the board to fill the remaining gaps.
       for (let row = 0; row < emptyCount; row++) {
         newColumn[row] = this.createTile(row, col, randomLetter(), true);
       }

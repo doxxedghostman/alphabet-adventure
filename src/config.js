@@ -4,7 +4,7 @@
 export const BOARD_SIZE = 7;
 export const TILE_SIZE = 72;
 export const TILE_GAP = 6;
-export const BOARD_TOP_MARGIN = 90; // room for score/title UI above the grid
+export const BOARD_TOP_MARGIN = 132; // room for title/subtitle/current-word/score UI above the grid
 export const BOARD_SIDE_MARGIN = 24;
 
 export const BOARD_PIXEL_SIZE = {
