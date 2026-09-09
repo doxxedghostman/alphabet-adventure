@@ -9,17 +9,23 @@ import {
   LETTER_COLORS,
   randomLetter,
 } from '../config.js';
-import { WORD_SET, PREFIX_SET } from '../data/wordlist.js';
+import { WORD_SET } from '../data/wordlist.js';
 
-// Word-Trace mechanic:
-// - Drag through orthogonally-adjacent letters (up/down/left/right, no
-//   diagonals) to trace a 3-5 letter word. The path can turn corners.
-// - Release on a valid word -> those tiles clear, score, and the board
-//   collapses/refills like match-3.
-// - After every fall (both from the player's clear AND from cascades),
-//   the board is auto-scanned for any straight-line 3-5 letter word that
-//   landed by chance -> it auto-clears too, Candy-Crush style, and can
-//   keep chaining until the board settles.
+// Word-Swap mechanic:
+// - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
+//   diagonals) to swap them.
+// - After the swap, the WHOLE board is scanned (every row + every column)
+//   for any 3-5 letter straight-line word. A single swap can create more
+//   than one word at once (e.g. finishes a word in its row AND a
+//   different word in its column) - both clear.
+// - If the swap creates no word anywhere on the board, it reverts -
+//   classic invalid-swap bounce-back.
+// - After every fall - whether from the player's own clear or from a
+//   cascade - the board automatically re-scans every row and column for
+//   any word that landed there by chance. If one did, it clears
+//   automatically too, without the player touching anything, and can
+//   keep chaining further cascades, exactly like a Candy Crush combo
+//   chain.
 
 export class BoardScene extends Phaser.Scene {
   constructor() {
@@ -28,11 +34,15 @@ export class BoardScene extends Phaser.Scene {
 
   create() {
     this.isBusy = false;
-    this.isDragging = false;
     this.score = 0;
     this.grid = [];
-    this.path = [];
-    this.pathKeys = new Set();
+
+    // Tap-to-select state (for tap-tap swapping) and swipe tracking (for
+    // press-drag-release swapping). Both paths funnel into attemptSwap().
+    this.selectedTile = null;
+    this.pointerDownTile = null;
+    this.pointerDownPos = null;
+    this.swipeHandled = false;
 
     this.add
       .text(BOARD_PIXEL_SIZE.width / 2, 26, 'Alphabet Adventure', {
@@ -44,7 +54,7 @@ export class BoardScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 52, 'Drag in a straight line (row or column) to spell a 3-5 letter word', {
+      .text(BOARD_PIXEL_SIZE.width / 2, 56, 'Swap two adjacent tiles to spell a 3-5 letter word', {
         fontSize: '13px',
         color: '#a79ccf',
         fontFamily: 'system-ui, sans-serif',
@@ -53,18 +63,8 @@ export class BoardScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.pathText = this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 90, '', {
-        fontSize: '26px',
-        fontStyle: 'bold',
-        color: '#ffffff',
-        fontFamily: 'system-ui, sans-serif',
-        letterSpacing: 4,
-      })
-      .setOrigin(0.5);
-
     this.scoreText = this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 114, 'Score: 0', {
+      .text(BOARD_PIXEL_SIZE.width / 2, 86, 'Score: 0', {
         fontSize: '16px',
         fontStyle: 'bold',
         color: '#ffd93d',
@@ -73,10 +73,6 @@ export class BoardScene extends Phaser.Scene {
       .setOrigin(0.5, 0);
 
     this.createShuffleButton();
-
-    // Drawn once, redrawn on every path change to trace the drag as a line
-    // through tile centers.
-    this.pathGraphics = this.add.graphics();
 
     this.createInitialBoard();
     this.setupInput();
@@ -110,31 +106,14 @@ export class BoardScene extends Phaser.Scene {
   }
 
   // Silent safety net: called after the board first appears and after every
-  // fall/cascade settles. If literally no valid word exists anywhere on the
-  // board, the player has no legal move — so we reshuffle automatically,
+  // fall/cascade settles. If literally no swap on the board could create a
+  // word, the player has no legal move - so we reshuffle automatically,
   // without a toast, before they'd ever notice. This is what makes the
   // manual Shuffle button "optional" rather than load-bearing.
   async ensureSolvable() {
-    if (!this.hasValidWord()) {
+    if (!this.hasValidSwap()) {
       await this.shuffleBoard(true);
     }
-  }
-
-  // Straight-line-only check (matches what the player can now actually
-  // drag): true if any row or column contains a 3-5 letter run, read in
-  // either direction, that's a real dictionary word.
-  hasValidWord() {
-    for (let row = 0; row < BOARD_SIZE; row++) {
-      const letters = [];
-      for (let col = 0; col < BOARD_SIZE; col++) letters.push(this.grid[row][col]?.letter);
-      if (this.lineHasWord(letters)) return true;
-    }
-    for (let col = 0; col < BOARD_SIZE; col++) {
-      const letters = [];
-      for (let row = 0; row < BOARD_SIZE; row++) letters.push(this.grid[row][col]?.letter);
-      if (this.lineHasWord(letters)) return true;
-    }
-    return false;
   }
 
   lineHasWord(letters) {
@@ -150,6 +129,57 @@ export class BoardScene extends Phaser.Scene {
     return false;
   }
 
+  // True if there exists at least one adjacent pair on the board that,
+  // if swapped, would create a word in the row and/or column it lands in.
+  // This is the real "is there a legal move" check for the swap mechanic -
+  // unlike checking whether a word already exists (which, post-cascade,
+  // is normally false anyway since existing words auto-clear).
+  hasValidSwap() {
+    for (let row = 0; row < BOARD_SIZE; row++) {
+      for (let col = 0; col < BOARD_SIZE; col++) {
+        if (col + 1 < BOARD_SIZE && this.wouldSwapCreateWord(row, col, row, col + 1)) return true;
+        if (row + 1 < BOARD_SIZE && this.wouldSwapCreateWord(row, col, row + 1, col)) return true;
+      }
+    }
+    return false;
+  }
+
+  // Temporarily swaps two cells' letters, checks only the rows/columns that
+  // could possibly be affected (at most 2 rows + 2 cols), then reverts.
+  wouldSwapCreateWord(r1, c1, r2, c2) {
+    const tileA = this.grid[r1][c1];
+    const tileB = this.grid[r2][c2];
+    const letterA = tileA.letter;
+    const letterB = tileB.letter;
+
+    tileA.letter = letterB;
+    tileB.letter = letterA;
+
+    let found = false;
+    for (const r of new Set([r1, r2])) {
+      const letters = [];
+      for (let c = 0; c < BOARD_SIZE; c++) letters.push(this.grid[r][c].letter);
+      if (this.lineHasWord(letters)) {
+        found = true;
+        break;
+      }
+    }
+    if (!found) {
+      for (const c of new Set([c1, c2])) {
+        const letters = [];
+        for (let r = 0; r < BOARD_SIZE; r++) letters.push(this.grid[r][c].letter);
+        if (this.lineHasWord(letters)) {
+          found = true;
+          break;
+        }
+      }
+    }
+
+    tileA.letter = letterA;
+    tileB.letter = letterB;
+    return found;
+  }
+
   shuffleArray(arr) {
     for (let i = arr.length - 1; i > 0; i--) {
       const j = Math.floor(Math.random() * (i + 1));
@@ -158,10 +188,12 @@ export class BoardScene extends Phaser.Scene {
   }
 
   // Reassigns existing tiles' letters (no new tiles, no re-layout) to a
-  // shuffled arrangement that's guaranteed solvable, retrying a bounded
-  // number of times before giving up and accepting whatever it landed on.
+  // shuffled arrangement guaranteed to have at least one valid swap,
+  // retrying a bounded number of times before giving up and accepting
+  // whatever it landed on.
   async shuffleBoard(silent = false) {
-    if (this.isDragging) this.cancelPath();
+    this.deselectTile();
+    this.pointerDownTile = null;
     this.isBusy = true;
 
     const tiles = [];
@@ -181,7 +213,7 @@ export class BoardScene extends Phaser.Scene {
         t.letter = candidate[i];
       });
       attempts += 1;
-    } while (!this.hasValidWord() && attempts < 50);
+    } while (!this.hasValidSwap() && attempts < 50);
 
     await Promise.all(
       tiles.map((tile, i) =>
@@ -298,13 +330,27 @@ export class BoardScene extends Phaser.Scene {
     return tile;
   }
 
-  // ---------- input (drag-to-trace) ----------
+  // ---------- input (tap-tap or swipe to swap) ----------
 
   setupInput() {
     this.input.on('pointerdown', (pointer) => this.handlePointerDown(pointer));
     this.input.on('pointermove', (pointer) => this.handlePointerMove(pointer));
-    this.input.on('pointerup', () => this.endPath());
-    this.input.on('pointerupoutside', () => this.endPath());
+    this.input.on('pointerup', () => this.handlePointerUp());
+    this.input.on('pointerupoutside', () => this.handlePointerUp());
+  }
+
+  isOrthogonallyAdjacent(a, b) {
+    return Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1;
+  }
+
+  selectTile(tile) {
+    this.selectedTile = tile;
+    this.setTileHighlight(tile, true);
+  }
+
+  deselectTile() {
+    if (this.selectedTile) this.setTileHighlight(this.selectedTile, false);
+    this.selectedTile = null;
   }
 
   handlePointerDown(pointer) {
@@ -313,133 +359,71 @@ export class BoardScene extends Phaser.Scene {
     if (!cell) return;
     const tile = this.grid[cell.row][cell.col];
     if (!tile) return;
-    this.startPath(tile);
-  }
 
-  handlePointerMove(pointer) {
-    if (!this.isDragging || this.isBusy) return;
-    const cell = this.cellFromPixel(pointer.x, pointer.y);
-    if (!cell) return;
-    const tile = this.grid[cell.row][cell.col];
-    if (!tile) return;
-    this.extendPathTo(tile);
-  }
+    this.pointerDownTile = tile;
+    this.pointerDownPos = { x: pointer.x, y: pointer.y };
+    this.swipeHandled = false;
 
-  keyOf(tile) {
-    return `${tile.row},${tile.col}`;
-  }
-
-  isOrthogonallyAdjacent(a, b) {
-    return Math.abs(a.row - b.row) + Math.abs(a.col - b.col) === 1;
-  }
-
-  startPath(tile) {
-    this.path = [tile];
-    this.pathKeys = new Set([this.keyOf(tile)]);
-    this.isDragging = true;
-    this.setTileHighlight(tile, true);
-    this.updatePathVisuals();
-  }
-
-  extendPathTo(tile) {
-    const last = this.path[this.path.length - 1];
-    if (tile === last) return;
-
-    // Dragging back onto the previous tile undoes the last step.
-    if (this.path.length >= 2 && tile === this.path[this.path.length - 2]) {
-      const removed = this.path.pop();
-      this.pathKeys.delete(this.keyOf(removed));
-      this.setTileHighlight(removed, false);
-      this.updatePathVisuals();
+    if (this.selectedTile && this.selectedTile !== tile) {
+      // Second tap: swap if adjacent, otherwise move the selection.
+      if (this.isOrthogonallyAdjacent(this.selectedTile, tile)) {
+        const a = this.selectedTile;
+        this.deselectTile();
+        this.swipeHandled = true;
+        this.pointerDownTile = null;
+        this.attemptSwap(a, tile);
+      } else {
+        this.deselectTile();
+        this.selectTile(tile);
+      }
       return;
     }
 
-    const key = this.keyOf(tile);
-    if (this.pathKeys.has(key)) return; // no reusing a tile in the same word
-    if (!this.isOrthogonallyAdjacent(last, tile)) return; // must be a legal orthogonal step
-
-    // Candy Crush style: once a direction is set by the first two tiles,
-    // every further tile must continue in that same straight line — no
-    // corners, no zigzags. Only the very first step (path length 1) is free
-    // to go any of the 4 directions.
-    if (this.path.length >= 2) {
-      const first = this.path[0];
-      const second = this.path[1];
-      const dirRow = second.row - first.row;
-      const dirCol = second.col - first.col;
-      const stepRow = tile.row - last.row;
-      const stepCol = tile.col - last.col;
-      if (stepRow !== dirRow || stepCol !== dirCol) return; // would turn a corner — reject
+    if (this.selectedTile === tile) {
+      // Tapping the same tile again deselects it.
+      this.deselectTile();
+      this.pointerDownTile = null;
+      return;
     }
 
-    const candidate = this.path.map((t) => t.letter).join('') + tile.letter;
-    if (candidate.length > 5) return; // dictionary caps at 5 letters
-    if (!PREFIX_SET.has(candidate)) return; // dead end — no word starts this way
-
-    this.path.push(tile);
-    this.pathKeys.add(key);
-    this.setTileHighlight(tile, true);
-    this.updatePathVisuals();
+    this.selectTile(tile);
   }
 
-  endPath() {
-    if (!this.isDragging) return;
-    this.isDragging = false;
+  handlePointerMove(pointer) {
+    if (this.isBusy || this.swipeHandled || !this.pointerDownTile) return;
 
-    const word = this.path.map((t) => t.letter).join('');
-    if (word.length >= 3 && WORD_SET.has(word)) {
-      this.commitPath(word);
+    const dx = pointer.x - this.pointerDownPos.x;
+    const dy = pointer.y - this.pointerDownPos.y;
+    const threshold = TILE_SIZE * 0.35;
+    if (Math.hypot(dx, dy) < threshold) return;
+
+    let dRow = 0;
+    let dCol = 0;
+    if (Math.abs(dx) > Math.abs(dy)) {
+      dCol = dx > 0 ? 1 : -1;
     } else {
-      this.cancelPath();
+      dRow = dy > 0 ? 1 : -1;
     }
+
+    const targetRow = this.pointerDownTile.row + dRow;
+    const targetCol = this.pointerDownTile.col + dCol;
+    if (targetRow < 0 || targetRow >= BOARD_SIZE || targetCol < 0 || targetCol >= BOARD_SIZE) return;
+
+    const targetTile = this.grid[targetRow][targetCol];
+    if (!targetTile) return;
+
+    this.swipeHandled = true;
+    const a = this.pointerDownTile;
+    this.deselectTile();
+    this.pointerDownTile = null;
+    this.attemptSwap(a, targetTile);
   }
 
-  cancelPath() {
-    const tiles = [...this.path];
-    const failColor = 0xff4757;
-
-    // Redraw the traced line in red (instead of leaving it white/vanishing
-    // instantly) so the cancel is visible on the path itself, not just the
-    // tiles.
-    this.pathGraphics.clear();
-    if (tiles.length > 1) {
-      this.pathGraphics.lineStyle(6, failColor, 0.9);
-      this.pathGraphics.beginPath();
-      this.pathGraphics.moveTo(tiles[0].container.x, tiles[0].container.y);
-      for (let i = 1; i < tiles.length; i++) {
-        this.pathGraphics.lineTo(tiles[i].container.x, tiles[i].container.y);
-      }
-      this.pathGraphics.strokePath();
-    }
-    this.pathText.setColor('#ff4757');
-
-    tiles.forEach((tile) => {
-      this.tweens.add({
-        targets: tile.bg,
-        fillColor: failColor,
-        duration: 90,
-        yoyo: true,
-        onComplete: () => this.setTileHighlight(tile, false),
-      });
-    });
-
-    // Path/selection state clears right away so a new drag can start
-    // immediately, but the red line + text hold on screen briefly before
-    // fading so the cancel actually reads as feedback.
-    this.path = [];
-    this.pathKeys.clear();
-    this.time.delayedCall(180, () => {
-      this.pathGraphics.clear();
-      this.pathText.setText('');
-      this.pathText.setColor('#ffffff');
-    });
-  }
-
-  resetPathState() {
-    this.path = [];
-    this.pathKeys.clear();
-    this.pathGraphics.clear();
-    this.pathText.setText('');
+  handlePointerUp() {
+    this.pointerDownTile = null;
+    this.pointerDownPos = null;
+    // this.selectedTile is intentionally left alone here: a plain tap with
+    // no swipe leaves the tile selected, awaiting a second tap to swap.
   }
 
   setTileHighlight(tile, on) {
@@ -452,48 +436,80 @@ export class BoardScene extends Phaser.Scene {
     });
   }
 
-  updatePathVisuals() {
-    this.pathGraphics.clear();
-    const word = this.path.map((t) => t.letter).join('');
-    const isReady = word.length >= 3 && WORD_SET.has(word);
+  // ---------- swap / commit / cascade loop ----------
 
-    if (this.path.length > 1) {
-      this.pathGraphics.lineStyle(6, isReady ? 0x7cfc9a : 0xffffff, 0.85);
-      this.pathGraphics.beginPath();
-      this.pathGraphics.moveTo(this.path[0].container.x, this.path[0].container.y);
-      for (let i = 1; i < this.path.length; i++) {
-        this.pathGraphics.lineTo(this.path[i].container.x, this.path[i].container.y);
-      }
-      this.pathGraphics.strokePath();
-    }
+  // Swaps two tiles' grid positions and animates their containers to the
+  // new spots. Calling this twice in a row on the same pair (swap, then
+  // swap again) returns the board to its original state - that's how a
+  // rejected swap bounces back.
+  async animateSwap(tileA, tileB) {
+    this.grid[tileA.row][tileA.col] = tileB;
+    this.grid[tileB.row][tileB.col] = tileA;
 
-    this.pathText.setText(word);
-    this.pathText.setColor(isReady ? '#7CFC9A' : '#ffffff');
+    const aRow = tileA.row;
+    const aCol = tileA.col;
+    const bRow = tileB.row;
+    const bCol = tileB.col;
+
+    tileA.row = bRow;
+    tileA.col = bCol;
+    tileB.row = aRow;
+    tileB.col = aCol;
+
+    const posA = this.cellToPixel(tileA.row, tileA.col);
+    const posB = this.cellToPixel(tileB.row, tileB.col);
+
+    await Promise.all([
+      this.tweenPromise({ targets: tileA.container, x: posA.x, y: posA.y, duration: 160, ease: 'Sine.easeInOut' }),
+      this.tweenPromise({ targets: tileB.container, x: posB.x, y: posB.y, duration: 160, ease: 'Sine.easeInOut' }),
+    ]);
   }
 
-  // ---------- commit / cascade loop ----------
-
-  async commitPath(word) {
+  async attemptSwap(tileA, tileB) {
     this.isBusy = true;
-    const wordTiles = [...this.path];
-    wordTiles.forEach((tile) => this.setTileHighlight(tile, false));
-    this.resetPathState();
+    await this.animateSwap(tileA, tileB);
 
-    this.score += word.length * 20;
+    const { matchedCells, wordsFound } = this.findWordMatches();
+
+    if (matchedCells.size === 0) {
+      // No word anywhere on the board as a result of this swap - bounce
+      // back, classic invalid-swap feedback.
+      const failColor = 0xff4757;
+      await Promise.all(
+        [tileA, tileB].map((tile) =>
+          this.tweenPromise({
+            targets: tile.bg,
+            fillColor: failColor,
+            duration: 90,
+            yoyo: true,
+          })
+        )
+      );
+      await this.animateSwap(tileA, tileB);
+      this.isBusy = false;
+      return;
+    }
+
+    const points = wordsFound.reduce((sum, w) => sum + w.length * 20, 0);
+    this.score += points;
     this.updateScoreText();
-    this.showWordToast(word, '#7CFC9A');
 
-    const matchedKeys = new Set(wordTiles.map((t) => `${t.row},${t.col}`));
-    await this.clearTiles(matchedKeys);
+    if (wordsFound.length > 1) {
+      this.showComboText(1, wordsFound, 'x2!');
+    } else {
+      this.showWordToast(wordsFound[0], '#7CFC9A');
+    }
+
+    await this.clearTiles(matchedCells);
     await this.collapseAndRefill();
-    await this.resolveAutoMatches(1);
+    await this.resolveAutoMatches(2);
     await this.ensureSolvable();
     this.isBusy = false;
   }
 
   // Scans a full row/column of letters left-to-right (or top-to-bottom) and
   // greedily takes the longest dictionary word at each position, then jumps
-  // past it — so overlapping substrings don't all score separately.
+  // past it - so overlapping substrings don't all score separately.
   scanLineForWords(letters) {
     const found = [];
     let i = 0;
@@ -546,13 +562,7 @@ export class BoardScene extends Phaser.Scene {
     this.score += points;
     this.updateScoreText();
 
-    if (chainLevel > 1) {
-      this.showComboText(chainLevel, wordsFound);
-    } else {
-      wordsFound.forEach((w, i) => {
-        this.time.delayedCall(i * 120, () => this.showWordToast(w, '#ffd93d'));
-      });
-    }
+    this.showComboText(chainLevel, wordsFound);
 
     await this.clearTiles(matchedCells);
     await this.collapseAndRefill();
@@ -589,16 +599,21 @@ export class BoardScene extends Phaser.Scene {
     });
   }
 
-  showComboText(chainLevel, wordsFound) {
+  showComboText(chainLevel, wordsFound, labelOverride) {
     const label = this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, BOARD_TOP_MARGIN + 40, `Chain x${chainLevel}! ${wordsFound.join(', ')}`, {
-        fontSize: '20px',
-        fontStyle: 'bold',
-        color: '#ffd93d',
-        fontFamily: 'system-ui, sans-serif',
-        align: 'center',
-        wordWrap: { width: BOARD_PIXEL_SIZE.width - 30 },
-      })
+      .text(
+        BOARD_PIXEL_SIZE.width / 2,
+        BOARD_TOP_MARGIN + 40,
+        labelOverride ? `${wordsFound.join(', ')} ${labelOverride}` : `Chain x${chainLevel}! ${wordsFound.join(', ')}`,
+        {
+          fontSize: '20px',
+          fontStyle: 'bold',
+          color: '#ffd93d',
+          fontFamily: 'system-ui, sans-serif',
+          align: 'center',
+          wordWrap: { width: BOARD_PIXEL_SIZE.width - 30 },
+        }
+      )
       .setOrigin(0.5)
       .setAlpha(0)
       .setScale(0.7);
