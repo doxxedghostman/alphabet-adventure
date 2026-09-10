@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { SplashScene } from './scenes/SplashScene.js';
 import { BoardScene } from './scenes/BoardScene.js';
 import { BOARD_PIXEL_SIZE } from './config.js';
 
@@ -8,7 +9,7 @@ const config = {
   width: BOARD_PIXEL_SIZE.width,
   height: BOARD_PIXEL_SIZE.height,
   backgroundColor: '#241a3d',
-  scene: [BoardScene],
+  scene: [SplashScene, BoardScene],
   render: {
     antialias: true,
   },

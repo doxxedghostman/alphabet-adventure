@@ -47,7 +47,7 @@ export class BoardScene extends Phaser.Scene {
     this.swipeHandled = false;
 
     this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 26, 'Alphabet Adventure', {
+      .text(BOARD_PIXEL_SIZE.width / 2, 26, 'WordSwoop', {
         fontSize: '26px',
         fontStyle: 'bold',
         color: '#ffffff',
