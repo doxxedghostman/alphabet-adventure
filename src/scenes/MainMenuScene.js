@@ -92,7 +92,7 @@ export class MainMenuScene extends Phaser.Scene {
   startGame() {
     this.cameras.main.fadeOut(280, 0x24, 0x1a, 0x3d);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start('BoardScene');
+      this.scene.start('BoardScene', { levelId: 1 });
     });
   }
 }

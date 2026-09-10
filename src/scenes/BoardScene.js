@@ -12,6 +12,7 @@ import {
   randomLetter,
 } from '../config.js';
 import { WORD_SET } from '../data/wordlist.js';
+import { getLevel } from '../data/levels.js';
 
 // Word-Swap mechanic:
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
@@ -34,10 +35,14 @@ export class BoardScene extends Phaser.Scene {
     super('BoardScene');
   }
 
-  create() {
+  create(sceneData) {
     this.isBusy = false;
     this.score = 0;
     this.grid = [];
+
+    this.level = getLevel(sceneData?.levelId ?? 1);
+    this.movesLeft = this.level.maxSwaps;
+    this.targetWord = this.level.targetWord;
 
     // Tap-to-select state (for tap-tap swapping) and swipe tracking (for
     // press-drag-release swapping). Both paths funnel into attemptSwap().
@@ -46,34 +51,7 @@ export class BoardScene extends Phaser.Scene {
     this.pointerDownPos = null;
     this.swipeHandled = false;
 
-    this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 26, 'WordSwoop', {
-        fontSize: '26px',
-        fontStyle: 'bold',
-        color: '#ffffff',
-        fontFamily: 'system-ui, sans-serif',
-      })
-      .setOrigin(0.5);
-
-    this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 56, 'Swap two adjacent tiles to spell a 3-6 letter word', {
-        fontSize: '13px',
-        color: '#a79ccf',
-        fontFamily: 'system-ui, sans-serif',
-        align: 'center',
-        wordWrap: { width: BOARD_PIXEL_SIZE.width - 40 },
-      })
-      .setOrigin(0.5);
-
-    this.scoreText = this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 86, 'Score: 0', {
-        fontSize: '16px',
-        fontStyle: 'bold',
-        color: '#ffd93d',
-        fontFamily: 'system-ui, sans-serif',
-      })
-      .setOrigin(0.5, 0);
-
+    this.createHeader();
     this.createShuffleButton();
 
     this.createInitialBoard();
@@ -81,17 +59,75 @@ export class BoardScene extends Phaser.Scene {
     this.ensureSolvable();
   }
 
+  // ---------- header (level / moves / goal / score) ----------
+
+  createHeader() {
+    this.createPill(20, 18, `Level ${this.level.id}`, 0xffd93d, 'left');
+    this.movesPill = this.createPill(BOARD_PIXEL_SIZE.width - 20, 18, `Moves ${this.movesLeft}`, 0x6bc9ef, 'right');
+
+    this.add
+      .text(BOARD_PIXEL_SIZE.width / 2, 60, `Find: ${this.targetWord}`, {
+        fontSize: '19px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        fontFamily: 'system-ui, sans-serif',
+      })
+      .setOrigin(0.5);
+
+    this.scoreText = this.add
+      .text(BOARD_PIXEL_SIZE.width / 2, 92, 'Score: 0', {
+        fontSize: '14px',
+        fontStyle: 'bold',
+        color: '#a79ccf',
+        fontFamily: 'system-ui, sans-serif',
+      })
+      .setOrigin(0.5, 0);
+  }
+
+  // Small rounded-rect + centered text, used for the Level/Moves badges.
+  // align 'left' anchors the pill's left edge at x; 'right' anchors its
+  // right edge at x (so it hugs the board's right border like the Shuffle
+  // button does).
+  createPill(x, y, label, color, align = 'left') {
+    const width = 92;
+    const height = 30;
+    const originX = align === 'right' ? 1 : 0;
+    const rectX = align === 'right' ? x - width : x;
+
+    const bg = this.add.graphics();
+    bg.fillStyle(color, 0.18);
+    bg.fillRoundedRect(rectX, y, width, height, 10);
+    bg.lineStyle(1.5, color, 0.6);
+    bg.strokeRoundedRect(rectX, y, width, height, 10);
+
+    const text = this.add
+      .text(rectX + width / 2, y + height / 2, label, {
+        fontSize: '14px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        fontFamily: 'system-ui, sans-serif',
+      })
+      .setOrigin(0.5);
+
+    return { bg, text, x: rectX, y, width, height, originX };
+  }
+
+  updateMovesText() {
+    this.movesPill.text.setText(`Moves ${this.movesLeft}`);
+  }
+
+
   // ---------- shuffle / solvability ----------
 
   createShuffleButton() {
     const bg = this.add
-      .rectangle(BOARD_PIXEL_SIZE.width - 20, 20, 84, 30, 0xffffff, 0.12)
+      .rectangle(BOARD_PIXEL_SIZE.width - 20, 54, 84, 26, 0xffffff, 0.12)
       .setOrigin(1, 0)
       .setStrokeStyle(1.5, 0xffffff, 0.4);
 
     const label = this.add
-      .text(BOARD_PIXEL_SIZE.width - 20 - 42, 20 + 15, '⟳ Shuffle', {
-        fontSize: '13px',
+      .text(BOARD_PIXEL_SIZE.width - 20 - 42, 54 + 13, '⟳ Shuffle', {
+        fontSize: '12px',
         fontStyle: 'bold',
         color: '#ffffff',
         fontFamily: 'system-ui, sans-serif',
