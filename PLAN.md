@@ -178,10 +178,19 @@ boot flow added (splash with loading bar -> main menu with a Play
 button -> board), replacing what used to be a direct load straight
 into the board (see `update.md` for the detailed log of all of this).
 
-**Phase 2 — Level objectives & structure**
-Specific target word per level, a limited-swaps or time-limit
-structure (replacing today's endless free-play scoring), win/lose
-conditions, the goal/moves/stars header shown in early mockups.
+**Phase 2 — Level objectives & structure (done, see `update.md`)**
+Levels are plain data (`src/data/levels.js`: targetWord + maxSwaps).
+The board header shows a Level badge, a Moves counter, and the goal
+("Find: WORD"). A move is spent on every successful swap (invalid
+swaps that bounce back are free). The target word can land either
+directly from the player's swap or via a chained cascade — either way
+wins the level, even mid-chain, taking priority over running out of
+moves. Win and lose each end in a card popup (title, message, score,
+two buttons): win -> Next Level / Replay, lose -> Try Again / Main
+Menu. 3 starter levels exist (BAG, CAT, GARDEN). Not yet built: World
+Map / Daily Challenge / Achievements / Settings on the main menu
+(still Play-only), obstacles, and special tiles — those stay Phase
+3/4 as originally planned.
 
 **Phase 3 — Special mechanics**
 Rocket, bomb, wildcard, ice, locks (see section 4, triggers now based

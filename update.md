@@ -231,25 +231,80 @@ straight into the board:
 
 ---
 
+## Phase 2 — Level objectives & structure
+
+### Milestone 5 — target word, moves, win/lose popups (Phase 2 core loop)
+
+Shipped in 3 scoped batches:
+
+**Batch 1 — level data + header UI.** New `src/data/levels.js`: plain
+data (`{ id, targetWord, maxSwaps }`) plus `getLevel()` /
+`getNextLevelId()` helpers, no logic in BoardScene needed to add a
+level. BoardScene now takes a `levelId` via scene data (MainMenuScene's
+Play button passes `{ levelId: 1 }`), and the header shows a Level
+badge, a Moves badge, and a "Find: WORD" goal line. UI/data only in
+this batch — moves didn't decrement yet.
+
+**Batch 2 — moves countdown + win/lose detection.** A move is spent on
+every *successful* swap only; a swap that bounces back (no word
+anywhere on the board) stays free, matching standard match-3
+convention. `checkTargetWord()` runs after the player's own swap *and*
+after every auto-cascade step, since the target can land via a chain
+reaction rather than the direct swap — first match wins immediately,
+even mid-cascade, which is why a win always takes priority over
+running out of moves (`checkLevelEnd()`, which checks moves-exhausted,
+can never fire after a win already set `levelOver`). All input (tap,
+swipe, Shuffle) is blocked once `levelOver` is true. Landed with a
+plain placeholder banner just to prove the logic worked end-to-end.
+
+**Batch 3 — real popups.** Replaced the placeholder banner with a
+proper card popup: dim overlay, title, message, score, and two
+buttons. Win -> "Great Word! You spelled X" -> Next Level (or Back to
+Menu on the last level) / Replay. Lose -> "Out of Moves, Needed: X" ->
+Try Again / Main Menu. `restartLevel()` uses `scene.restart()` for a
+clean retry (fresh board, same target); `goToNextLevelOrMenu()`
+advances via `getNextLevelId()` or falls back to the main menu once
+the level list runs out.
+
+End-to-end result: Main Menu -> Play -> swap to spell the target word
+within the move budget -> win/lose popup -> Next Level / Retry / Menu.
+This is the first time the game has had an actual objective and an
+ending, rather than endless free-play scoring.
+
+- Verified: build passes after each of the 3 batches (checked
+  individually before moving to the next), plus a manual read-through
+  confirming no leftover references to the old placeholder banner
+  after batch 3 replaced it.
+- Not done here (still open, see `PLAN.md`): target-word solvability
+  (nothing yet guarantees BAG/CAT/GARDEN are reachable within their
+  move budgets on a given random board — picked common,
+  high-frequency-letter words to keep the odds good in the meantime,
+  not as a real fix), stars/rating, obstacles, special tiles, only 3
+  levels exist.
+
+---
+
 ## Next up
 
-1. **Expand the main menu** — World map, Daily challenge, Achievements,
+1. **Target-word solvability** (see `PLAN.md`): today's solver only
+   proves "a word exists" or "a swap exists," not "this specific
+   target word is reachable within N moves." Needs either a
+   level-specific solver/simulator run before a level ships, or a
+   manual playtest step, before adding many more levels.
+2. **Expand the main menu** — World map, Daily challenge, Achievements,
    Settings (currently just Play).
-2. **Divide the alphabet into progressive stages** — e.g. common
+3. **Divide the alphabet into progressive stages** — e.g. common
    letters unlocked first, rarer ones added in later worlds/levels,
    now that the full A-Z pool is confirmed working.
-3. **Phase 2 — level objectives & structure**, replacing today's
-   endless free-play scoring:
-   - Target word per level (e.g. "Find: LION").
-   - Swap-limit structure (a move-limit equivalent).
-   - Win/lose conditions.
-   - Goal / moves / stars header UI (stars row, move counter, goal
-     icons like the reference mockup), plus a bottom booster toolbar.
-4. **Target-word solvability**, called out in `PLAN.md`: once levels
-   have a specific target word + swap limit, today's "does *a* word
-   exist" solver isn't enough — need "is *the target word* reachable
-   within N swaps, accounting for obstacles/wildcards." Needs a
-   level-specific solver/simulator or a manual playtest step before
-   Phase 6 content production scales up.
-5. Revisit Special Tiles' length thresholds (`PLAN.md` §4) now that 6
+4. Revisit Special Tiles' length thresholds (`PLAN.md` §4) now that 6
    is the max word length, not 5.
+5. **My Word Book** (new idea from the reference mockups, not
+   previously in `PLAN.md`): a running log of every word the player's
+   ever cleared, shown with pronunciation. Cheap to build — log
+   distinct cleared words per save, pronunciation via the browser's
+   built-in speech API (no audio assets needed). Worth adding as a
+   Phase 4/5 nice-to-have.
+6. Stars/rating per level, coins/currency, booster inventory
+   (Rocket/Rainbow/Bomb/Shuffle as spend-to-use items, distinct from
+   the auto-triggered special tiles in `PLAN.md` §4 — worth deciding
+   how those two systems relate before building either further).
