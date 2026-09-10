@@ -1,4 +1,4 @@
-// Phase 1 prototype config: 7x7 board, swap -> match 3 -> clear -> fall -> score.
+// Prototype config: 6x6 board, swap -> match 3-6 letter word -> clear -> fall -> score.
 // No target words, no special tiles, no obstacles yet (those are Phase 2/3).
 
 export const BOARD_SIZE = 6;
