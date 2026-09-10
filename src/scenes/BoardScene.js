@@ -12,7 +12,7 @@ import {
   randomLetter,
 } from '../config.js';
 import { WORD_SET } from '../data/wordlist.js';
-import { getLevel } from '../data/levels.js';
+import { getLevel, getNextLevelId } from '../data/levels.js';
 
 // Word-Swap mechanic:
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
@@ -41,6 +41,7 @@ export class BoardScene extends Phaser.Scene {
     this.grid = [];
 
     this.level = getLevel(sceneData?.levelId ?? 1);
+    this.nextLevelId = getNextLevelId(this.level.id);
     this.movesLeft = this.level.maxSwaps;
     this.targetWord = this.level.targetWord;
     this.levelOver = false;
@@ -591,52 +592,154 @@ export class BoardScene extends Phaser.Scene {
   onLevelWon() {
     this.levelOver = true;
     this.deselectTile();
-    this.showEndBanner(`${this.targetWord} found!\nLevel Complete`, '#7CFC9A');
+    this.showEndPopup({
+      title: 'Great Word!',
+      titleColor: '#ffd93d',
+      message: `You spelled ${this.targetWord}`,
+      messageColor: '#7CFC9A',
+      primaryLabel: this.nextLevelId ? 'Next Level' : 'Back to Menu',
+      primaryAction: () => this.goToNextLevelOrMenu(),
+      secondaryLabel: 'Replay',
+      secondaryAction: () => this.restartLevel(),
+    });
   }
 
   onLevelLost() {
     this.levelOver = true;
     this.deselectTile();
-    this.showEndBanner(`Out of moves\nTry again`, '#ff4757');
+    this.showEndPopup({
+      title: 'Out of Moves',
+      titleColor: '#ff4757',
+      message: `Needed: ${this.targetWord}`,
+      messageColor: '#a79ccf',
+      primaryLabel: 'Try Again',
+      primaryAction: () => this.restartLevel(),
+      secondaryLabel: 'Main Menu',
+      secondaryAction: () => this.goToMainMenu(),
+    });
   }
 
-  // Placeholder end-of-level feedback for this batch - a proper Win/Lose
-  // popup with Next Level / Retry buttons lands in the next batch. For now
-  // this just clearly signals the level is over and blocks further input
-  // (handlePointerDown checks this.levelOver).
-  showEndBanner(message, color) {
-    const overlay = this.add.rectangle(
-      BOARD_PIXEL_SIZE.width / 2,
-      BOARD_PIXEL_SIZE.height / 2,
-      BOARD_PIXEL_SIZE.width,
-      BOARD_PIXEL_SIZE.height,
-      0x000000,
-      0.55
-    );
+  restartLevel() {
+    this.scene.restart({ levelId: this.level.id });
+  }
 
-    const label = this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, BOARD_PIXEL_SIZE.height / 2, message, {
+  goToMainMenu() {
+    this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.start('MainMenuScene');
+    });
+  }
+
+  goToNextLevelOrMenu() {
+    if (this.nextLevelId) {
+      this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        this.scene.start('BoardScene', { levelId: this.nextLevelId });
+      });
+    } else {
+      this.goToMainMenu();
+    }
+  }
+
+  // Card-style end-of-level popup: dim overlay, title, message, score, and
+  // one or two buttons. Used for both win and lose - which buttons/colors
+  // show is entirely driven by the config object passed in.
+  showEndPopup({ title, titleColor, message, messageColor, primaryLabel, primaryAction, secondaryLabel, secondaryAction }) {
+    const centerX = BOARD_PIXEL_SIZE.width / 2;
+    const centerY = BOARD_PIXEL_SIZE.height / 2;
+
+    const overlay = this.add
+      .rectangle(centerX, centerY, BOARD_PIXEL_SIZE.width, BOARD_PIXEL_SIZE.height, 0x000000, 0.6)
+      .setAlpha(0);
+
+    const cardWidth = BOARD_PIXEL_SIZE.width - 60;
+    const cardHeight = 260;
+    const card = this.add.container(centerX, centerY).setAlpha(0).setScale(0.85);
+
+    const cardBg = this.add.graphics();
+    cardBg.fillStyle(0x2a1f47, 1);
+    cardBg.fillRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 22);
+    cardBg.lineStyle(2, 0xffffff, 0.15);
+    cardBg.strokeRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 22);
+
+    const titleText = this.add
+      .text(0, -cardHeight / 2 + 44, title, {
         fontSize: '26px',
         fontStyle: 'bold',
-        color,
+        color: titleColor,
         fontFamily: 'system-ui, sans-serif',
-        align: 'center',
       })
-      .setOrigin(0.5)
-      .setAlpha(0)
-      .setScale(0.8);
+      .setOrigin(0.5);
 
+    const messageText = this.add
+      .text(0, -cardHeight / 2 + 84, message, {
+        fontSize: '16px',
+        color: messageColor,
+        fontFamily: 'system-ui, sans-serif',
+      })
+      .setOrigin(0.5);
+
+    const scoreText = this.add
+      .text(0, -cardHeight / 2 + 114, `Score: ${this.score}`, {
+        fontSize: '14px',
+        fontStyle: 'bold',
+        color: '#ffd93d',
+        fontFamily: 'system-ui, sans-serif',
+      })
+      .setOrigin(0.5);
+
+    card.add([cardBg, titleText, messageText, scoreText]);
+    card.add(this.createPopupButton(0, 46, primaryLabel, 0xffd93d, '#1b1030', primaryAction));
+    card.add(this.createPopupButton(0, 96, secondaryLabel, 0x3a2c5c, '#ffffff', secondaryAction));
+
+    this.tweens.add({ targets: overlay, alpha: 1, duration: 220 });
     this.tweens.add({
-      targets: [overlay, label],
+      targets: card,
       alpha: 1,
-      duration: 250,
-    });
-    this.tweens.add({
-      targets: label,
       scale: 1,
-      duration: 250,
+      duration: 260,
       ease: 'Back.easeOut',
     });
+  }
+
+  createPopupButton(x, y, label, fillColor, textColor, onClick) {
+    const width = 200;
+    const height = 42;
+    const button = this.add.container(x, y);
+
+    const bg = this.add.graphics();
+    bg.fillStyle(fillColor, 1);
+    bg.fillRoundedRect(-width / 2, -height / 2, width, height, 14);
+
+    const text = this.add
+      .text(0, 0, label, {
+        fontSize: '16px',
+        fontStyle: 'bold',
+        color: textColor,
+        fontFamily: 'system-ui, sans-serif',
+      })
+      .setOrigin(0.5);
+
+    button.add([bg, text]);
+    button.setSize(width, height);
+    button.setInteractive({ useHandCursor: true });
+
+    button.on('pointerdown', () => {
+      this.tweens.add({ targets: button, scale: 0.94, duration: 80 });
+    });
+    button.on('pointerup', () => {
+      this.tweens.add({
+        targets: button,
+        scale: 1,
+        duration: 100,
+        onComplete: onClick,
+      });
+    });
+    button.on('pointerout', () => {
+      this.tweens.add({ targets: button, scale: 1, duration: 100 });
+    });
+
+    return button;
   }
 
   // Scans a full row/column of letters left-to-right (or top-to-bottom) and
