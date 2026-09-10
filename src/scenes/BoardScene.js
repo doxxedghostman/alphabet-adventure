@@ -43,6 +43,7 @@ export class BoardScene extends Phaser.Scene {
     this.level = getLevel(sceneData?.levelId ?? 1);
     this.movesLeft = this.level.maxSwaps;
     this.targetWord = this.level.targetWord;
+    this.levelOver = false;
 
     // Tap-to-select state (for tap-tap swapping) and swipe tracking (for
     // press-drag-release swapping). Both paths funnel into attemptSwap().
@@ -135,7 +136,7 @@ export class BoardScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     bg.setInteractive({ useHandCursor: true }).on('pointerup', () => {
-      if (this.isBusy) return;
+      if (this.isBusy || this.levelOver) return;
       this.shuffleBoard(false);
     });
 
@@ -400,7 +401,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   handlePointerDown(pointer) {
-    if (this.isBusy) return;
+    if (this.isBusy || this.levelOver) return;
     const cell = this.cellFromPixel(pointer.x, pointer.y);
     if (!cell) return;
     const tile = this.grid[cell.row][cell.col];
@@ -436,7 +437,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   handlePointerMove(pointer) {
-    if (this.isBusy || this.swipeHandled || !this.pointerDownTile) return;
+    if (this.isBusy || this.levelOver || this.swipeHandled || !this.pointerDownTile) return;
 
     const dx = pointer.x - this.pointerDownPos.x;
     const dy = pointer.y - this.pointerDownPos.y;
@@ -512,6 +513,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   async attemptSwap(tileA, tileB) {
+    if (this.levelOver) return;
     this.isBusy = true;
     await this.animateSwap(tileA, tileB);
 
@@ -519,7 +521,7 @@ export class BoardScene extends Phaser.Scene {
 
     if (matchedCells.size === 0) {
       // No word anywhere on the board as a result of this swap - bounce
-      // back, classic invalid-swap feedback.
+      // back, classic invalid-swap feedback. Doesn't cost a move.
       const failColor = 0xff4757;
       await Promise.all(
         [tileA, tileB].map((tile) =>
@@ -546,11 +548,95 @@ export class BoardScene extends Phaser.Scene {
       this.showWordToast(wordsFound[0], '#7CFC9A');
     }
 
+    this.spendMove();
+    this.checkTargetWord(wordsFound);
+
     await this.clearTiles(matchedCells);
     await this.collapseAndRefill();
     await this.resolveAutoMatches(2);
     await this.ensureSolvable();
+    this.checkLevelEnd();
     this.isBusy = false;
+  }
+
+  // ---------- level end conditions ----------
+
+  spendMove() {
+    this.movesLeft = Math.max(0, this.movesLeft - 1);
+    this.updateMovesText();
+  }
+
+  // The target word can appear either as the direct result of the player's
+  // swap, or fall into place a moment later during an auto-cascade - either
+  // way it counts, so this is called from both attemptSwap and
+  // resolveAutoMatches.
+  checkTargetWord(wordsFound) {
+    if (this.levelOver) return;
+    if (wordsFound.includes(this.targetWord)) {
+      this.onLevelWon();
+    }
+  }
+
+  // Called once the swap + any chained cascades have fully settled. Only
+  // reachable here if checkTargetWord() didn't already win the level above,
+  // so a level can never simultaneously "win" and "run out of moves" - a
+  // win found mid-cascade always takes priority.
+  checkLevelEnd() {
+    if (this.levelOver) return;
+    if (this.movesLeft <= 0) {
+      this.onLevelLost();
+    }
+  }
+
+  onLevelWon() {
+    this.levelOver = true;
+    this.deselectTile();
+    this.showEndBanner(`${this.targetWord} found!\nLevel Complete`, '#7CFC9A');
+  }
+
+  onLevelLost() {
+    this.levelOver = true;
+    this.deselectTile();
+    this.showEndBanner(`Out of moves\nTry again`, '#ff4757');
+  }
+
+  // Placeholder end-of-level feedback for this batch - a proper Win/Lose
+  // popup with Next Level / Retry buttons lands in the next batch. For now
+  // this just clearly signals the level is over and blocks further input
+  // (handlePointerDown checks this.levelOver).
+  showEndBanner(message, color) {
+    const overlay = this.add.rectangle(
+      BOARD_PIXEL_SIZE.width / 2,
+      BOARD_PIXEL_SIZE.height / 2,
+      BOARD_PIXEL_SIZE.width,
+      BOARD_PIXEL_SIZE.height,
+      0x000000,
+      0.55
+    );
+
+    const label = this.add
+      .text(BOARD_PIXEL_SIZE.width / 2, BOARD_PIXEL_SIZE.height / 2, message, {
+        fontSize: '26px',
+        fontStyle: 'bold',
+        color,
+        fontFamily: 'system-ui, sans-serif',
+        align: 'center',
+      })
+      .setOrigin(0.5)
+      .setAlpha(0)
+      .setScale(0.8);
+
+    this.tweens.add({
+      targets: [overlay, label],
+      alpha: 1,
+      duration: 250,
+    });
+    this.tweens.add({
+      targets: label,
+      scale: 1,
+      duration: 250,
+      ease: 'Back.easeOut',
+    });
   }
 
   // Scans a full row/column of letters left-to-right (or top-to-bottom) and
@@ -609,6 +695,7 @@ export class BoardScene extends Phaser.Scene {
     this.updateScoreText();
 
     this.showComboText(chainLevel, wordsFound);
+    this.checkTargetWord(wordsFound);
 
     await this.clearTiles(matchedCells);
     await this.collapseAndRefill();
