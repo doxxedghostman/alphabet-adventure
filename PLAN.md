@@ -1,4 +1,9 @@
-# Alphabet Adventure
+# WordSwoop
+
+*(Originally prototyped under the working title "Alphabet Adventure" —
+renamed once a studio/publisher identity was attached. The repo/folder
+name is unchanged for now; only in-game and player-facing branding
+uses the new name.)*
 
 A word-connect puzzle game where players swap adjacent letter tiles to
 spell real words, while automatic Candy-Crush-style cascades reward
@@ -6,6 +11,8 @@ lucky board arrangements too — all while completing objectives and
 progressing through an adventure world.
 
 Think: Bookworm + Candy Crush + Adventure.
+
+Published by **Wobblewing Studios**.
 
 Stack: Phaser + Capacitor (reusing patterns from Kid Number Adventure),
 Next.js if a web/PWA build is wanted later.
@@ -15,9 +22,20 @@ Next.js if a web/PWA build is wanted later.
 
 ---
 
+## 0. Boot flow
+
+1. **Splash** — studio logo + game name, with a loading bar that ticks
+   through 40% -> 70% -> 90% -> 100% checkpoints (visibly pausing at
+   each rather than animating smoothly). Whole sequence stays under 3
+   seconds, and plays on every app open, not just first launch.
+2. **Main menu** — see section 1 below.
+3. **Board** — reached by tapping Play.
+
 ## 1. Main menu
 
-- Play
+Currently implemented: **Play** only, which opens the board directly.
+Everything else below is planned, not yet built:
+
 - World map
 - Daily challenge
 - Achievements
@@ -154,8 +172,11 @@ instead of match-aware): tap/swipe two adjacent tiles to swap them,
 whole board scanned for any word(s) the swap created. This is the
 confirmed core loop going forward. Since then: full A-Z alphabet
 restored (was briefly reduced to 10 letters), board resized 7x7 -> 6x6,
-word length range extended 3-5 -> 3-6, and a shuffle bug fixed (see
-`update.md` for the detailed log of all of this).
+word length range extended 3-5 -> 3-6, a shuffle bug fixed, the game
+renamed to WordSwoop under publisher Wobblewing Studios, and a proper
+boot flow added (splash with loading bar -> main menu with a Play
+button -> board), replacing what used to be a direct load straight
+into the board (see `update.md` for the detailed log of all of this).
 
 **Phase 2 — Level objectives & structure**
 Specific target word per level, a limited-swaps or time-limit
@@ -233,3 +254,7 @@ Can we make a 6x6 board where the player swaps adjacent tiles to spell
 real words, with satisfying automatic cascades on top? If that's fun
 after 5-10 minutes of play, build worlds, characters, story,
 monetization, and levels around it.
+
+(This milestone is met — the board plays as described. The splash and
+main menu built on top of it are the first pieces of "worlds,
+characters, story... around it.")

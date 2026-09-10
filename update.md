@@ -192,23 +192,64 @@ Three changes landed together:
 
 ---
 
+### Milestone 4 — rebrand to WordSwoop, proper boot flow (splash -> main menu -> board)
+
+Game renamed from the working title "Alphabet Adventure" to
+**WordSwoop**, published under **Wobblewing Studios** (logo supplied,
+now used in-game). Repo/folder name unchanged for now — only
+player-facing branding changed.
+
+Added a real boot flow, replacing what used to be a direct load
+straight into the board:
+
+- **Splash screen**: studio logo pops in (scale+alpha tween with a
+  small overshoot/settle), triggers a sparkle-star particle burst,
+  then the "WordSwoop" title reveals underneath with its own burst.
+  Ambient sparkles drift in the background throughout. First version
+  of this then just faded straight into the board on a fixed ~2.6s
+  timer with no menu in between and no loading indicator — corrected
+  per feedback (see below).
+- **Loading bar**: replaced the fixed timer with an actual loading bar
+  under the title that ticks through checkpoints — 40% -> 70% -> 90%
+  -> 100% — visibly pausing at each rather than animating smoothly.
+  Whole sequence (logo pop-in + title reveal + loading bar + fade)
+  totals ~2.6s, under the 3s budget. Plays on every app open, not just
+  first launch - no skip-after-first-time logic.
+- **Main menu**: new scene the splash now hands off to instead of the
+  board directly. Shows the logo/title again plus a Play button;
+  tapping Play fades into the board. Deliberately minimal for now —
+  World Map / Daily Challenge / Achievements / Settings (PLAN.md
+  section 1) are follow-ups, not built here.
+- Logo asset: resized from the studio's 1536x1024 upload down to
+  700px wide (transparency preserved), stored under `public/assets/`
+  so Vite serves it as a static file.
+- Verified: build passes each time; Phaser particle API
+  (`add.particles()`, `.explode()`) and the Container
+  `setSize()`+`setInteractive()` pattern for the Play button were both
+  checked directly against the installed Phaser 3.80 source rather
+  than assumed from memory.
+
+---
+
 ## Next up
 
-1. **Divide the alphabet into progressive stages** — e.g. common
+1. **Expand the main menu** — World map, Daily challenge, Achievements,
+   Settings (currently just Play).
+2. **Divide the alphabet into progressive stages** — e.g. common
    letters unlocked first, rarer ones added in later worlds/levels,
    now that the full A-Z pool is confirmed working.
-2. **Phase 2 — level objectives & structure**, replacing today's
+3. **Phase 2 — level objectives & structure**, replacing today's
    endless free-play scoring:
    - Target word per level (e.g. "Find: LION").
    - Swap-limit structure (a move-limit equivalent).
    - Win/lose conditions.
    - Goal / moves / stars header UI (stars row, move counter, goal
      icons like the reference mockup), plus a bottom booster toolbar.
-3. **Target-word solvability**, called out in `PLAN.md`: once levels
+4. **Target-word solvability**, called out in `PLAN.md`: once levels
    have a specific target word + swap limit, today's "does *a* word
    exist" solver isn't enough — need "is *the target word* reachable
    within N swaps, accounting for obstacles/wildcards." Needs a
    level-specific solver/simulator or a manual playtest step before
    Phase 6 content production scales up.
-4. Revisit Special Tiles' length thresholds (`PLAN.md` §4) now that 6
+5. Revisit Special Tiles' length thresholds (`PLAN.md` §4) now that 6
    is the max word length, not 5.
