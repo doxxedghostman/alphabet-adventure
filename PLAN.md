@@ -123,6 +123,15 @@ Avoid "find a word" as the only objective. Mix in:
 Reference mockup: `docs/reference/world-map-mockup.png` (World Select
 grid + Candy Garden level path, forest-adventure art style).
 
+Candy Garden art generated and shipped: `public/assets/candy-garden-
+thumb.jpg` (480x360 world-select tile) and `public/assets/candy-garden-
+bg.jpg` (600x900 level-path background, tall enough for a scrollable
+20-node path). Both compressed from multi-MB AI-generator originals
+down to 60KB/175KB via resize-to-actual-display-size + JPEG (no
+transparency needed for either, so JPEG over PNG for the size win).
+This is the only world with real art so far; `WorldSelectScene` should
+show the other 9 as locked/placeholder until their art exists.
+
 - Two new scenes: `WorldSelectScene` (2x2 scrollable grid of world
   tiles, locked worlds shown greyed out with a padlock icon per the
   mockup) and `LevelPathScene` (per-world winding path of 20 numbered

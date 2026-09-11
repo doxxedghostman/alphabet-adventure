@@ -563,3 +563,20 @@ art assets needed total (10 thumbnails + 10 backgrounds); nodes/stars/
 lock icon/signpost/back button are code-drawn, not per-level art.
 
 No code changed — docs and reference image only.
+
+---
+
+### Milestone 11 — Candy Garden world map art generated + compressed
+
+Generated a world-select thumbnail and a level-path background for
+Candy Garden (World 1) via AI image generation, matching the style of
+the earlier reference mockup. Originals came in at 2.4MB and 2.8MB —
+resized to their actual in-game display size (480x360 thumbnail,
+600x900 scrollable path background) and re-encoded as JPEG (no alpha
+needed for either), landing at 60KB and 175KB. Saved to
+`public/assets/candy-garden-thumb.jpg` and `public/assets/candy-garden-
+bg.jpg`.
+
+Not done here: the other 9 worlds' art, and no code wired up yet
+(`WorldSelectScene`/`LevelPathScene` from Milestone 10's plan don't
+exist yet — this is art assets only).
