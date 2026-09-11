@@ -152,6 +152,41 @@ function findWordRun(grid, word) {
   return null;
 }
 
+// Scans every row/column, both reading directions, for ANY dictionary
+// word (not a specific target) appearing as a contiguous run. Returns
+// the first one found (cells + the word), or null if the board is
+// completely clean. Used to catch accidental words scrambleGrid's raw
+// swaps introduce as a side effect - it only ever intended to move the
+// target word, but a random swap can just as easily create some other
+// unrelated word purely by chance.
+function findAnyWordRun(grid) {
+  const size = grid.length;
+  for (let row = 0; row < size; row++) {
+    const rowStr = grid[row].join('');
+    for (let len = MAX_WORD_LENGTH; len >= MIN_WORD_LENGTH; len--) {
+      for (let start = 0; start + len <= size; start++) {
+        const segment = rowStr.slice(start, start + len);
+        if (WORD_SET.has(segment) || WORD_SET.has([...segment].reverse().join(''))) {
+          return Array.from({ length: len }, (_, i) => [row, start + i]);
+        }
+      }
+    }
+  }
+  for (let col = 0; col < size; col++) {
+    let colStr = '';
+    for (let row = 0; row < size; row++) colStr += grid[row][col];
+    for (let len = MAX_WORD_LENGTH; len >= MIN_WORD_LENGTH; len--) {
+      for (let start = 0; start + len <= size; start++) {
+        const segment = colStr.slice(start, start + len);
+        if (WORD_SET.has(segment) || WORD_SET.has([...segment].reverse().join(''))) {
+          return Array.from({ length: len }, (_, i) => [start + i, col]);
+        }
+      }
+    }
+  }
+  return null;
+}
+
 // Applies `scrambleCount` random adjacent swaps directly to the grid's
 // letters (not simulated through game rules - this is generation-time
 // setup, not player input), then verifies `word` is no longer sitting
@@ -159,9 +194,16 @@ function findWordRun(grid, word) {
 // touching the word's own cells (bug: was letting the word survive
 // scrambling intact ~45% of the time on 200-trial testing) - the
 // verification loop below closes that gap by forcing corrective swaps
-// directly on the surviving run until it's broken. Returns the total
-// number of swaps actually applied (random + corrective), which is what
-// the "provably solvable within this many swaps" guarantee is based on.
+// directly on the surviving run until it's broken. Also checks for and
+// breaks any OTHER accidental word the raw swaps happened to create as a
+// side effect - found via the offline solver's search diagnostics: a
+// freshly scrambled board routinely had 3-4 unrelated accidental words
+// sitting on it before the player ever touched it, which in the real
+// game means either an unwanted auto-clear the instant the level loads,
+// or matched tiles sitting inertly in a state the rules say shouldn't
+// exist. Returns the total number of swaps actually applied (random +
+// corrective), which is what the "provably solvable within this many
+// swaps" guarantee is based on.
 function scrambleGrid(grid, scrambleCount, word) {
   const pairs = adjacentPairs();
   let applied = 0;
@@ -175,12 +217,14 @@ function scrambleGrid(grid, scrambleCount, word) {
   }
 
   // Safety cap: a single corrective swap almost always breaks a straight
-  // run, so this should resolve in 1-2 iterations in practice. Capped to
-  // avoid any theoretical infinite loop.
-  const MAX_CORRECTIVE_ATTEMPTS = 20;
+  // run, so this should resolve in a handful of iterations in practice.
+  // Capped to avoid any theoretical infinite loop (e.g. a corrective swap
+  // for one problem coincidentally recreating the other).
+  const MAX_CORRECTIVE_ATTEMPTS = 150;
   let attempts = 0;
-  let run = findWordRun(grid, word);
-  while (run && attempts < MAX_CORRECTIVE_ATTEMPTS) {
+  while (attempts < MAX_CORRECTIVE_ATTEMPTS) {
+    const run = findWordRun(grid, word) ?? findAnyWordRun(grid);
+    if (!run) break;
     const [r1, c1] = run[Math.floor(Math.random() * run.length)];
     const neighborPairs = pairs.filter(
       ([pr1, pc1, pr2, pc2]) => (pr1 === r1 && pc1 === c1) || (pr2 === r1 && pc2 === c1)
@@ -191,7 +235,6 @@ function scrambleGrid(grid, scrambleCount, word) {
     grid[pr2][pc2] = tmp;
     applied += 1;
     attempts += 1;
-    run = findWordRun(grid, word);
   }
 
   return applied;
