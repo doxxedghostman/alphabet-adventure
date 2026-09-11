@@ -851,7 +851,19 @@ export class BoardScene extends Phaser.Scene {
 
   // Scans a full row/column of letters left-to-right (or top-to-bottom) and
   // greedily takes the longest dictionary word at each position, then jumps
-  // past it - so overlapping substrings don't all score separately.
+  // past it - so overlapping substrings don't all score separately. Checks
+  // BOTH reading directions (matches PLAN.md §2's "row or column, either
+  // reading direction" and hasValidSwap/wouldSwapCreateWord's own
+  // lineHasWord, which already checked both) - this used to be forward-only,
+  // which meant a swap hasValidSwap() considered "legal" (because it forms
+  // a backward-reading word) could actually bounce back with zero effect
+  // when played, since this function never saw the reverse match. That
+  // let a board pass the auto-reshuffle safety-net check while having zero
+  // swaps that actually cleared anything - found via playtest simulation,
+  // reproducible in ~1-11% of trials depending on level. When a reverse
+  // match wins, the reported word is the correctly-spelled dictionary word
+  // (not the on-board reversed letters), matching how checkWinCondition
+  // compares against `targetWord`.
   scanLineForWords(letters) {
     const found = [];
     let i = 0;
@@ -859,9 +871,15 @@ export class BoardScene extends Phaser.Scene {
       let matchedLen = 0;
       const maxLen = Math.min(MAX_WORD_LENGTH, letters.length - i);
       for (let len = maxLen; len >= MIN_WORD_LENGTH; len--) {
-        const word = letters.slice(i, i + len).join('');
-        if (WORD_SET.has(word)) {
-          found.push({ start: i, length: len, word });
+        const segment = letters.slice(i, i + len).join('');
+        if (WORD_SET.has(segment)) {
+          found.push({ start: i, length: len, word: segment });
+          matchedLen = len;
+          break;
+        }
+        const reversed = segment.split('').reverse().join('');
+        if (WORD_SET.has(reversed)) {
+          found.push({ start: i, length: len, word: reversed });
           matchedLen = len;
           break;
         }
