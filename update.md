@@ -284,27 +284,83 @@ ending, rather than endless free-play scoring.
 
 ---
 
+### Milestone 6 — target-word solvability resolved (guaranteed-board generator) + 200-level plan locked in
+
+Decided the content scale: **200 levels total** (was conflicting
+between 150 and 180 in `PLAN.md` — resolved to 200 across the existing
+6 worlds, ~33-34 levels each). Of those, **every 5th level (40 total)**
+is a `type: 'target'` level with a specific word to find; the rest will
+be free-play (`type: 'free'`, not yet built — only the target-word
+levels were blocked on the solvability problem, so that's what got
+built first).
+
+That solvability problem (open since Milestone 5) is now resolved —
+without a live solver. A real solver would need to search over
+sequences of swaps (not just one swap deep like `hasValidSwap()`),
+accounting for cascades scrambling progress along the way — expensive
+and fragile. Instead, new `src/utils/levelGenerator.js` builds the
+board **backwards** from a solved state:
+
+1. Place `targetWord` correctly, in a straight line (random row or
+   column), on an otherwise-empty board.
+2. Fill every other cell with the same weighted-random,
+   avoid-accidental-words logic the free-play board already used.
+3. Apply `scrambleCount` random adjacent-tile swaps directly to the
+   letter grid to scramble the word away from its solved position.
+
+Since the scramble path is known, the board is provably solvable in at
+most `scrambleCount` swaps — reversing the scramble always works, even
+though the player will likely find a different, possibly shorter path.
+No search needed, just arithmetic. `recommendedMaxSwaps()` adds a
+buffer on top (scrambleCount + 50% + 3) so the player isn't held to the
+exact reverse path.
+
+Wired into `BoardScene.createInitialBoard()`: levels with `type:
+'target'` now call `generateGuaranteedBoard()` instead of the old
+random-fill-then-patch approach (`pickNonMatchingLetter` +
+`ensureTargetLettersPresent`, which only guaranteed the *letters*
+existed somewhere on the board, not that the *word* was reachable in
+time). All 3 existing levels (BAG, CAT, GARDEN) now carry `type:
+'target'` in `levels.js` and use this generator.
+
+Scramble counts per word length are placeholders in
+`SCRAMBLE_COUNT_BY_LENGTH` (3: 6, 4: 9, 5: 12, 6: 15) — picked as a
+starting point, not yet playtested. Too few scrambles and the word
+looks near-complete on load (too easy); too many and clearing it eats
+most of the swap budget just resetting the board (too punishing).
+Finding the actual sweet spot per length is next, once there's time to
+play through several target-word levels back to back.
+
+- Not done here: `type: 'free'` levels (no fixed word — still just
+  `type: 'target'` levels exist), the scramble-count playtest pass
+  above, and accounting for obstacles/wildcards in the generator once
+  Phase 3 adds them (they don't exist yet, so out of scope for now but
+  could block the scrambled swap path once they do).
+
+---
+
 ## Next up
 
-1. **Target-word solvability** (see `PLAN.md`): today's solver only
-   proves "a word exists" or "a swap exists," not "this specific
-   target word is reachable within N moves." Needs either a
-   level-specific solver/simulator run before a level ships, or a
-   manual playtest step, before adding many more levels.
-2. **Expand the main menu** — World map, Daily challenge, Achievements,
+1. **Playtest scramble-count sweet spot** per word length (see
+   Milestone 6) — tune `SCRAMBLE_COUNT_BY_LENGTH` based on how
+   easy/punishing target-word levels actually feel to play.
+2. **Build `type: 'free'` levels** — the free-play objective shape
+   (score target? move limit? something else?) isn't defined yet;
+   only target-word levels were blocked on solvability.
+3. **Expand the main menu** — World map, Daily challenge, Achievements,
    Settings (currently just Play).
-3. **Divide the alphabet into progressive stages** — e.g. common
+4. **Divide the alphabet into progressive stages** — e.g. common
    letters unlocked first, rarer ones added in later worlds/levels,
    now that the full A-Z pool is confirmed working.
-4. Revisit Special Tiles' length thresholds (`PLAN.md` §4) now that 6
+5. Revisit Special Tiles' length thresholds (`PLAN.md` §4) now that 6
    is the max word length, not 5.
-5. **My Word Book** (new idea from the reference mockups, not
+6. **My Word Book** (new idea from the reference mockups, not
    previously in `PLAN.md`): a running log of every word the player's
    ever cleared, shown with pronunciation. Cheap to build — log
    distinct cleared words per save, pronunciation via the browser's
    built-in speech API (no audio assets needed). Worth adding as a
    Phase 4/5 nice-to-have.
-6. Stars/rating per level, coins/currency, booster inventory
+7. Stars/rating per level, coins/currency, booster inventory
    (Rocket/Rainbow/Bomb/Shuffle as spend-to-use items, distinct from
    the auto-triggered special tiles in `PLAN.md` §4 — worth deciding
    how those two systems relate before building either further).

@@ -119,14 +119,21 @@ Avoid "find a word" as the only objective. Mix in:
 
 Real adventure structure instead of a flat level list:
 
-1. Alphabet Forest — levels 1-30
-2. Animal Kingdom — levels 31-60
-3. Ocean — levels 61-90
-4. Desert — levels 91-120
-5. Ice Kingdom — levels 121-150
-6. Space — levels 151-180
+1. Alphabet Forest — levels 1-34
+2. Animal Kingdom — levels 35-68
+3. Ocean — levels 69-102
+4. Desert — levels 103-136
+5. Ice Kingdom — levels 137-168
+6. Space — levels 169-200
 
 Each world gets its own art, music, obstacle set, and vocabulary.
+
+Total decided at **200 levels** (was conflicting between 180 here and 150
+in §15 — resolved to 200 across the same 6 worlds above, ~33-34 levels
+each rather than a flat 30). Of those, every 5th level (**40 total**) is
+a `type: 'target'` level with a specific word to find; the rest are
+free-play. See §15 Phase 6 and the solvability section below for how
+target levels are generated.
 
 ## 10. Characters
 
@@ -179,18 +186,20 @@ button -> board), replacing what used to be a direct load straight
 into the board (see `update.md` for the detailed log of all of this).
 
 **Phase 2 — Level objectives & structure (done, see `update.md`)**
-Levels are plain data (`src/data/levels.js`: targetWord + maxSwaps).
-The board header shows a Level badge, a Moves counter, and the goal
-("Find: WORD"). A move is spent on every successful swap (invalid
-swaps that bounce back are free). The target word can land either
-directly from the player's swap or via a chained cascade — either way
-wins the level, even mid-chain, taking priority over running out of
-moves. Win and lose each end in a card popup (title, message, score,
-two buttons): win -> Next Level / Replay, lose -> Try Again / Main
-Menu. 3 starter levels exist (BAG, CAT, GARDEN). Not yet built: World
-Map / Daily Challenge / Achievements / Settings on the main menu
-(still Play-only), obstacles, and special tiles — those stay Phase
-3/4 as originally planned.
+Levels are plain data (`src/data/levels.js`: type + targetWord +
+maxSwaps). The board header shows a Level badge, a Moves counter, and
+the goal ("Find: WORD"). A move is spent on every successful swap
+(invalid swaps that bounce back are free). The target word can land
+either directly from the player's swap or via a chained cascade —
+either way wins the level, even mid-chain, taking priority over running
+out of moves. Win and lose each end in a card popup (title, message,
+score, two buttons): win -> Next Level / Replay, lose -> Try Again /
+Main Menu. 3 starter levels exist (BAG, CAT, GARDEN), all `type:
+'target'` and built via the guaranteed-board generator (see solvability
+section below). Not yet built: `type: 'free'` levels, World Map / Daily
+Challenge / Achievements / Settings on the main menu (still Play-only),
+obstacles, and special tiles — those stay Phase 3/4 as originally
+planned.
 
 **Phase 3 — Special mechanics**
 Rocket, bomb, wildcard, ice, locks (see section 4, triggers now based
@@ -204,7 +213,10 @@ Characters, animated letters, particle effects, explosions, sound
 effects, music, level-complete animations.
 
 **Phase 6 — Content**
-Target: ~5 worlds x 30 levels = 150 levels. Build a level-data format
+Target: 6 worlds, **200 levels total**. Every 5th level (40 total) is a
+`type: 'target'` level (specific word, board generated via
+`generateGuaranteedBoard()` — see solvability section below); the rest
+are free-play. Build a level-data format
 so levels are defined as data, not hand-coded, e.g.:
 
 ```
@@ -219,7 +231,7 @@ Stars: 10000 / 15000 / 20000
 
 This is what makes generating hundreds of levels tractable.
 
-## Open technical risk: solvability — resolved for free-play, open for target-word levels
+## Solvability — resolved for free-play, resolved for target-word levels
 
 Under the Word-Swap mechanic, the board must always have at least one
 adjacent swap that would create a word — otherwise the player has no
@@ -243,12 +255,26 @@ after every other board change. Spot-checked with 500 random 6x6
 boards using the full alphabet and the 3-6 word range: 0 came back
 stuck.
 
-**Still open (Phase 2+):** once levels have a specific *target* word
-and a swap limit, the existing solver only proves "a word exists," not
-"the target word is reachable within N swaps, accounting for
-obstacles/wildcards." That needs either a level-specific solver/
-simulator run before a level ships, or a manual playtest step in the
-content pipeline. Decide before Phase 6 content production scales up.
+**Resolved (target-word levels):** a live solver proving "targetWord is
+reachable within N swaps" was ruled out as expensive and unreliable
+(search over swap sequences, cascades complicate it further). Instead,
+`generateGuaranteedBoard()` (`src/utils/levelGenerator.js`) builds the
+board backwards from a solved state: place targetWord correctly in a
+straight line, fill the rest of the board normally, then apply
+`scrambleCount` random adjacent-tile swaps. Since the scramble path is
+known, the board is provably solvable in at most `scrambleCount` swaps —
+no search needed. `maxSwaps` per level just needs to be >= scrambleCount
+(a buffer on top, via `recommendedMaxSwaps()`, gives the player slack
+since they won't necessarily find the exact reverse path). Wired into
+`BoardScene.createInitialBoard()` for any level with `type: 'target'`.
+Placeholder scramble counts by word length live in
+`SCRAMBLE_COUNT_BY_LENGTH` (3-letter: 6, 4: 9, 5: 12, 6: 15) — the
+sweet spot per length (too few scrambles = word looks near-complete and
+easy; too many = eats most of the swap budget resetting the board) still
+needs playtesting and tuning, this is just a starting point. Obstacles/
+wildcards aren't accounted for yet since they don't exist in the game
+yet (Phase 3) — revisit this generator once they're built, since they
+could block the scrambled swap path.
 
 ## Game loop
 
