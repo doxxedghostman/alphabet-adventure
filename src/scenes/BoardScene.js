@@ -958,7 +958,8 @@ export class BoardScene extends Phaser.Scene {
         fontFamily: 'system-ui, sans-serif',
       })
       .setOrigin(0.5)
-      .setAlpha(0);
+      .setAlpha(0)
+      .setDepth(1000);
 
     this.tweens.add({
       targets: label,
@@ -996,7 +997,8 @@ export class BoardScene extends Phaser.Scene {
       )
       .setOrigin(0.5)
       .setAlpha(0)
-      .setScale(0.7);
+      .setScale(0.7)
+      .setDepth(1000);
 
     this.cameras.main.shake(120, 0.004);
 
