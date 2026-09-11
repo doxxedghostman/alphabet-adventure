@@ -44,7 +44,8 @@ export class BoardScene extends Phaser.Scene {
     this.level = getLevel(sceneData?.levelId ?? 1);
     this.nextLevelId = getNextLevelId(this.level.id);
     this.movesLeft = this.level.maxSwaps;
-    this.targetWord = this.level.targetWord;
+    this.targetWord = this.level.targetWord; // only set for type: 'target'
+    this.scoreTarget = this.level.scoreTarget; // only set for type: 'free'
     this.levelOver = false;
 
     // Tap-to-select state (for tap-tap swapping) and swipe tracking (for
@@ -68,8 +69,13 @@ export class BoardScene extends Phaser.Scene {
     this.createPill(20, 18, `Level ${this.level.id}`, 0xffd93d, 'left');
     this.movesPill = this.createPill(BOARD_PIXEL_SIZE.width - 20, 18, `Moves ${this.movesLeft}`, 0x6bc9ef, 'right');
 
+    // 'target' levels show the word to find; 'free' levels show the
+    // score to reach instead - the score line itself then shows progress
+    // toward it ("120 / 500") rather than just a running total.
+    const goalLabel = this.level.type === 'free' ? `Reach ${this.scoreTarget} points` : `Find: ${this.targetWord}`;
+
     this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 60, `Find: ${this.targetWord}`, {
+      .text(BOARD_PIXEL_SIZE.width / 2, 60, goalLabel, {
         fontSize: '19px',
         fontStyle: 'bold',
         color: '#ffffff',
@@ -78,13 +84,19 @@ export class BoardScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.scoreText = this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 92, 'Score: 0', {
+      .text(BOARD_PIXEL_SIZE.width / 2, 92, this.scoreDisplayText(), {
         fontSize: '14px',
         fontStyle: 'bold',
         color: '#a79ccf',
         fontFamily: 'system-ui, sans-serif',
       })
       .setOrigin(0.5, 0);
+  }
+
+  // 'free' levels show progress toward the score target; 'target' levels
+  // just show the running score (no fixed number to compare it to).
+  scoreDisplayText() {
+    return this.level.type === 'free' ? `Score: ${this.score} / ${this.scoreTarget}` : `Score: ${this.score}`;
   }
 
   // Small rounded-rect + centered text, used for the Level/Moves badges.
@@ -250,10 +262,13 @@ export class BoardScene extends Phaser.Scene {
     // has drifted out entirely, inject it here before shuffling (the later
     // resolveAutoMatches(1) call below won't help with this: it only runs
     // ensureTargetLettersPresent() when a cascade actually happens).
-    for (const letter of new Set(this.targetWord.split(''))) {
-      if (!originalLetters.includes(letter)) {
-        const idx = Math.floor(Math.random() * originalLetters.length);
-        originalLetters[idx] = letter;
+    // Free-play levels have no target word, so nothing to preserve here.
+    if (this.targetWord) {
+      for (const letter of new Set(this.targetWord.split(''))) {
+        if (!originalLetters.includes(letter)) {
+          const idx = Math.floor(Math.random() * originalLetters.length);
+          originalLetters[idx] = letter;
+        }
       }
     }
 
@@ -367,6 +382,7 @@ export class BoardScene extends Phaser.Scene {
   // random too, so a needed letter can vanish again once its last copy on
   // the board gets cleared as part of scoring some other word).
   ensureTargetLettersPresent() {
+    if (!this.targetWord) return; // free-play levels have no target word to guarantee
     const needed = [...new Set(this.targetWord.split(''))].filter((letter) => !this.boardHasLetter(letter));
     if (needed.length === 0) return;
 
@@ -629,7 +645,7 @@ export class BoardScene extends Phaser.Scene {
     }
 
     this.spendMove();
-    this.checkTargetWord(wordsFound);
+    this.checkWinCondition(wordsFound);
 
     await this.clearTiles(matchedCells);
     await this.collapseAndRefill();
@@ -647,21 +663,28 @@ export class BoardScene extends Phaser.Scene {
     this.updateMovesText();
   }
 
-  // The target word can appear either as the direct result of the player's
-  // swap, or fall into place a moment later during an auto-cascade - either
-  // way it counts, so this is called from both attemptSwap and
-  // resolveAutoMatches.
-  checkTargetWord(wordsFound) {
+  // The win condition can be met either as the direct result of the
+  // player's swap, or a moment later during an auto-cascade - either way
+  // it counts, so this is called from both attemptSwap and
+  // resolveAutoMatches. Branches by level type:
+  //   'target' - wordsFound must include the specific target word.
+  //   'free'   - score must reach scoreTarget (wordsFound is irrelevant
+  //              here since ANY word contributes to the free-play score).
+  checkWinCondition(wordsFound) {
     if (this.levelOver) return;
+    if (this.level.type === 'free') {
+      if (this.score >= this.scoreTarget) this.onLevelWon();
+      return;
+    }
     if (wordsFound.includes(this.targetWord)) {
       this.onLevelWon();
     }
   }
 
   // Called once the swap + any chained cascades have fully settled. Only
-  // reachable here if checkTargetWord() didn't already win the level above,
-  // so a level can never simultaneously "win" and "run out of moves" - a
-  // win found mid-cascade always takes priority.
+  // reachable here if checkWinCondition() didn't already win the level
+  // above, so a level can never simultaneously "win" and "run out of
+  // moves" - a win found mid-cascade always takes priority.
   checkLevelEnd() {
     if (this.levelOver) return;
     if (this.movesLeft <= 0) {
@@ -672,10 +695,11 @@ export class BoardScene extends Phaser.Scene {
   onLevelWon() {
     this.levelOver = true;
     this.deselectTile();
+    const message = this.level.type === 'free' ? `You reached ${this.score} points!` : `You spelled ${this.targetWord}`;
     this.showEndPopup({
       title: 'Great Word!',
       titleColor: '#ffd93d',
-      message: `You spelled ${this.targetWord}`,
+      message,
       messageColor: '#7CFC9A',
       primaryLabel: this.nextLevelId ? 'Next Level' : 'Back to Menu',
       primaryAction: () => this.goToNextLevelOrMenu(),
@@ -687,10 +711,13 @@ export class BoardScene extends Phaser.Scene {
   onLevelLost() {
     this.levelOver = true;
     this.deselectTile();
+    const message = this.level.type === 'free'
+      ? `Needed: ${this.scoreTarget} points (got ${this.score})`
+      : `Needed: ${this.targetWord}`;
     this.showEndPopup({
       title: 'Out of Moves',
       titleColor: '#ff4757',
-      message: `Needed: ${this.targetWord}`,
+      message,
       messageColor: '#a79ccf',
       primaryLabel: 'Try Again',
       primaryAction: () => this.restartLevel(),
@@ -878,7 +905,7 @@ export class BoardScene extends Phaser.Scene {
     this.updateScoreText();
 
     this.showComboText(chainLevel, wordsFound);
-    this.checkTargetWord(wordsFound);
+    this.checkWinCondition(wordsFound);
 
     await this.clearTiles(matchedCells);
     await this.collapseAndRefill();
@@ -1032,6 +1059,6 @@ export class BoardScene extends Phaser.Scene {
   }
 
   updateScoreText() {
-    this.scoreText.setText(`Score: ${this.score}`);
+    this.scoreText.setText(this.scoreDisplayText());
   }
 }
