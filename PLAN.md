@@ -262,20 +262,21 @@ button -> board), replacing what used to be a direct load straight
 into the board (see `update.md` for the detailed log of all of this).
 
 **Phase 2 — Level objectives & structure (done, see `update.md`)**
-Levels are plain data (`src/data/levels.js`: type + targetWord +
-maxSwaps). The board header shows a Level badge, a Moves counter, and
-the goal ("Find: WORD"). A move is spent on every successful swap
-(invalid swaps that bounce back are free). The target word can land
+Levels are plain data (`src/data/levels.js`: type + targetWord/
+scoreTarget + maxSwaps). The board header shows a Level badge, a Moves
+counter, and the goal — "Find: WORD" for `type: 'target'`, "Reach N
+points" for `type: 'free'`. A move is spent on every successful swap
+(invalid swaps that bounce back are free). The win condition can land
 either directly from the player's swap or via a chained cascade —
 either way wins the level, even mid-chain, taking priority over running
 out of moves. Win and lose each end in a card popup (title, message,
 score, two buttons): win -> Next Level / Replay, lose -> Try Again /
-Main Menu. 3 starter levels exist (BAG, CAT, GARDEN), all `type:
-'target'` and built via the guaranteed-board generator (see solvability
-section below). Not yet built: `type: 'free'` levels, World Map / Daily
-Challenge / Achievements / Settings on the main menu (still Play-only),
-obstacles, and special tiles — those stay Phase 3/4 as originally
-planned.
+Main Menu. 5 levels exist: 3 `type: 'target'` (BAG, CAT, GARDEN, built
+via the guaranteed-board generator) and 2 `type: 'free'` (score-target
+demo levels — see §16 Phase 6 for why score target was chosen as the
+free-play objective). Not yet built: World Map / Daily Challenge /
+Achievements / Settings on the main menu (still Play-only), obstacles,
+and special tiles — those stay Phase 3/4 as originally planned.
 
 **Phase 3 — Special mechanics**
 Rocket, bomb, wildcard, ice, locks (see section 4, triggers now based
@@ -294,7 +295,14 @@ effects, music, level-complete animations.
 Target: 10 worlds (§9), **200 levels total**. Every 5th level (40
 total) is a `type: 'target'` level (specific word, board generated via
 `generateGuaranteedBoard()` — see solvability section below); the rest
-are free-play. Build a level-data format
+(160) are `type: 'free'` — **score target**: reach `scoreTarget` points
+within `maxSwaps` swaps, any words count. Chosen over "find N words" or
+a bare move-limit objective since it reuses the existing scoring math
+directly and doubles as the star threshold for the planned §14 3-star
+meter. Both types are implemented in `BoardScene.js`/`levels.js`; only
+5 demo levels exist so far (3 target, 2 free) — authoring the full
+200-level list (words per world, score targets per difficulty tier) is
+still open. Build a level-data format
 so levels are defined as data, not hand-coded, e.g.:
 
 ```

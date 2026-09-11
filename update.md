@@ -339,28 +339,98 @@ play through several target-word levels back to back.
 
 ---
 
+### Milestone 7 — switched to 10-world layout (docs only)
+
+Replaced the 6-world/~33-per-world map in `PLAN.md` §9 with a 10-world/
+20-per-world layout from an external game-design spec: Candy Garden,
+Jungle Jumble, Ocean Words, Dino Valley, Cloud Kingdom, Crystal Forest,
+Magic Mountain, Space Words, Ancient Valley, WordSwoop Kingdom. 200
+levels total unchanged. Character list updated to loosely match (rough
+placeholders, not final design). Word length stayed at 3-6 — explicitly
+rejected shrinking to the spec's 3-5 range, since the board/generator/
+wordlist already support 3-6 and that wasn't up for discussion.
+
+Also documented (not built) several systems from the same spec as
+planned main-menu/meta-layer additions, not board mechanics: Lives,
+Bombs, Combo/streak multiplier, Boss/Champion levels every 20th,
+3-star scoring, coins, daily login rewards (`PLAN.md` §14).
+
+No code changed — docs only, so no build verification needed beyond
+confirming the file still parses as valid markdown.
+
+---
+
+### Milestone 8 — free-play levels (`type: 'free'`, score-target objective)
+
+Resolved the last item blocking most of the 200-level content: what a
+free-play level's objective actually is. Went with **score target** —
+reach `scoreTarget` points within `maxSwaps` swaps, any words count —
+over "find N words" or a bare move limit, since it reuses the existing
+scoring math untouched and doubles as the star threshold the planned
+§14 3-star meter needs anyway.
+
+Changes in `BoardScene.js`:
+- `createHeader()` and `updateScoreText()` now branch by
+  `this.level.type`: `'target'` shows "Find: WORD"; `'free'` shows
+  "Reach N points" as the goal and "Score: X / N" as live progress
+  (was just "Score: X" for everyone before).
+- `checkTargetWord()` renamed to `checkWinCondition()` and now branches
+  by type: `'target'` keeps the old "did wordsFound include the target"
+  check; `'free'` just checks `score >= scoreTarget`.
+- `onLevelWon()` / `onLevelLost()` popup messages branch by type so
+  they don't reference `targetWord` (which is `undefined` for free
+  levels) — free levels report the score reached/needed instead.
+- `ensureTargetLettersPresent()` now no-ops immediately if
+  `targetWord` is unset, since free levels have no target letters to
+  guarantee.
+- Found and fixed a real bug while doing this: `shuffleBoard()` had an
+  unguarded `this.targetWord.split('')` that would have thrown the
+  moment a player hit Shuffle on a free-play level. Guarded behind
+  `if (this.targetWord)`.
+
+`levels.js`: documented the two-type schema in full, added 2 working
+`type: 'free'` demo levels (ids 4-5, scoreTarget 300/600) alongside the
+existing 3 `type: 'target'` levels. Ids don't yet follow the eventual
+"every 5th is target" numbering — these are functional demo levels,
+not the final authored list.
+
+- Verified: `npm run build` passes clean after each logical change
+  (header/score branch, win/lose branch, the shuffle bug fix); grepped
+  every remaining `targetWord` reference in `BoardScene.js` by hand
+  afterward to confirm none are reachable unguarded for a `type:
+  'free'` level.
+- Not done here: the scramble-count playtest (Milestone 6's leftover),
+  and authoring the other ~155 free-play levels + ~36 remaining target
+  words — this milestone only proves the `'free'` type works, it
+  doesn't populate the level list.
+
+---
+
 ## Next up
 
 1. **Playtest scramble-count sweet spot** per word length (see
    Milestone 6) — tune `SCRAMBLE_COUNT_BY_LENGTH` based on how
    easy/punishing target-word levels actually feel to play.
-2. **Build `type: 'free'` levels** — the free-play objective shape
-   (score target? move limit? something else?) isn't defined yet;
-   only target-word levels were blocked on solvability.
-3. **Expand the main menu** — World map, Daily challenge, Achievements,
+2. **Playtest the score-target numbers** (see Milestone 8) — the 2 demo
+   free-play levels (300/600 points) are guesses, not verified against
+   actual play.
+3. **Author the full 200-level list** — pick the remaining ~36 target
+   words (themed per world) and ~155 more free-play score targets,
+   scaling difficulty per PLAN.md §4's progression curve.
+4. **Expand the main menu** — World map, Daily challenge, Achievements,
    Settings (currently just Play).
-4. **Divide the alphabet into progressive stages** — e.g. common
+5. **Divide the alphabet into progressive stages** — e.g. common
    letters unlocked first, rarer ones added in later worlds/levels,
    now that the full A-Z pool is confirmed working.
-5. Revisit Special Tiles' length thresholds (`PLAN.md` §4) now that 6
+6. Revisit Special Tiles' length thresholds (`PLAN.md` §4) now that 6
    is the max word length, not 5.
-6. **My Word Book** (new idea from the reference mockups, not
+7. **My Word Book** (new idea from the reference mockups, not
    previously in `PLAN.md`): a running log of every word the player's
    ever cleared, shown with pronunciation. Cheap to build — log
    distinct cleared words per save, pronunciation via the browser's
    built-in speech API (no audio assets needed). Worth adding as a
    Phase 4/5 nice-to-have.
-7. Stars/rating per level, coins/currency, booster inventory
+8. Stars/rating per level, coins/currency, booster inventory
    (Rocket/Rainbow/Bomb/Shuffle as spend-to-use items, distinct from
    the auto-triggered special tiles in `PLAN.md` §4 — worth deciding
    how those two systems relate before building either further).
