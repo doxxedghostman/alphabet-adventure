@@ -1,16 +1,30 @@
-// Phase 2 level data. Each level is just a target word to produce via a
-// swap and a swap budget to do it in — kept as plain data (PLAN.md §15,
-// Phase 6) so new levels don't require touching BoardScene's logic.
+// Level data — kept as plain data (PLAN.md §15, Phase 6) so new levels
+// don't require touching BoardScene's logic.
 //
-// NOTE on solvability: today nothing guarantees a given targetWord is
-// actually reachable within maxSwaps on a random board — that's the "still
-// open" risk called out in PLAN.md under Open technical risk. Picked short,
-// common, high-frequency-letter words here to keep the odds good in the
-// meantime; a real per-level solver/playtest pass is a follow-up.
+// Two level types (decided after the target-word solvability discussion):
+//   - type: 'target'    — every 5th level (40 of the planned 200 total).
+//                         Board is built by generateGuaranteedBoard()
+//                         (src/utils/levelGenerator.js), which places the
+//                         word solved then scrambles it a known number of
+//                         swaps — so it's PROVABLY reachable within
+//                         maxSwaps, not just "probably" like the old
+//                         random-fill approach. This is what used to be
+//                         the "still open" solvability risk — resolved.
+//   - type: 'free'      — normal free-play board (any word counts, no
+//                         fixed target). Not yet represented in this file;
+//                         free-play levels will need their own objective
+//                         shape (e.g. score/move-limit) as a follow-up —
+//                         only the target-word levels were blocked on
+//                         solvability, so that's what got built first.
+//
+// scrambleCount is optional per-level — omit it to use the
+// SCRAMBLE_COUNT_BY_LENGTH default for that word's length. Override it
+// once playtesting finds the per-length sweet spot isn't right for a
+// specific word.
 export const LEVELS = [
-  { id: 1, targetWord: 'BAG', maxSwaps: 15 },
-  { id: 2, targetWord: 'CAT', maxSwaps: 15 },
-  { id: 3, targetWord: 'GARDEN', maxSwaps: 25 },
+  { id: 1, type: 'target', targetWord: 'BAG', maxSwaps: 15 },
+  { id: 2, type: 'target', targetWord: 'CAT', maxSwaps: 15 },
+  { id: 3, type: 'target', targetWord: 'GARDEN', maxSwaps: 25 },
 ];
 
 export function getLevel(id) {

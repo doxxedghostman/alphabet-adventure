@@ -13,6 +13,7 @@ import {
 } from '../config.js';
 import { WORD_SET } from '../data/wordlist.js';
 import { getLevel, getNextLevelId } from '../data/levels.js';
+import { generateGuaranteedBoard, SCRAMBLE_COUNT_BY_LENGTH } from '../utils/levelGenerator.js';
 
 // Word-Swap mechanic:
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
@@ -323,6 +324,26 @@ export class BoardScene extends Phaser.Scene {
   // ---------- board setup ----------
 
   createInitialBoard() {
+    // Target-word levels (every 5th level, per PLAN.md) use the
+    // guaranteed generator: it builds the board backwards from a solved
+    // state so targetWord is provably reachable within maxSwaps, instead
+    // of the old "fill randomly, hope the letters happen to line up"
+    // approach. Free-play levels don't have a fixed word to guarantee, so
+    // they keep the original random fill.
+    if (this.level.type === 'target') {
+      const scrambleCount = this.level.scrambleCount
+        ?? SCRAMBLE_COUNT_BY_LENGTH[this.targetWord.length]
+        ?? 10;
+      const { grid: letterGrid } = generateGuaranteedBoard(this.targetWord, scrambleCount);
+      for (let row = 0; row < BOARD_SIZE; row++) {
+        this.grid.push([]);
+        for (let col = 0; col < BOARD_SIZE; col++) {
+          this.grid[row][col] = this.createTile(row, col, letterGrid[row][col]);
+        }
+      }
+      return;
+    }
+
     for (let row = 0; row < BOARD_SIZE; row++) {
       this.grid.push([]);
       for (let col = 0; col < BOARD_SIZE; col++) {
