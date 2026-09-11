@@ -1,18 +1,32 @@
 import Phaser from 'phaser';
 
-const STUDIO_NAME = 'Wobblewing Studios';
-const GAME_TITLE = 'WordSwoop';
-
 // Landing screen after the splash. Just a Play button for now - World
 // Map / Daily Challenge / Achievements / Settings (see PLAN.md section
 // 1) get added here as the game expands, this isn't the final layout.
 //
-// Relies on the 'logo' texture already being loaded - SplashScene always
-// runs immediately before this scene in the boot sequence and loads it,
-// so no preload() is needed here.
+// Art: sourced from the forest-adventure mockup (logo lockup, the two
+// scout characters holding letter blocks, and the wood/gem "Play" pill),
+// each cropped out with a feathered edge so it sits cleanly on the flat
+// game background without a hard rectangle border. The mockup itself is
+// a tall poster shape that doesn't match the game's canvas aspect ratio,
+// so the pieces are laid out fresh here rather than shown as one image.
+//
+// Sizing below (0.60/0.66/0.46 width fractions, 0.025 top offset) is
+// hand-fitted to this game's actual fixed canvas (516x624 - see
+// config.js/main.js) so the button lands fully on-screen with a small
+// bottom margin. Since Phaser.Scale.FIT scales that whole fixed canvas
+// uniformly to any real device, this fits phones and tablets alike
+// without any separate per-device logic - it just has to fit the fixed
+// logical canvas once.
 export class MainMenuScene extends Phaser.Scene {
   constructor() {
     super('MainMenuScene');
+  }
+
+  preload() {
+    this.load.image('menuLogo', 'assets/menu-logo.png');
+    this.load.image('menuCharacters', 'assets/menu-characters.png');
+    this.load.image('menuPlayButton', 'assets/menu-play-button.png');
   }
 
   create() {
@@ -20,72 +34,60 @@ export class MainMenuScene extends Phaser.Scene {
 
     this.add.rectangle(0, 0, width, height, 0x241a3d).setOrigin(0);
 
-    const logo = this.add.image(width / 2, height * 0.26, 'logo');
-    const maxLogoWidth = width * 0.55;
-    logo.setScale(Math.min(1, maxLogoWidth / logo.width));
+    // Logo lockup: gems + "Word Swoop" + tagline ribbon, anchored to the top.
+    const logo = this.add.image(width / 2, height * 0.025, 'menuLogo').setOrigin(0.5, 0);
+    logo.setScale(Math.min(1, (width * 0.6) / logo.width));
 
-    this.add
-      .text(width / 2, height * 0.26 + (logo.displayHeight / 2) + 26, GAME_TITLE, {
-        fontSize: '32px',
-        fontStyle: 'bold',
-        color: '#ffffff',
-        fontFamily: 'system-ui, sans-serif',
-      })
-      .setOrigin(0.5);
+    // Two scout characters holding letter blocks, overlapping slightly into
+    // the tagline ribbon above so there's no dead gap between the pieces.
+    const characters = this.add
+      .image(width / 2, logo.y + logo.displayHeight - 10, 'menuCharacters')
+      .setOrigin(0.5, 0);
+    characters.setScale(Math.min(1, (width * 0.66) / characters.width));
 
-    this.add
-      .text(width / 2, height * 0.26 + (logo.displayHeight / 2) + 60, STUDIO_NAME, {
-        fontSize: '13px',
-        fontStyle: 'bold',
-        color: '#a79ccf',
-        fontFamily: 'system-ui, sans-serif',
-        letterSpacing: 1,
-      })
-      .setOrigin(0.5);
+    // Gentle idle bob so the menu doesn't feel static.
+    this.tweens.add({
+      targets: characters,
+      y: characters.y - 8,
+      duration: 1800,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+    });
 
-    this.createPlayButton(width / 2, height * 0.68);
+    this.createPlayButton(width / 2, characters.y + characters.displayHeight + 16);
   }
 
   createPlayButton(x, y) {
-    const buttonWidth = 200;
-    const buttonHeight = 62;
-
-    const button = this.add.container(x, y);
-
-    const bg = this.add.graphics();
-    bg.fillStyle(0xffd93d, 1);
-    bg.fillRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 18);
-    bg.lineStyle(3, 0x1b1030, 0.35);
-    bg.strokeRoundedRect(-buttonWidth / 2, -buttonHeight / 2, buttonWidth, buttonHeight, 18);
-
-    const label = this.add
-      .text(0, 0, 'PLAY', {
-        fontSize: '24px',
-        fontStyle: 'bold',
-        color: '#1b1030',
-        fontFamily: 'system-ui, sans-serif',
-        letterSpacing: 1,
-      })
-      .setOrigin(0.5);
-
-    button.add([bg, label]);
-    button.setSize(buttonWidth, buttonHeight);
+    const button = this.add.image(x, y, 'menuPlayButton').setOrigin(0.5, 0);
+    button.setScale(Math.min(1, (this.scale.width * 0.46) / button.width));
     button.setInteractive({ useHandCursor: true });
 
+    // Slow idle pulse to invite a tap.
+    this.pulseTween = this.tweens.add({
+      targets: button,
+      scale: button.scale * 1.045,
+      duration: 750,
+      ease: 'Sine.easeInOut',
+      yoyo: true,
+      repeat: -1,
+    });
+
     button.on('pointerdown', () => {
-      this.tweens.add({ targets: button, scale: 0.94, duration: 80, ease: 'Sine.easeOut' });
+      this.pulseTween.pause();
+      this.tweens.add({ targets: button, scale: button.scale * 0.94, duration: 80, ease: 'Sine.easeOut' });
     });
     button.on('pointerup', () => {
       this.tweens.add({
         targets: button,
-        scale: 1,
+        scale: button.scale / 0.94,
         duration: 100,
         ease: 'Sine.easeOut',
         onComplete: () => this.startGame(),
       });
     });
     button.on('pointerout', () => {
-      this.tweens.add({ targets: button, scale: 1, duration: 100, ease: 'Sine.easeOut' });
+      if (this.pulseTween.isPaused()) this.pulseTween.resume();
     });
   }
 
