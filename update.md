@@ -406,40 +406,140 @@ not the final authored list.
 
 ---
 
-## Next up
+### Milestone 9 — target-word generator bugs found via headless playtest simulation; "provably solvable" claim found to be false
+
+Built a standalone headless playtest script (`playtest.mjs`, run then
+discarded — not committed, since it's a one-off diagnostic, not
+product code) that reuses the real game's own letter pool, word list,
+scan logic, and level generator to simulate hundreds of games per
+level without a browser. Found and fixed four real bugs along the way,
+then hit a fifth, bigger architectural problem that's not a quick fix.
+
+**Fixed:**
+
+- **`generateGuaranteedBoard()` was leaving the target word fully
+  visible on load.** `scrambleGrid()` picked swap pairs uniformly from
+  the whole board with no guarantee any swap touched the target word's
+  own cells — with only 6 scrambles for a 3-letter word on a 6x6 board
+  (60 possible pairs), the word survived intact ~45% of the time
+  (measured: 91/200 trials). Fixed with a verify-and-retry pass: after
+  the random scramble, scan for the word and, if still present, apply
+  corrective swaps directly on its cells until broken. Verified 0/300
+  failures across 6 different target words post-fix.
+- **4 Dependabot alerts (1 high, 3 moderate)**, all in the `vite`/
+  `esbuild` dev-server path (path traversal, `fs.deny` bypass, NTLM
+  hash disclosure, dev-server CORS gap) — dev-tooling only, never
+  shipped in the production bundle, but worth closing. Bumped
+  `vite` 5.4.10 -> 6.4.3 (latest patched release still on the 6.x
+  line — no `vite.config` exists, so no plugins to break, making this
+  about as low-risk a bump as they come). Verified: `npm audit` clean,
+  production build succeeds, dev server boots normally.
+- **`scanLineForWords()` was forward-only, `hasValidSwap()` wasn't.**
+  `hasValidSwap()`/`wouldSwapCreateWord()` (the auto-reshuffle safety
+  net) already checked both reading directions per `PLAN.md` §2's
+  design, but `scanLineForWords()` — what actually clears/scores a
+  real swap — only checked forward. That mismatch meant a board could
+  satisfy `hasValidSwap()` via a backward-only word, so
+  `ensureSolvable()` considered it fine, while zero swaps on it would
+  actually clear anything — every swap bounces back forever with no
+  in-game recovery short of manually reshuffling repeatedly. Reproduced
+  in 1-11% of simulated games depending on level. Fixed by checking the
+  reversed substring too (reporting the correctly-spelled dictionary
+  word, not the on-board reversed letters, matching what
+  `checkWinCondition` compares against).
+- **Win/lose popup could appear mid-cascade while the board kept
+  animating underneath it.** `checkWinCondition()` (called from both
+  `attemptSwap` and `resolveAutoMatches`) can fire `onLevelWon()`/
+  `onLevelLost()` partway through a cascade chain, but neither caller
+  stopped afterward — they kept clearing, refilling, and recursing
+  into further cascade levels underneath the already-visible overlay.
+  Reported via screenshot: "Chain x6!" toasts and mid-fall tiles still
+  animating while the Next Level/Replay overlay was already on screen.
+  Fixed with an early-return guard (`if (this.levelOver) return`) right
+  after each `checkWinCondition()` call, and after the
+  `resolveAutoMatches`/`ensureSolvable` sequence in `attemptSwap`.
+
+All four verified with `npm run build` passing clean; the visibility
+and reverse-word fixes additionally verified with hundreds of
+simulated trials each via the playtest script.
+
+**Found, not yet fixed — bigger than a bug:**
+
+`generateGuaranteedBoard()`'s core claim ("solvable in at most
+`scrambleCount` swaps by reversing the scramble") doesn't actually
+hold under real play. The scramble is applied by directly editing the
+letter grid, bypassing game rules — but in the real game, a swap that
+doesn't complete some word doesn't just cost nothing, it **reverts
+completely**. And a swap that *does* complete a word **destroys those
+tiles** (`clearTiles()` + `collapseAndRefill()` — they're removed and
+replaced with fresh random letters), it doesn't just reposition them.
+So reversing the scramble only works if every individual reverse-swap
+also happens to independently complete some word — which is rarely
+true. Measured directly: only **1% of GARDEN boards** (2/200) and
+**13% of BAG boards** (26/200) have a genuinely legal reverse-path;
+in the rest, even the *first* reverse-swap is often already illegal.
+This is why the playtest bot's GARDEN win-rate came out so low (~16%
+within budget) — not a tuning problem, a solvability problem.
+
+Three options considered for a real fix: (1) precompute verified
+boards offline via a real search over legal swap sequences, baked into
+`levels.js` as fixed data instead of randomly regenerated per play —
+keeps the guarantee, real engineering work, but the "expensive search"
+concern from Milestone 6 mostly disappears if it only ever runs once
+at authoring time, not per-play; (2) drop the deterministic guarantee
+entirely, accept target completion is probabilistic (already how
+BAG/CAT behave in practice, ~80% within budget) — smallest change but
+a target-word level can be genuinely unwinnable in a given attempt;
+(3) change the swap mechanic so target-word tiles don't clear until
+the full word completes — biggest change, alters core game feel.
+**Decided on (1)** — starting work on the offline solver/generator
+next, building and pushing it incrementally rather than as one large
+change.
+
+---
+
+
 
 Priority order below. Note: kids mode (`PLAN.md` §7) is **not** a
 current priority — this is a general-audience game first. Items are
 ordered to follow the existing plan (general game first) rather than
 around kids-mode-specific concerns.
 
-1. Revisit Special Tiles' length thresholds (`PLAN.md` §4) now that 6
+1. **Build an offline verified-board generator/solver for target-word
+   levels** (Milestone 9) — real search over legal swap sequences
+   (accounting for clear+cascade+refill), run once per level at
+   authoring time, output baked into `levels.js` as fixed boards
+   instead of randomly regenerated per play. Supersedes item 3 below
+   for target levels specifically — no point tuning scramble counts on
+   a generator that isn't reliably solvable in the first place.
+2. Revisit Special Tiles' length thresholds (`PLAN.md` §4) now that 6
    is the max word length, not 5.
-2. **Divide the alphabet into progressive stages** — e.g. common
+3. **Divide the alphabet into progressive stages** — e.g. common
    letters unlocked first, rarer ones added in later worlds/levels,
    now that the full A-Z pool is confirmed working.
-3. **Playtest scramble-count sweet spot** per word length (see
-   Milestone 6) — tune `SCRAMBLE_COUNT_BY_LENGTH` based on how
-   easy/punishing target-word levels actually feel to play.
-4. **Playtest the score-target numbers** (see Milestone 8) — the 2 demo
+4. **Playtest scramble-count sweet spot** per word length (see
+   Milestone 6) — only still relevant if item 1 above ends up keeping
+   any randomized (non-offline-verified) generation path.
+5. **Playtest the score-target numbers** (see Milestone 8) — the 2 demo
    free-play levels (300/600 points) are guesses, not verified against
    actual play.
-5. **Author the full 200-level list** — pick the remaining ~36 target
+6. **Author the full 200-level list** — pick the remaining ~36 target
    words (themed per world) and ~155 more free-play score targets,
-   scaling difficulty per PLAN.md §4's progression curve.
-6. **Expand the main menu** — World map, Daily challenge, Achievements,
+   scaling difficulty per PLAN.md §4's progression curve. Blocked on
+   item 1 for the target-word levels specifically.
+7. **Expand the main menu** — World map, Daily challenge, Achievements,
    Settings (currently just Play).
-7. **My Word Book** (new idea from the reference mockups, not
+8. **My Word Book** (new idea from the reference mockups, not
    previously in `PLAN.md`): a running log of every word the player's
    ever cleared, shown with pronunciation. Cheap to build — log
    distinct cleared words per save, pronunciation via the browser's
    built-in speech API (no audio assets needed). Worth adding as a
    Phase 4/5 nice-to-have.
-8. Stars/rating per level, coins/currency, booster inventory
+9. Stars/rating per level, coins/currency, booster inventory
    (Rocket/Rainbow/Bomb/Shuffle as spend-to-use items, distinct from
    the auto-triggered special tiles in `PLAN.md` §4 — worth deciding
    how those two systems relate before building either further).
-9. **Bidirectional-match readability** — deprioritized. `scanLineForWords()`
+10. **Bidirectional-match readability** — deprioritized. `scanLineForWords()`
    correctly matches words in either reading direction (`PLAN.md` §2),
    so a board reading e.g. `B-O-L` credits "LOB" without the player
    ever seeing the word in correct left-to-right order — treated as a
