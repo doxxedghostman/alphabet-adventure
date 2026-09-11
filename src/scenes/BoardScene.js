@@ -950,74 +950,109 @@ export class BoardScene extends Phaser.Scene {
   }
 
   showWordToast(word, color) {
+    this.spawnCandyPop(word, color, { fontSize: '26px', y: BOARD_TOP_MARGIN + 30 });
+  }
+
+  showComboText(chainLevel, wordsFound, labelOverride) {
+    const tierColors = ['#ffd93d', '#ff9f43', '#ff6b9d', '#b57bff'];
+    const color = tierColors[Math.min(chainLevel - 1, tierColors.length - 1)];
+    const text = labelOverride
+      ? `${wordsFound.join(', ')} ${labelOverride}`
+      : `Chain x${chainLevel}! ${wordsFound.join(', ')}`;
+
+    this.cameras.main.shake(120, 0.004 + chainLevel * 0.0008);
+
+    this.spawnCandyPop(text, color, {
+      fontSize: chainLevel > 1 ? '27px' : '22px',
+      y: BOARD_TOP_MARGIN + 40,
+      wordWrap: BOARD_PIXEL_SIZE.width - 30,
+      sparkle: chainLevel > 1,
+    });
+  }
+
+  // Candy-Crush-style punchy popup: bold outlined/shadowed text that pops in
+  // with an overshoot + tiny rotation wobble, holds briefly, then floats up
+  // and fades. Always drawn above the board (see setDepth).
+  spawnCandyPop(text, color, opts = {}) {
+    const { fontSize = '24px', y = BOARD_TOP_MARGIN + 30, wordWrap, sparkle = false } = opts;
+    const x = BOARD_PIXEL_SIZE.width / 2;
+
     const label = this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, BOARD_TOP_MARGIN + 30, word, {
-        fontSize: '22px',
-        fontStyle: 'bold',
+      .text(x, y, text, {
+        fontSize,
+        fontStyle: '800',
         color,
-        fontFamily: 'system-ui, sans-serif',
+        fontFamily: '"Baloo 2", "Arial Black", system-ui, sans-serif',
+        align: 'center',
+        stroke: '#1b1030',
+        strokeThickness: 6,
+        shadow: { offsetX: 0, offsetY: 3, color: '#000000', blur: 6, fill: true },
+        ...(wordWrap ? { wordWrap: { width: wordWrap } } : {}),
       })
       .setOrigin(0.5)
       .setAlpha(0)
+      .setScale(0.4)
+      .setRotation(-0.08)
       .setDepth(1000);
+
+    if (sparkle) this.spawnSparkleBurst(x, y, color);
 
     this.tweens.add({
       targets: label,
       alpha: 1,
-      y: label.y - 20,
-      duration: 200,
+      scale: 1.15,
+      rotation: 0.03,
+      duration: 180,
       ease: 'Back.easeOut',
       onComplete: () => {
         this.tweens.add({
           targets: label,
-          alpha: 0,
-          y: label.y - 16,
-          delay: 300,
-          duration: 300,
-          onComplete: () => label.destroy(),
+          scale: 1,
+          rotation: 0,
+          duration: 140,
+          ease: 'Sine.easeOut',
+          onComplete: () => {
+            this.tweens.add({
+              targets: label,
+              alpha: 0,
+              y: label.y - 18,
+              delay: 280,
+              duration: 280,
+              onComplete: () => label.destroy(),
+            });
+          },
         });
       },
     });
   }
 
-  showComboText(chainLevel, wordsFound, labelOverride) {
-    const label = this.add
-      .text(
-        BOARD_PIXEL_SIZE.width / 2,
-        BOARD_TOP_MARGIN + 40,
-        labelOverride ? `${wordsFound.join(', ')} ${labelOverride}` : `Chain x${chainLevel}! ${wordsFound.join(', ')}`,
-        {
-          fontSize: '20px',
-          fontStyle: 'bold',
-          color: '#ffd93d',
-          fontFamily: 'system-ui, sans-serif',
-          align: 'center',
-          wordWrap: { width: BOARD_PIXEL_SIZE.width - 30 },
-        }
-      )
-      .setOrigin(0.5)
-      .setAlpha(0)
-      .setScale(0.7)
-      .setDepth(1000);
+  // Small burst of candy-colored star sparkles behind bigger combos.
+  spawnSparkleBurst(x, y, hexColor) {
+    const base = Phaser.Display.Color.HexStringToColor(hexColor).color;
+    const palette = [base, 0xffd93d, 0xff9f43, 0x7ce0ff];
+    const count = 6;
 
-    this.cameras.main.shake(120, 0.004);
+    for (let i = 0; i < count; i++) {
+      const angle = (Math.PI * 2 * i) / count + Phaser.Math.FloatBetween(-0.25, 0.25);
+      const dist = Phaser.Math.Between(30, 50);
+      const star = this.add
+        .star(x, y, 5, 3, 7, palette[i % palette.length])
+        .setDepth(999)
+        .setAlpha(0.95)
+        .setScale(0.3);
 
-    this.tweens.add({
-      targets: label,
-      alpha: 1,
-      scale: 1,
-      duration: 200,
-      ease: 'Back.easeOut',
-      onComplete: () => {
-        this.tweens.add({
-          targets: label,
-          alpha: 0,
-          delay: 350,
-          duration: 300,
-          onComplete: () => label.destroy(),
-        });
-      },
-    });
+      this.tweens.add({
+        targets: star,
+        x: x + Math.cos(angle) * dist,
+        y: y + Math.sin(angle) * dist,
+        alpha: 0,
+        scale: 0.9,
+        rotation: Phaser.Math.FloatBetween(-1, 1),
+        duration: 420,
+        ease: 'Cubic.easeOut',
+        onComplete: () => star.destroy(),
+      });
+    }
   }
 
   async clearTiles(matchedKeys) {
