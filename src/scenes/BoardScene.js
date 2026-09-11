@@ -890,13 +890,22 @@ export class BoardScene extends Phaser.Scene {
       for (let len = maxLen; len >= MIN_WORD_LENGTH; len--) {
         const segment = letters.slice(i, i + len).join('');
         if (WORD_SET.has(segment)) {
-          found.push({ start: i, length: len, word: segment });
+          found.push({ start: i, length: len, word: segment, wasReversed: false });
           matchedLen = len;
           break;
         }
         const reversed = segment.split('').reverse().join('');
         if (WORD_SET.has(reversed)) {
-          found.push({ start: i, length: len, word: reversed });
+          // wasReversed: this word matched via the on-board letters read
+          // backward (e.g. board shows B-O-L, credited word is LOB). The
+          // clear/score logic doesn't need this - `word` is already the
+          // correctly-spelled dictionary word - but a future kids-mode
+          // clear animation can use this flag to visually flip the tiles
+          // or show "BOL -> LOB!" before clearing, so kids always see the
+          // word spelled correctly at the moment it's credited, rather
+          // than silently crediting a word they never saw in order. See
+          // update.md "Next up" for the reasoning.
+          found.push({ start: i, length: len, word: reversed, wasReversed: true });
           matchedLen = len;
           break;
         }

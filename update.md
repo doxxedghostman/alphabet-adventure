@@ -408,29 +408,49 @@ not the final authored list.
 
 ## Next up
 
-1. **Playtest scramble-count sweet spot** per word length (see
+1. **Bidirectional-match readability (kids mode)** — `scanLineForWords()`
+   correctly matches words in either reading direction (`PLAN.md` §2),
+   so a board reading e.g. `B-O-L` credits "LOB" without the player
+   ever seeing the word in correct left-to-right order. Fine, maybe
+   even a nice puzzle flourish, for general/adult play. Potentially
+   counter-pedagogical for kids mode (§7), where reversed-letter
+   confusion is already a common early-reading issue — the game would
+   be rewarding a word the child never actually saw spelled correctly.
+   Decision: don't touch match detection (it has to agree with
+   `hasValidSwap()`/`wouldSwapCreateWord()` or swaps silently fizzle,
+   per the Milestone-era bug this logic already fixed). Instead, each
+   match found by `scanLineForWords()` now carries a `wasReversed`
+   flag (added, unused by any caller yet) so a future kids-mode clear
+   animation can flip the tiles or show a quick "BOL -> LOB!" callout
+   before clearing, so kids always see the credited word spelled
+   correctly at the moment it's confirmed. Not yet wired into
+   `resolveAutoMatches`/the clear animation, and kids mode itself
+   doesn't exist yet (§7 is still unbuilt) — this just lays the data
+   plumbing so it's a small follow-up once kids mode is built, instead
+   of another retrofit.
+2. **Playtest scramble-count sweet spot** per word length (see
    Milestone 6) — tune `SCRAMBLE_COUNT_BY_LENGTH` based on how
    easy/punishing target-word levels actually feel to play.
-2. **Playtest the score-target numbers** (see Milestone 8) — the 2 demo
+3. **Playtest the score-target numbers** (see Milestone 8) — the 2 demo
    free-play levels (300/600 points) are guesses, not verified against
    actual play.
-3. **Author the full 200-level list** — pick the remaining ~36 target
+4. **Author the full 200-level list** — pick the remaining ~36 target
    words (themed per world) and ~155 more free-play score targets,
    scaling difficulty per PLAN.md §4's progression curve.
-4. **Expand the main menu** — World map, Daily challenge, Achievements,
+5. **Expand the main menu** — World map, Daily challenge, Achievements,
    Settings (currently just Play).
-5. **Divide the alphabet into progressive stages** — e.g. common
+6. **Divide the alphabet into progressive stages** — e.g. common
    letters unlocked first, rarer ones added in later worlds/levels,
    now that the full A-Z pool is confirmed working.
-6. Revisit Special Tiles' length thresholds (`PLAN.md` §4) now that 6
+7. Revisit Special Tiles' length thresholds (`PLAN.md` §4) now that 6
    is the max word length, not 5.
-7. **My Word Book** (new idea from the reference mockups, not
+8. **My Word Book** (new idea from the reference mockups, not
    previously in `PLAN.md`): a running log of every word the player's
    ever cleared, shown with pronunciation. Cheap to build — log
    distinct cleared words per save, pronunciation via the browser's
    built-in speech API (no audio assets needed). Worth adding as a
    Phase 4/5 nice-to-have.
-8. Stars/rating per level, coins/currency, booster inventory
+9. Stars/rating per level, coins/currency, booster inventory
    (Rocket/Rainbow/Bomb/Shuffle as spend-to-use items, distinct from
    the auto-triggered special tiles in `PLAN.md` §4 — worth deciding
    how those two systems relate before building either further).
