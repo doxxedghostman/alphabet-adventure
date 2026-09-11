@@ -117,46 +117,122 @@ Avoid "find a word" as the only objective. Mix in:
 
 ## 9. World map
 
-Real adventure structure instead of a flat level list:
+Real adventure structure instead of a flat level list. **Replaced the
+original 6-world layout with a 10-world layout** (kept the 200-level
+total, just split more finely — 20 levels per world instead of
+~33-34):
 
-1. Alphabet Forest — levels 1-34
-2. Animal Kingdom — levels 35-68
-3. Ocean — levels 69-102
-4. Desert — levels 103-136
-5. Ice Kingdom — levels 137-168
-6. Space — levels 169-200
+1. Candy Garden — levels 1-20
+2. Jungle Jumble — levels 21-40
+3. Ocean Words — levels 41-60
+4. Dino Valley — levels 61-80
+5. Cloud Kingdom — levels 81-100
+6. Crystal Forest — levels 101-120
+7. Magic Mountain — levels 121-140
+8. Space Words — levels 141-160
+9. Ancient Valley — levels 161-180
+10. WordSwoop Kingdom — levels 181-200
 
-Each world gets its own art, music, obstacle set, and vocabulary.
+Each world gets its own art, music, obstacle set, and vocabulary —
+rough per-world decoration ideas from the external spec this layout
+came from: Candy Garden: candy trees/flowers; Jungle Jumble:
+trees/birds/vines; Ocean Words: water/fish/shells; Dino Valley:
+dinosaurs/volcanoes, etc. — the rest still need theming as each world
+gets built.
 
-Total decided at **200 levels** (was conflicting between 180 here and 150
-in §15 — resolved to 200 across the same 6 worlds above, ~33-34 levels
-each rather than a flat 30). Of those, every 5th level (**40 total**) is
-a `type: 'target'` level with a specific word to find; the rest are
-free-play. See §15 Phase 6 and the solvability section below for how
-target levels are generated.
+Total stays at **200 levels**. Of those, every 5th level (**40 total**)
+is a `type: 'target'` level with a specific word to find; the rest are
+free-play. Target-word difficulty should climb with world/level number
+— early worlds use short common words (CAT, BAG), later worlds use
+longer, less obvious ones (BRAVE, and eventually the harder 6-letter
+words the board already supports, e.g. GARDEN-length). See §16 Phase 6
+and the solvability section below for how target levels are generated.
+
+**Level 200** is a planned capstone ("Ultimate Word Challenge" per the
+external spec this world layout came from) — unique board/background,
+a hard target word, big coin reward, and a special completion
+animation. Not built — just flagged as the intended shape of the last
+level once content production gets there.
 
 ## 10. Characters
 
 - Lumi — main character. The Alphabet Kingdom has been corrupted; the
   player restores it by solving puzzles.
-- Per-world characters: Forest Guardian, Lion King, Mermaid, Penguin
-  explorer, Robot, etc.
+- Per-world characters (rough first pass matching the new §9 world
+  names — not a final design, just placeholders so each world isn't
+  characterless): Candy Garden — Candy Guardian; Jungle Jumble — Lion
+  King; Ocean Words — Mermaid; Dino Valley — Dino explorer; Cloud
+  Kingdom — Cloud spirit; Crystal Forest — Crystal fairy; Magic
+  Mountain — Wizard; Space Words — Robot; Ancient Valley — Explorer/
+  archaeologist; WordSwoop Kingdom — Lumi's home turf, likely no
+  separate guide character since it's the finale.
 
 ## 11. Rewards
 
-- 1-3 stars per level, coins, gems, boosters on completion.
+- 1-3 stars per level (star meter fills as score climbs toward 3
+  thresholds — see §14 below), coins, gems, boosters on completion.
+- Coins (planned, not built): minimum 5 coins per completed level,
+  more for harder/milestone/boss levels (e.g. 10 for a hard level, 20
+  for a milestone). Lives in the player's profile/main-menu economy,
+  not the board itself.
 
 ## 12. Daily challenge
 
 - One special puzzle per day (e.g. "Today's word: VOLCANO").
 - Rewards: coins, gems, boosters. Consider a weekly challenge too.
+- Daily login reward cycle (planned, not built): a 7-day repeating
+  cycle of small rewards (coins, a Shuffle, a Bomb, building to a
+  bigger reward on day 7), main-menu-only — doesn't touch the board.
 
 ## 13. Achievements
 
 Examples: solve 100 words, create 50 combos, complete World 1, solve a
-10-letter word, finish a level without boosters.
+10-letter word, finish a level without boosters, collect 1,000 coins,
+use 10 Shuffles, use 10 Bombs, complete 50 levels, complete all 200
+levels. Lives entirely in a profile/achievements screen — doesn't
+touch board logic.
 
-## 14. Monetization
+## 14. Meta / main-menu systems (planned, not built)
+
+Everything below is a decision to add to the plan, not a build — these
+are meta-progression/economy features that should live in the main
+menu, profile, and level-complete screens rather than being new board
+mechanics. The board's job stays "swap letters, spell words"; these
+systems sit around it.
+
+- **Lives** — start at 5 (max 5), lose 1 on a failed level, regenerate
+  automatically (e.g. +1 every 30 min), optionally refillable via a
+  rewarded ad. Classic Candy-Crush-style return loop.
+- **Bombs** — a stronger booster than Shuffle: clears/resets the
+  current board for another attempt. Start with 2, regenerate slower
+  than Shuffle (e.g. +1 per 24h), harder to earn via ads (e.g. 3 ads
+  per +1) since it's more powerful. Needs a confirm dialog before use
+  ("Use Bomb? This will clear the current board.") to avoid accidental
+  taps.
+- **Shuffle economy** — Shuffle already exists as a board mechanic
+  (manual + auto via `ensureSolvable()`), but doesn't currently have a
+  supply limit. Adding one (e.g. start with 5, +1/hour, or watch an ad
+  for +1) is a main-menu/economy layer on top of the existing button,
+  not a change to the shuffle logic itself.
+- **Combo / streak multiplier** — reward consecutive words found
+  without a "dead" swap in between (×1 for one word, ×2 for two in a
+  row, etc., topping out at a "Super Swoop" label for 4+). This one
+  does touch board scoring (it's a multiplier on points earned), but
+  the reward/effect of it (score, animations) can surface via a HUD
+  element rather than any new board rule.
+- **Boss / Champion levels** — every 20th level (so, the last level of
+  each 10-world's block) becomes a milestone: unique board/background,
+  a harder target word, a bigger coin reward, a unique
+  completion animation. This is a content/presentation change on
+  existing target-word levels, not a new mechanic.
+- **3-star scoring** — each level gets 3 score thresholds shown as a
+  fillable meter under the level header; completing a level shows a
+  1/2/3-star result and saves the player's best score/stars/moves for
+  that level so they can replay to improve it. Mostly a level-complete-
+  screen and profile feature; the underlying score number already
+  exists.
+
+## 15. Monetization
 
 - Free: hundreds of levels, limited boosters, ads between some levels,
   daily rewards.
@@ -164,7 +240,7 @@ Examples: solve 100 words, create 50 combos, complete World 1, solve a
   progression.
 - Not pay-to-win.
 
-## 15. Build phases
+## 16. Build phases
 
 **Phase 1 — Prototype (in progress, core mechanic now settled)**
 The core loop went through a full circle before landing: built first
@@ -206,15 +282,17 @@ Rocket, bomb, wildcard, ice, locks (see section 4, triggers now based
 on word length rather than match length).
 
 **Phase 4 — Progression**
-Levels, stars, coins, world map, unlock system, save progress.
+Levels, stars, coins, world map, unlock system, save progress. Also
+where the §14 meta systems (Lives, Bombs, Combo multiplier, Boss
+levels, 3-star scoring) would slot in — all planned, none built yet.
 
 **Phase 5 — Art & audio**
 Characters, animated letters, particle effects, explosions, sound
 effects, music, level-complete animations.
 
 **Phase 6 — Content**
-Target: 6 worlds, **200 levels total**. Every 5th level (40 total) is a
-`type: 'target'` level (specific word, board generated via
+Target: 10 worlds (§9), **200 levels total**. Every 5th level (40
+total) is a `type: 'target'` level (specific word, board generated via
 `generateGuaranteedBoard()` — see solvability section below); the rest
 are free-play. Build a level-data format
 so levels are defined as data, not hand-coded, e.g.:
