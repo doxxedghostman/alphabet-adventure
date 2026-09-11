@@ -547,3 +547,19 @@ around kids-mode-specific concerns.
    kids mode isn't a current priority. Each match still carries a
    `wasReversed` flag (added, unused by any caller) in case this is
    revisited later; no other behavior changed.
+
+---
+
+### Milestone 10 — World Map planned (docs only)
+
+Reference mockup added at `docs/reference/world-map-mockup.png`
+(forest-adventure style World Select grid + Candy Garden level path).
+Full implementation plan written up in `PLAN.md` §8.5: two new scenes
+(`WorldSelectScene`, `LevelPathScene`), a new `worlds.js` data file, a
+new localStorage progress store (levels completed — doesn't exist yet,
+blocking this), lock logic (sequential level/world unlocking), and a
+build order starting with World 1 (Candy Garden) only. Only 20 unique
+art assets needed total (10 thumbnails + 10 backgrounds); nodes/stars/
+lock icon/signpost/back button are code-drawn, not per-level art.
+
+No code changed — docs and reference image only.

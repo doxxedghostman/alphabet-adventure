@@ -118,6 +118,48 @@ Avoid "find a word" as the only objective. Mix in:
 - Categories: science, technology, geography, vocabulary.
 - Later additions: synonyms, antonyms, riddles, definitions, anagrams, word chains.
 
+## 8.5 World Map — implementation plan
+
+Reference mockup: `docs/reference/world-map-mockup.png` (World Select
+grid + Candy Garden level path, forest-adventure art style).
+
+- Two new scenes: `WorldSelectScene` (2x2 scrollable grid of world
+  tiles, locked worlds shown greyed out with a padlock icon per the
+  mockup) and `LevelPathScene` (per-world winding path of 20 numbered
+  nodes over that world's background art, Start signpost at node 1,
+  bigger gold-ringed node for the boss level at 20, Back button to
+  return to World Select).
+- Only 20 unique art images needed total (10 world thumbnails + 10
+  path backgrounds), not 200 - nodes, stars, lock icon, signpost, and
+  Back button are drawn/reused in code, matching how tiles/popups
+  already work in `BoardScene.js`.
+- New `worlds.js` data file: id, display name, thumbnail/background
+  asset keys, level ID range per world (mirrors `levels.js`'s pattern).
+- New progress store (localStorage): tracks completed level ids (and
+  later star counts). Needed because Main Menu's Play button currently
+  jumps straight to level 1 with no memory of prior sessions - the map
+  is what forces this to finally exist.
+- Lock logic: a level is locked unless the previous level in its world
+  is completed (world's own level 1 unlocks with the world); a world is
+  locked unless the previous world's level 20 (boss) is completed.
+- Node color in the mockup is decorative only (not tied to level type
+  or difficulty) - deliberate choice, not an oversight.
+- Path reads bottom-to-top (node 1 at the bottom near Start, node 20 at
+  the top) - matches the mockup and common genre convention (e.g. Candy
+  Crush), confirmed intentional.
+- Main Menu's Play button changes from `scene.start('BoardScene',
+  {levelId:1})` to `scene.start('WorldSelectScene')` once this exists.
+- Build order: progress store -> `worlds.js` for World 1 (Candy Garden,
+  the only world with real level data) -> `LevelPathScene` for World 1
+  with hand-placed node coordinates -> `WorldSelectScene` with only
+  World 1 unlocked (rest locked/placeholder art) -> wire the full
+  Main Menu -> World Select -> Level Path -> Board -> back chain with
+  real progress saving -> repeat per additional world as it's authored.
+- Node placement will be hand-placed coordinates per world (not
+  procedural), since it's a one-time cost per world (10 total) rather
+  than per level, and avoids nodes overlapping background art badly.
+- Not built yet: any of the above. This section is the plan only.
+
 ## 9. World map
 
 Real adventure structure instead of a flat level list. **Replaced the
