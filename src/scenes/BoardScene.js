@@ -646,11 +646,28 @@ export class BoardScene extends Phaser.Scene {
 
     this.spendMove();
     this.checkWinCondition(wordsFound);
+    if (this.levelOver) {
+      // onLevelWon()/onLevelLost() already popped the end-of-level overlay -
+      // don't keep clearing/refilling/cascading underneath it. Screenshot
+      // bug: without this guard, resolveAutoMatches kept recursing into
+      // further cascade chains (visible as "Chain x6!" toasts) while the
+      // win popup was already on screen.
+      this.isBusy = false;
+      return;
+    }
 
     await this.clearTiles(matchedCells);
     await this.collapseAndRefill();
     if (!this.levelOver) this.ensureTargetLettersPresent();
     await this.resolveAutoMatches(2);
+    if (this.levelOver) {
+      // resolveAutoMatches can win/lose mid-cascade recursion (same fix as
+      // above) - if it did, skip ensureSolvable() too, since reshuffling
+      // the board is pointless (and visually jarring) once the end-of-level
+      // overlay is already showing.
+      this.isBusy = false;
+      return;
+    }
     await this.ensureSolvable();
     this.checkLevelEnd();
     this.isBusy = false;
@@ -924,6 +941,7 @@ export class BoardScene extends Phaser.Scene {
 
     this.showComboText(chainLevel, wordsFound);
     this.checkWinCondition(wordsFound);
+    if (this.levelOver) return; // same guard as attemptSwap - stop the chain once won/lost
 
     await this.clearTiles(matchedCells);
     await this.collapseAndRefill();
