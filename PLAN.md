@@ -107,6 +107,9 @@ Avoid "find a word" as the only objective. Mix in:
 
 ## 7. Kids mode
 
+> Not a current priority — the game is being built general-audience
+> first. Section kept for reference, not on the near-term roadmap.
+
 - Categories: animals, fruits, colors, vehicles, objects, numbers.
 - Picture clues, voice pronunciation, simpler words, hints, larger tap targets.
 
