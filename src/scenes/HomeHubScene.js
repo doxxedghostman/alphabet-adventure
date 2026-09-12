@@ -15,20 +15,46 @@ import { resetProgress } from '../utils/progressStore.js';
 // even though none of those systems exist yet - tapping one shows a
 // "Coming Soon" toast rather than doing nothing or looking disabled.
 //
-// All icons are code-drawn (rounded-rect badge + a Unicode glyph),
-// same visual language as the star/lock glyphs already used in
-// LevelPathScene/WorldSelectScene - no new art assets needed here.
-// Avatar/name/currency are placeholders (no account or economy system
-// exists yet) rather than real data.
+// Art: swapped from code-drawn placeholders to the real generated art
+// (forest bg, wood top bar, word-map banner, mini map parchment card,
+// 8 side icons, decorative letter blocks) once the user sent it over.
+// Icons were re-keyed for transparency on our end (originals had a flat
+// white background baked in, not real alpha) before being added.
+//
+// Animation pass (per chat, "add effect where necessary"): kept it
+// selective rather than animating every element -
+//  - Word Map button breathes gently (it's the only real action here)
+//  - Spin wheel idles with a continuous slow rotation
+//  - Daily-reward calendar pulses (classic "come back today" nudge)
+//  - The map preview's star/goal node has a soft glow pulse
+//  - The letter-block strip has a slow float for a little life
+//  - Every tappable icon still gets the existing press-down bounce
 export class HomeHubScene extends Phaser.Scene {
   constructor() {
     super('HomeHubScene');
   }
 
+  preload() {
+    this.load.image('hubTopBar', 'assets/top-bar.png');
+    this.load.image('hubWordMapBanner', 'assets/word-map-banner.png');
+    this.load.image('hubMapPreviewCard', 'assets/map-preview-card.jpg');
+    this.load.image('hubForestBg', 'assets/forest-background.jpg');
+    this.load.image('hubLetterBlocks', 'assets/letter-blocks-strip.png');
+
+    this.load.image('iconShop', 'assets/icon-shop.png');
+    this.load.image('iconGallery', 'assets/icon-gallery.png');
+    this.load.image('iconTrophy', 'assets/icon-trophy.png');
+    this.load.image('iconLeaderboard', 'assets/icon-leaderboard.png');
+    this.load.image('iconCoinShop', 'assets/icon-coin-shop.png');
+    this.load.image('iconCalendar', 'assets/icon-calendar.png');
+    this.load.image('iconSpinWheel', 'assets/icon-spin-wheel.png');
+    this.load.image('iconVideo', 'assets/icon-video.png');
+  }
+
   create() {
     const { width, height } = this.scale;
-    this.add.rectangle(0, 0, width, height, 0x241a3d).setOrigin(0);
 
+    this.createBackground(width, height);
     this.createTopBar(width);
     this.createLogoAndMapPreview(width);
     this.createIconColumn('left', 16);
@@ -36,17 +62,31 @@ export class HomeHubScene extends Phaser.Scene {
     this.createWordMapButton(width, height);
   }
 
+  // --- Background -----------------------------------------------------------
+
+  createBackground(width, height) {
+    // Forest bg is portrait-ish (600x900) but not the same aspect as the
+    // fixed game canvas - scale to cover width and center vertically so
+    // it fills the frame with no letterboxing, same idea as a CSS
+    // background-size: cover.
+    const bg = this.add.image(width / 2, height / 2, 'hubForestBg');
+    const scale = Math.max(width / bg.width, height / bg.height);
+    bg.setScale(scale);
+    // Dim it slightly so the UI on top stays readable, same role the
+    // flat 0x241a3d rectangle used to play.
+    this.add.rectangle(0, 0, width, height, 0x1a1030, 0.45).setOrigin(0);
+  }
+
   // --- Top bar: avatar, name, currency, add-currency, settings -----------
 
   createTopBar(width) {
-    const barHeight = 52;
-    const bar = this.add.graphics();
-    bar.fillStyle(0x3a2a5c, 1);
-    bar.fillRoundedRect(10, 8, width - 20, barHeight, 12);
-    bar.lineStyle(2, 0xffffff, 0.5);
-    bar.strokeRoundedRect(10, 8, width - 20, barHeight, 12);
+    const barHeight = 64;
+    const barY = 8;
 
-    const cy = 8 + barHeight / 2;
+    const bar = this.add.image(width / 2, barY, 'hubTopBar').setOrigin(0.5, 0);
+    bar.setDisplaySize(width - 20, barHeight);
+
+    const cy = barY + barHeight / 2;
 
     // Avatar (placeholder - no account system yet)
     this.add.circle(38, cy, 18, 0x8f5c3c, 1).setStrokeStyle(2, 0xffffff, 0.9);
@@ -56,7 +96,7 @@ export class HomeHubScene extends Phaser.Scene {
       fontFamily: 'Arial',
       fontSize: '13px',
       fontStyle: 'bold',
-      color: '#ffffff',
+      color: '#3a2a5c',
     }).setOrigin(0, 0.5);
 
     // Currency (placeholder - no economy system yet)
@@ -66,11 +106,23 @@ export class HomeHubScene extends Phaser.Scene {
       fontFamily: 'Arial',
       fontSize: '15px',
       fontStyle: 'bold',
-      color: '#ffd93d',
+      color: '#8a5a1c',
     }).setOrigin(0, 0.5);
 
-    this.createSmallIconButton(width - 78, cy, '+', '#c0392b', () => this.comingSoon());
+    const addBtn = this.createSmallIconButton(width - 78, cy, '+', '#c0392b', () => this.comingSoon());
     this.createSmallIconButton(width - 34, cy, '\u2699', '#8e44ad', () => this.openSettings());
+
+    // Gentle pulse on the "+" currency button - it's the one spot in the
+    // bar that's an actual call-to-action (buy currency), same nudge
+    // pattern as the daily-reward calendar icon below.
+    this.tweens.add({
+      targets: addBtn.targets,
+      scale: 1.12,
+      duration: 620,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   createSmallIconButton(x, y, glyph, color, onTap) {
@@ -84,6 +136,7 @@ export class HomeHubScene extends Phaser.Scene {
       this.tweens.add({ targets: [circle, label], scale: 1, duration: 100 });
       onTap();
     });
+    return { targets: [circle, label] };
   }
 
   // --- Center: logo + decorative mini map preview -------------------------
@@ -93,27 +146,33 @@ export class HomeHubScene extends Phaser.Scene {
     logo.setScale(Math.min(1, (width * 0.42) / logo.width));
 
     const ribbonY = logo.y + logo.displayHeight + 6;
-    this.add.text(width / 2, ribbonY, 'Word Map', {
+    const banner = this.add.image(width / 2, ribbonY, 'hubWordMapBanner').setOrigin(0.5, 0);
+    banner.setDisplaySize(210, 66);
+    this.add.text(width / 2, ribbonY + 33, 'Word Map', {
       fontFamily: 'Arial',
       fontSize: '15px',
       fontStyle: 'bold',
-      color: '#3a2a5c',
-    }).setOrigin(0.5).setPadding(14, 5, 14, 5).setBackgroundColor('#f0c987');
+      color: '#4a2f10',
+    }).setOrigin(0.5);
 
-    // Decorative preview of the real map - a few code-drawn nodes on a
-    // parchment card, same lock/star visual language as the real
+    // Mini map preview - real parchment art (cropped to a wide strip
+    // from the square source) with the same code-drawn lock/star nodes
+    // and dashed path overlaid on top, same visual language as the real
     // WorldSelectScene/LevelPathScene. Not interactive - it's a teaser
     // for the button just below it, not a shortcut around it.
-    const cardW = width * 0.62;
-    const cardH = 120;
+    const cardW = width * 0.64;
+    const cardH = 130;
     const cardX = width / 2 - cardW / 2;
-    const cardY = ribbonY + 34;
+    const cardY = ribbonY + 40;
 
-    const card = this.add.graphics();
-    card.fillStyle(0xe8d9b0, 1);
-    card.fillRoundedRect(cardX, cardY, cardW, cardH, 10);
-    card.lineStyle(3, 0x8b6b3d, 1);
-    card.strokeRoundedRect(cardX, cardY, cardW, cardH, 10);
+    const card = this.add.image(width / 2, cardY, 'hubMapPreviewCard').setOrigin(0.5, 0);
+    // Crop a horizontal band out of the square source so it reads as a
+    // wide map strip instead of a squished square.
+    card.setCrop(0, 218, 700, 263);
+    card.setDisplaySize(cardW, cardH);
+    const frameBorder = this.add.graphics();
+    frameBorder.lineStyle(3, 0x8b6b3d, 1);
+    frameBorder.strokeRoundedRect(cardX, cardY, cardW, cardH, 10);
 
     const previewNodes = [
       { dx: 0.18, dy: 0.72, state: 'locked' },
@@ -142,9 +201,38 @@ export class HomeHubScene extends Phaser.Scene {
       dot.strokeCircle(x, y, 13);
       const glyph = n.state === 'star' ? '\u2605' : '\u{1F512}';
       this.add.text(x, y, glyph, { fontSize: '13px' }).setOrigin(0.5);
+
+      // The star/goal node gets a soft glow pulse - it's the "prize at
+      // the end of the path" and deserves to draw the eye, same idea as
+      // the star used at the end of the real LevelPathScene/WorldSelect.
+      if (n.state === 'star') {
+        const glow = this.add.circle(x, y, 13, 0xffe38a, 0.55);
+        this.tweens.add({
+          targets: glow,
+          scale: 1.7,
+          alpha: 0,
+          duration: 1100,
+          repeat: -1,
+          ease: 'Sine.easeOut',
+        });
+      }
     });
 
     this.mapPreviewBottom = cardY + cardH;
+
+    // Decorative letter-block strip, floated just under the map preview
+    // - purely for flavor (per chat, "skip if you don't care" - kept it
+    // in since the user sent it), not interactive.
+    const blocks = this.add.image(width / 2, this.mapPreviewBottom + 26, 'hubLetterBlocks');
+    blocks.setDisplaySize(width * 0.5, (width * 0.5) * (300 / 900));
+    this.tweens.add({
+      targets: blocks,
+      y: blocks.y - 5,
+      duration: 1600,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
   }
 
   // --- Side icon columns ---------------------------------------------------
@@ -152,39 +240,65 @@ export class HomeHubScene extends Phaser.Scene {
   createIconColumn(side, x) {
     const icons = side === 'left'
       ? [
-        { glyph: '\u{1F3EA}', color: '#c0392b' }, // shop
-        { glyph: '\u{1F5BC}', color: '#2980b9' }, // gallery
-        { glyph: '\u{1F3C6}', color: '#f39c12' }, // trophy
-        { glyph: '\u{1F947}', color: '#8e44ad' }, // leaderboard
+        { key: 'iconShop', anim: null },
+        { key: 'iconGallery', anim: null },
+        { key: 'iconTrophy', anim: null },
+        { key: 'iconLeaderboard', anim: null },
       ]
       : [
-        { glyph: '\u{1F6D2}', color: '#c0392b' }, // coin shop
-        { glyph: '\u{1F4C5}', color: '#27ae60' }, // daily calendar
-        { glyph: '\u{1F3A1}', color: '#e91e8c' }, // spin wheel
-        { glyph: '\u25B6', color: '#2980b9' }, // video reward
+        { key: 'iconCoinShop', anim: null },
+        { key: 'iconCalendar', anim: 'pulse' }, // daily reward - invite a tap
+        { key: 'iconSpinWheel', anim: 'spin' }, // spin wheel - idle rotation
+        { key: 'iconVideo', anim: null },
       ];
 
     const top = 90;
     const gap = 78;
-    icons.forEach((icon, i) => this.createColumnIcon(x, top + i * gap, icon.glyph, icon.color));
+    icons.forEach((icon, i) => this.createColumnIcon(x, top + i * gap, icon.key, icon.anim));
   }
 
-  createColumnIcon(x, y, glyph, color) {
+  createColumnIcon(x, y, textureKey, anim) {
     const size = 52;
+    const cx = x + size / 2;
+    const cy = y + size / 2;
+
+    // Soft rounded backing card, same role the solid color badge used
+    // to play, so every icon still reads as a tappable tile even though
+    // the art itself has an irregular silhouette.
     const bg = this.add.graphics();
-    bg.fillStyle(Phaser.Display.Color.HexStringToColor(color).color, 1);
+    bg.fillStyle(0xffffff, 0.14);
     bg.fillRoundedRect(x, y, size, size, 12);
-    bg.lineStyle(2, 0xffffff, 0.85);
+    bg.lineStyle(2, 0xffffff, 0.6);
     bg.strokeRoundedRect(x, y, size, size, 12);
 
-    const label = this.add.text(x + size / 2, y + size / 2, glyph, { fontSize: '24px' }).setOrigin(0.5);
+    const icon = this.add.image(cx, cy, textureKey);
+    icon.setDisplaySize(42, 42);
 
     const hit = this.add.rectangle(x, y, size, size, 0xffffff, 0).setOrigin(0).setInteractive({ useHandCursor: true });
-    hit.on('pointerdown', () => this.tweens.add({ targets: [bg, label], scale: 0.9, duration: 70 }));
+    hit.on('pointerdown', () => this.tweens.add({ targets: [bg, icon], scale: 0.88, duration: 70 }));
     hit.on('pointerup', () => {
-      this.tweens.add({ targets: [bg, label], scale: 1, duration: 100 });
+      this.tweens.add({ targets: [bg, icon], scale: 1, duration: 100 });
       this.comingSoon();
     });
+
+    if (anim === 'spin') {
+      this.tweens.add({
+        targets: icon,
+        angle: 360,
+        duration: 6000,
+        repeat: -1,
+        ease: 'Linear',
+      });
+    } else if (anim === 'pulse') {
+      this.tweens.add({
+        targets: icon,
+        scale: 1.12,
+        duration: 620,
+        yoyo: true,
+        repeat: -1,
+        ease: 'Sine.easeInOut',
+      });
+    }
   }
 
   comingSoon() {
@@ -232,8 +346,24 @@ export class HomeHubScene extends Phaser.Scene {
       color: '#ffffff',
     }).setOrigin(0.5);
 
+    // Idle "breathing" pulse - this is the only real way forward from
+    // this screen, so it gets a gentle loop nudging the eye toward it.
+    // Paused/resumed around the press-down tween so the two never
+    // fight each other.
+    const breathe = this.tweens.add({
+      targets: [bg, label],
+      scale: 1.035,
+      duration: 780,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+
     const hit = this.add.rectangle(x, y, w, h, 0xffffff, 0).setInteractive({ useHandCursor: true });
-    hit.on('pointerdown', () => this.tweens.add({ targets: [bg, label], scale: 0.96, duration: 70 }));
+    hit.on('pointerdown', () => {
+      breathe.pause();
+      this.tweens.add({ targets: [bg, label], scale: 0.96, duration: 70 });
+    });
     hit.on('pointerup', () => {
       this.tweens.add({
         targets: [bg, label],
