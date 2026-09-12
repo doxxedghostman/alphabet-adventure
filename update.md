@@ -718,3 +718,43 @@ straight to `BoardScene` Level 1, same as before. That's the last
 piece (wiring the Play button + `BoardScene`'s win flow to actually
 call `completeLevel()` and return to the path instead of chaining
 global level ids) - next batch.
+
+---
+
+### Milestone 17 — World Map fully wired end-to-end
+
+The last piece of the Milestone 10 plan: the actual navigation chain.
+
+- `MainMenuScene`'s Play button now goes to `WorldSelectScene` instead
+  of straight into `BoardScene` Level 1.
+- `BoardScene` now accepts `worldId`/`levelNum` (passed by
+  `LevelPathScene`) alongside the existing `levelId`. On a win, if
+  `worldId` is set, it calls `completeLevel()` from `progressStore.js`
+  - the first time anything in the game actually persists progress.
+- "Next Level" now means "next level in this world" when reached via
+  the World Map (computing the next global id via `levelIdFor()`)
+  rather than the old flat global-id chain from `levels.js`. Beating a
+  world's boss (level 20) instead shows a "World Map" button and
+  returns to `WorldSelectScene`, since beating a boss may have just
+  unlocked the next world - more useful than dropping the player
+  straight into a world they didn't choose.
+- The "Main Menu"/"Try Again" secondary button on loss now returns to
+  `LevelPathScene` (relabeled "Level Path") when reached via the World
+  Map, instead of always going to `MainMenuScene`.
+- Direct/legacy `BoardScene` launches with no `worldId` (e.g. manual
+  testing via the console) still work exactly as before, via the
+  original `nextLevelId`/`getLevel()` global chain - nothing about
+  that path changed.
+
+Also updated `PLAN.md` §8.5 to mark the plan as built (all 10 worlds'
+art, not just Candy Garden's) rather than leaving it reading as a
+plan-only section now that it's implemented.
+
+**Remaining gap, not a World Map issue:** only 5 real levels exist in
+`levels.js` (as its own note has said since Milestone 8/9) - so every
+level node past Candy Garden's first few, in every world, currently
+loads placeholder content via `getLevel()`'s fallback rather than a
+real target word or score target. Authoring the full 200-level list
+(update.md's outstanding item 6, still open) is what actually fills
+that in - the World Map itself now works correctly end to end
+regardless of how much real content sits behind each node.

@@ -14,6 +14,7 @@ import {
 import { WORD_SET } from '../data/wordlist.js';
 import { getLevel, getNextLevelId } from '../data/levels.js';
 import { generateGuaranteedBoard, SCRAMBLE_COUNT_BY_LENGTH } from '../utils/levelGenerator.js';
+import { completeLevel, levelIdFor, LEVELS_PER_WORLD } from '../utils/progressStore.js';
 
 // Word-Swap mechanic:
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
@@ -43,6 +44,11 @@ export class BoardScene extends Phaser.Scene {
 
     this.level = getLevel(sceneData?.levelId ?? 1);
     this.nextLevelId = getNextLevelId(this.level.id);
+    // World Map context (set when launched from LevelPathScene). Null
+    // when BoardScene is started directly (e.g. old-style testing) -
+    // that path still works via nextLevelId/getLevel's global chain.
+    this.worldId = sceneData?.worldId ?? null;
+    this.levelNum = sceneData?.levelNum ?? null;
     this.movesLeft = this.level.maxSwaps;
     this.targetWord = this.level.targetWord; // only set for type: 'target'
     this.scoreTarget = this.level.scoreTarget; // only set for type: 'free'
@@ -712,13 +718,16 @@ export class BoardScene extends Phaser.Scene {
   onLevelWon() {
     this.levelOver = true;
     this.deselectTile();
+    if (this.worldId) completeLevel(this.level.id);
+
+    const isBoss = this.worldId && this.levelNum === LEVELS_PER_WORLD;
     const message = this.level.type === 'free' ? `You reached ${this.score} points!` : `You spelled ${this.targetWord}`;
     this.showEndPopup({
       title: 'Great Word!',
       titleColor: '#ffd93d',
       message,
       messageColor: '#7CFC9A',
-      primaryLabel: this.nextLevelId ? 'Next Level' : 'Back to Menu',
+      primaryLabel: this.worldId ? (isBoss ? 'World Map' : 'Next Level') : this.nextLevelId ? 'Next Level' : 'Back to Menu',
       primaryAction: () => this.goToNextLevelOrMenu(),
       secondaryLabel: 'Replay',
       secondaryAction: () => this.restartLevel(),
@@ -738,23 +747,52 @@ export class BoardScene extends Phaser.Scene {
       messageColor: '#a79ccf',
       primaryLabel: 'Try Again',
       primaryAction: () => this.restartLevel(),
-      secondaryLabel: 'Main Menu',
+      secondaryLabel: this.worldId ? 'Level Path' : 'Main Menu',
       secondaryAction: () => this.goToMainMenu(),
     });
   }
 
   restartLevel() {
-    this.scene.restart({ levelId: this.level.id });
+    this.scene.restart({ levelId: this.level.id, worldId: this.worldId, levelNum: this.levelNum });
   }
 
+  // Named "main menu" for historical reasons (pre-World Map, this only
+  // ever went to MainMenuScene) - now returns to whichever screen makes
+  // sense: LevelPathScene if we got here via the World Map, otherwise
+  // the actual main menu for direct/legacy BoardScene launches.
   goToMainMenu() {
     this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start('MainMenuScene');
+      if (this.worldId) {
+        this.scene.start('LevelPathScene', { worldId: this.worldId });
+      } else {
+        this.scene.start('MainMenuScene');
+      }
     });
   }
 
   goToNextLevelOrMenu() {
+    if (this.worldId) {
+      const isBoss = this.levelNum === LEVELS_PER_WORLD;
+      this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
+      this.cameras.main.once('camerafadeoutcomplete', () => {
+        if (isBoss) {
+          // Beating a boss may have just unlocked the next world -
+          // World Map is more useful here than jumping straight into
+          // level 1 of a world the player hasn't chosen to enter yet.
+          this.scene.start('WorldSelectScene');
+        } else {
+          const nextLevelNum = this.levelNum + 1;
+          this.scene.start('BoardScene', {
+            levelId: levelIdFor(this.worldId, nextLevelNum),
+            worldId: this.worldId,
+            levelNum: nextLevelNum,
+          });
+        }
+      });
+      return;
+    }
+
     if (this.nextLevelId) {
       this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
       this.cameras.main.once('camerafadeoutcomplete', () => {

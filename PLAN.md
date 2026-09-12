@@ -123,14 +123,15 @@ Avoid "find a word" as the only objective. Mix in:
 Reference mockup: `docs/reference/world-map-mockup.png` (World Select
 grid + Candy Garden level path, forest-adventure art style).
 
-Candy Garden art generated and shipped: `public/assets/candy-garden-
-thumb.jpg` (480x360 world-select tile) and `public/assets/candy-garden-
-bg.jpg` (600x900 level-path background, tall enough for a scrollable
-20-node path). Both compressed from multi-MB AI-generator originals
-down to 60KB/175KB via resize-to-actual-display-size + JPEG (no
-transparency needed for either, so JPEG over PNG for the size win).
-This is the only world with real art so far; `WorldSelectScene` should
-show the other 9 as locked/placeholder until their art exists.
+All 10 worlds' art generated and shipped: `public/assets/<world-slug>-
+thumb.jpg` (480x360 world-select tile) and `-bg.jpg` (600x900
+level-path background, tall enough for a scrollable 20-node path) for
+each of Candy Garden, Jungle Jumble, Ocean Words, Dino Valley, Cloud
+Kingdom, Crystal Forest, Magic Mountain, Space Words, Ancient Valley,
+and WordSwoop Kingdom. All compressed from multi-MB AI-generator
+originals down to the 49-72KB/146-220KB range via resize-to-actual-
+display-size + JPEG (no transparency needed for either, so JPEG over
+PNG for the size win).
 
 - Two new scenes: `WorldSelectScene` (2x2 scrollable grid of world
   tiles, locked worlds shown greyed out with a padlock icon per the
@@ -164,10 +165,26 @@ show the other 9 as locked/placeholder until their art exists.
   World 1 unlocked (rest locked/placeholder art) -> wire the full
   Main Menu -> World Select -> Level Path -> Board -> back chain with
   real progress saving -> repeat per additional world as it's authored.
-- Node placement will be hand-placed coordinates per world (not
+- Node placement is hand-placed coordinates per world (not
   procedural), since it's a one-time cost per world (10 total) rather
   than per level, and avoids nodes overlapping background art badly.
-- Not built yet: any of the above. This section is the plan only.
+
+**Built:** progress store (`src/utils/progressStore.js`), `worlds.js`
+(all 10 worlds), `LevelPathScene` (hand-placed nodes for Candy Garden;
+the other 9 worlds use a generic serpentine fallback until their real
+paths get hand-tuned - they're locked/unreachable until then anyway),
+`WorldSelectScene` (2-column scrollable grid, lock overlay), and the
+full navigation chain: Main Menu Play -> World Select -> Level Path ->
+Board -> back, with `BoardScene` now calling `completeLevel()` on a
+win and routing "Next Level"/"World Map" based on whether the level
+just beaten was a world's boss (level 20).
+
+**Not done:** hand-placed node paths for worlds 2-10 (deferred until
+each is reachable/authored); the full 200-level content list is still
+only 5 demo levels (see levels.js's own note) so most level nodes past
+Candy Garden's first few currently load placeholder content via
+`getLevel()`'s fallback rather than unique target words/score
+targets - a content-authoring gap, not a World Map code gap.
 
 ## 9. World map
 
