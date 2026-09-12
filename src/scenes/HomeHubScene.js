@@ -11,8 +11,8 @@ import { resetProgress } from '../utils/progressStore.js';
 // Per chat: only the Word Map button and Settings (reset progress,
 // reusing the same panel as MainMenuScene) are real. The remaining
 // icons (shop, gallery, trophy, leaderboard, coin shop, calendar,
-// video) are shown but tapping just bounces + shows a "Coming Soon"
-// toast, since none of those systems exist yet.
+// video) are shown but inert - tap just does the press-down bounce,
+// no toast/popup, since none of those systems exist yet.
 //
 // Art: swapped from code-drawn placeholders to the real generated art
 // (forest bg, wood top bar, word-map banner, mini map parchment card,
@@ -27,8 +27,11 @@ import { resetProgress } from '../utils/progressStore.js';
 // producing a "white blink" artifact on-device - removed entirely.
 // Icons now sit directly on the forest background with no backing box
 // and no idle animation anywhere in this scene, only the existing
-// press-down/up tap bounce. The spin-wheel icon was dropped from the
-// right column too (not needed) rather than kept and fixed.
+// press-down/up tap bounce (no toast/popup on tap either). The
+// spin-wheel icon was dropped from the right column too (not needed)
+// rather than kept and fixed. "Guest_Player" placeholder text was also
+// dropped from the top bar - real profile/settings icons and account
+// data (Google sign-in + Supabase) are coming next.
 export class HomeHubScene extends Phaser.Scene {
   constructor() {
     super('HomeHubScene');
@@ -90,16 +93,10 @@ export class HomeHubScene extends Phaser.Scene {
 
     const cy = barY + barHeight / 2;
 
-    // Avatar (placeholder - no account system yet)
+    // Avatar (placeholder - no account system yet; real profile icon +
+    // account data coming with the Google sign-in / Supabase work).
     this.add.circle(38, cy, 18, 0x8f5c3c, 1).setStrokeStyle(2, 0xffffff, 0.9);
     this.add.text(38, cy, '\u{1F9D2}', { fontSize: '20px' }).setOrigin(0.5);
-
-    this.add.text(64, cy, 'Guest_Player', {
-      fontFamily: 'Arial',
-      fontSize: '13px',
-      fontStyle: 'bold',
-      color: '#3a2a5c',
-    }).setOrigin(0, 0.5);
 
     // Currency (placeholder - no economy system yet)
     const currencyX = width - 118;
@@ -111,7 +108,7 @@ export class HomeHubScene extends Phaser.Scene {
       color: '#8a5a1c',
     }).setOrigin(0, 0.5);
 
-    this.createSmallIconButton(width - 78, cy, '+', '#c0392b', () => this.comingSoon());
+    this.createSmallIconButton(width - 78, cy, '+', '#c0392b', () => {});
     this.createSmallIconButton(width - 34, cy, '\u2699', '#8e44ad', () => this.openSettings());
   }
 
@@ -220,41 +217,14 @@ export class HomeHubScene extends Phaser.Scene {
     const cy = y + size / 2;
 
     // No backing card and no idle animation - icons sit directly on the
-    // forest background. Tap just does a press-down/up bounce plus the
-    // "Coming Soon" toast; these systems don't exist yet.
+    // forest background. Tap just does a press-down/up bounce; these
+    // systems don't exist yet so there's nothing further to trigger.
     const icon = this.add.image(cx, cy, textureKey);
     icon.setDisplaySize(42, 42);
 
     const hit = this.add.rectangle(x, y, size, size, 0xffffff, 0).setOrigin(0).setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => this.tweens.add({ targets: icon, scale: 0.88, duration: 70 }));
-    hit.on('pointerup', () => {
-      this.tweens.add({ targets: icon, scale: 1, duration: 100 });
-      this.comingSoon();
-    });
-  }
-
-  comingSoon() {
-    const { width, height } = this.scale;
-    const toast = this.add.text(width / 2, height - 90, 'Coming Soon!', {
-      fontFamily: 'Arial',
-      fontSize: '16px',
-      fontStyle: 'bold',
-      color: '#ffffff',
-    }).setOrigin(0.5).setPadding(14, 8, 14, 8).setBackgroundColor('#000000aa');
-    toast.alpha = 0;
-    toast.y += 10;
-    this.tweens.add({
-      targets: toast,
-      alpha: 1,
-      y: toast.y - 10,
-      duration: 180,
-      ease: 'Sine.easeOut',
-      onComplete: () => {
-        this.time.delayedCall(900, () => {
-          this.tweens.add({ targets: toast, alpha: 0, duration: 220, onComplete: () => toast.destroy() });
-        });
-      },
-    });
+    hit.on('pointerup', () => this.tweens.add({ targets: icon, scale: 1, duration: 100 }));
   }
 
   // --- Bottom: the real navigation forward ----------------------------------
