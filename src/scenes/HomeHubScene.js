@@ -65,7 +65,7 @@ export class HomeHubScene extends Phaser.Scene {
     this.createTopBar(width);
     this.createLogoAndMapPreview(width);
     this.createIconColumn('left', 12);
-    this.createIconColumn('right', width - 12 - 64);
+    this.createIconColumn('right', width - 12 - 82);
     this.createWordMapButton(width, height);
   }
 
@@ -157,13 +157,15 @@ export class HomeHubScene extends Phaser.Scene {
 
     // Mini map preview removed per chat (parchment card, dashed path,
     // and lock/star nodes all taken out) - the letter-block strip below
-    // now sits directly under the "Word Map" ribbon/text instead of
-    // under the map card, moved up to close the gap that removal left.
+    // now sits under the "Word Map" ribbon/text instead of under the
+    // map card. Gap widened (26 -> 55) per chat: with the map gone the
+    // blocks had ended up sitting right under the logo/ribbon with no
+    // breathing room.
     this.mapPreviewBottom = ribbonY + 33;
 
     // Decorative letter-block strip - purely for flavor, not
     // interactive, no idle animation.
-    const blocks = this.add.image(width / 2, this.mapPreviewBottom + 26, 'hubLetterBlocks');
+    const blocks = this.add.image(width / 2, this.mapPreviewBottom + 55, 'hubLetterBlocks');
     blocks.setDisplaySize(width * 0.5, (width * 0.5) * (300 / 900));
   }
 
@@ -175,16 +177,16 @@ export class HomeHubScene extends Phaser.Scene {
       ? ['iconShop', 'iconGallery', 'iconTrophy', 'iconLeaderboard']
       : ['iconCoinShop', 'iconCalendar', 'iconVideo'];
 
-    // Enlarged per chat (was 42px display / 78px gap) - gap grown by
-    // more than the size increase so bigger icons still clear each
-    // other with room to spare, not just touching edge-to-edge.
+    // Enlarged again per chat (58px -> 74px display) - gap grown by
+    // more than the size increase (96 -> 108) so the bigger icons still
+    // clear each other with room to spare, not just touching edge-to-edge.
     const top = 92;
-    const gap = 96;
+    const gap = 108;
     icons.forEach((key, i) => this.createColumnIcon(x, top + i * gap, key));
   }
 
   createColumnIcon(x, y, textureKey) {
-    const size = 64;
+    const size = 82;
     const cx = x + size / 2;
     const cy = y + size / 2;
 
@@ -192,7 +194,7 @@ export class HomeHubScene extends Phaser.Scene {
     // forest background. Tap just does a press-down/up bounce; these
     // systems don't exist yet so there's nothing further to trigger.
     const icon = this.add.image(cx, cy, textureKey);
-    icon.setDisplaySize(58, 58);
+    icon.setDisplaySize(74, 74);
     // setDisplaySize gives this image a non-1 base scale (native art is
     // 280x280, shown at 42x42, so baseScale ~= 0.15). The tap-bounce
     // tween below must scale *relative to that*, not set scale to a
@@ -211,7 +213,9 @@ export class HomeHubScene extends Phaser.Scene {
   createWordMapButton(width, height) {
     const w = width * 0.7;
     const x = width / 2;
-    const y = height - 44;
+    // Nudged up per chat (was height - 44) - it was sitting flush at
+    // the very bottom edge.
+    const y = height - 62;
 
     // Real art with "Word Map" already baked in, replacing the
     // code-drawn blue rect + text label - image is the whole button now.
