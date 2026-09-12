@@ -45,7 +45,6 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('hubWordMapButton', 'assets/word-map-button.png');
     this.load.image('hubMapPreviewCard', 'assets/map-preview-card.jpg');
     this.load.image('hubForestBg', 'assets/forest-background.jpg');
-    this.load.video('hubBgVideo', 'assets/hub-background-loop-v2.mp4', false);
     this.load.image('hubLetterBlocks', 'assets/letter-blocks-strip.png');
 
     this.load.image('iconShop', 'assets/icon-shop.png');
@@ -73,42 +72,40 @@ export class HomeHubScene extends Phaser.Scene {
   // --- Background -----------------------------------------------------------
 
   createBackground(width, height) {
-    // Looping waterfall video background (per chat) - falls back to the
-    // static forest-background.jpg if video playback fails for any
-    // reason (some mobile browsers block autoplay even when muted, or
-    // the format isn't supported).
-    let bg;
-    try {
-      const video = this.add.video(width / 2, height / 2, 'hubBgVideo');
-      video.setMute(true);
-      video.setLoop(true);
-      video.play(true);
-      const vw = video.width || 624;
-      const vh = video.height || 840;
-      const scale = Math.max(width / vw, height / vh);
-      video.setScale(scale);
-      bg = video;
-    } catch (e) {
-      bg = null;
-    }
+    // Static illustrated forest/waterfall background (per chat - replaces
+    // the earlier looping video, which was only 624x840 and looked
+    // blurry once stretched to fill a phone screen, plus lost ~5% off
+    // the top/bottom to the cover-scale crop; this illustration holds up
+    // sharp at the same crop since it's clean line/paint art rather than
+    // video footage).
+    //
+    // Forest bg is portrait-ish (600x900) but not the same aspect as the
+    // fixed game canvas - scale to cover width/height and center so it
+    // fills the frame with no letterboxing, same idea as a CSS
+    // background-size: cover.
+    const bg = this.add.image(width / 2, height / 2, 'hubForestBg');
+    const scale = Math.max(width / bg.width, height / bg.height);
+    bg.setScale(scale);
 
-    if (!bg) {
-      // Forest bg is portrait-ish (600x900) but not the same aspect as
-      // the fixed game canvas - scale to cover width and center
-      // vertically so it fills the frame with no letterboxing, same
-      // idea as a CSS background-size: cover.
-      bg = this.add.image(width / 2, height / 2, 'hubForestBg');
-      const scale = Math.max(width / bg.width, height / bg.height);
-      bg.setScale(scale);
-    }
+    // Little bit of life instead of a dead-static image: a very slow,
+    // barely-perceptible drift/zoom (classic "Ken Burns" pan), yoyoing
+    // forever. Subtle on purpose - previous idle-effect passes on this
+    // screen (glow/shine on the icons) were tried and then deliberately
+    // removed for a plainer look, so this stays understated and lives
+    // only on the background, not the UI.
+    this.tweens.add({
+      targets: bg,
+      scale: scale * 1.06,
+      x: bg.x - 10,
+      y: bg.y - 6,
+      duration: 14000,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
 
     // Dim it slightly so the UI on top stays readable, same role the
-    // flat 0x241a3d rectangle used to play. Opacity dropped 0.45 -> 0.15
-    // per chat - at 0.45 the video's own bright/hazy palette plus the
-    // dark wash combined into a washed-out "faded" look across the
-    // whole screen (confirmed by compositing the two to reproduce it),
-    // not the actual blur the person suspected - see update.md
-    // Milestone 27.
+    // flat 0x241a3d rectangle used to play.
     this.add.rectangle(0, 0, width, height, 0x1a1030, 0.15).setOrigin(0);
   }
 
