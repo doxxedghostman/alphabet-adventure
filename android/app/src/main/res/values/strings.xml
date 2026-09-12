@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">WordSwoop</string>
+    <string name="title_activity_main">WordSwoop</string>
+    <string name="package_name">com.wobblewingstudios.wordswoop</string>
+    <string name="custom_url_scheme">com.wobblewingstudios.wordswoop</string>
+</resources>
