@@ -56,6 +56,7 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('iconCalendar', 'assets/icon-calendar.png');
     this.load.image('iconVideo', 'assets/icon-video.png');
     this.load.image('iconSettings', 'assets/icon-settings.png');
+    this.load.image('iconGem', 'assets/icon-gem.png');
   }
 
   create() {
@@ -102,7 +103,8 @@ export class HomeHubScene extends Phaser.Scene {
 
     // Currency (placeholder - no economy system yet)
     const currencyX = width - 118;
-    this.add.text(currencyX, cy, '\u{1F451}', { fontSize: '18px' }).setOrigin(0.5);
+    const gem = this.add.image(currencyX, cy, 'iconGem');
+    gem.setDisplaySize(20, 20);
     this.add.text(currencyX + 16, cy, '0', {
       fontFamily: 'Arial',
       fontSize: '15px',
