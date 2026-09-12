@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Matches the game's canvas/background purple (#241a3d) used across
+         SplashScene, MainMenuScene, SettingsScene, and the index.html
+         #game-frame background. -->
+    <color name="colorPrimary">#241a3d</color>
+    <color name="colorPrimaryDark">#1a1030</color>
+    <!-- Matches the gold "Play" button / letter-tile accent color. -->
+    <color name="colorAccent">#f2b705</color>
+</resources>
