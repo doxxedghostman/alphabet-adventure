@@ -973,6 +973,21 @@ placeholders, not converted to dead links — no store listing exists
 yet for the former, no IAP/RevenueCat setup exists yet for the latter
 (see Milestone 21's note on the codebase having neither).
 
+### Milestone 23 — Audio toggles: real switches, persisted, silently no-op
+
+Per chat, Music/Sound effects/Vibration in `SettingsScene` are real
+toggle rows now — new `addToggleRow()` helper (track + knob, tap to
+flip, tween on state change) reads its initial state from and writes
+changes to `settingsStore.js` (added last commit, unused until now).
+
+As flagged when the store was added: there is still no audio system in
+the codebase and no `@capacitor/haptics` dependency, so these toggles
+persist a real preference across reloads but don't control any actual
+sound or vibration yet — nothing plays audio or vibrates regardless of
+switch position. `isMusicOn()`/`isSfxOn()`/`isHapticsOn()` are the
+getters whatever adds real audio/haptics next should check before
+playing anything.
+
 ### Next up (not started) — Google sign-in + Supabase for account data
 
 Per chat: person wants to wire up Google sign-in and a Supabase backend

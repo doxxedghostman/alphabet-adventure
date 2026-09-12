@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import pkg from '../../package.json';
 import { resetProgress } from '../utils/progressStore.js';
+import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } from '../utils/settingsStore.js';
 
 // Settings — was a small fixed-height popup inside HomeHubScene with
 // exactly two buttons (Reset Progress, Close). That doesn't scale to a
@@ -29,9 +30,17 @@ const PLACEHOLDER_PRIVACY_URL = 'https://example.com/wordswoop/privacy';
 const PLACEHOLDER_TERMS_URL = 'https://example.com/wordswoop/terms';
 const SUPPORT_EMAIL = 'wordswoop@gmail.com';
 //
+// Audio toggles (per chat): Music/SFX/Vibration are real, persisted
+// switches now (see settingsStore.js) — but there is still no audio
+// system in the codebase (no this.sound usage anywhere) and no
+// @capacitor/haptics dependency installed, so flipping these currently
+// changes only the stored preference, not any actual sound/vibration.
+// Whatever adds real audio/haptics later just needs to check
+// isMusicOn()/isSfxOn()/isHapticsOn() before playing anything.
+//
 // Status per section (update as each lands):
 //   Account         - placeholder (blocked on Google sign-in / Supabase decision)
-//   Audio           - placeholder
+//   Audio           - real toggles, persisted, not yet wired to actual sound/haptics (none exist)
 //   Notifications   - placeholder (explicitly deferred per chat)
 //   Support & Legal - Privacy/Terms/Contact real (placeholder destinations); Rate/Restore still placeholder
 //   Data            - Reset Progress is real; Sign Out placeholder (blocked with Account)
@@ -59,9 +68,9 @@ export class SettingsScene extends Phaser.Scene {
     y += this.sectionGap;
 
     y = this.addSection(y, 'Audio');
-    y = this.addPlaceholderRow(y, 'Music', 'Coming soon');
-    y = this.addPlaceholderRow(y, 'Sound effects', 'Coming soon');
-    y = this.addPlaceholderRow(y, 'Vibration', 'Coming soon');
+    y = this.addToggleRow(y, 'Music', isMusicOn(), (value) => setMusicOn(value));
+    y = this.addToggleRow(y, 'Sound effects', isSfxOn(), (value) => setSfxOn(value));
+    y = this.addToggleRow(y, 'Vibration', isHapticsOn(), (value) => setHapticsOn(value));
     y += this.sectionGap;
 
     y = this.addSection(y, 'Notifications');
@@ -152,6 +161,46 @@ export class SettingsScene extends Phaser.Scene {
       color: '#c9c0e6',
     });
     valueText.setOrigin(1, 0.5);
+
+    return y + this.rowHeight;
+  }
+
+  addToggleRow(y, label, initialValue, onChange) {
+    const bg = this.rowBackground(y);
+    bg.setInteractive({ useHandCursor: true });
+
+    const labelText = this.add.text(this.margin + 14, y, label, {
+      fontFamily: 'Arial',
+      fontSize: '15px',
+      color: '#ffffff',
+    });
+    labelText.setOrigin(0, 0.5);
+
+    const trackWidth = 44;
+    const trackHeight = 24;
+    const trackX = this.scale.width - this.margin - 14 - trackWidth / 2;
+    const onColor = 0x4caf50;
+    const offColor = 0x5a5270;
+
+    const track = this.add.rectangle(trackX, y, trackWidth, trackHeight, initialValue ? onColor : offColor, 1);
+    track.setStrokeStyle(1, 0xffffff, 0.4);
+
+    const knobOffset = trackWidth / 2 - trackHeight / 2;
+    const knob = this.add.circle(trackX + (initialValue ? knobOffset : -knobOffset), y, trackHeight / 2 - 3, 0xffffff, 1);
+
+    let value = initialValue;
+    bg.on('pointerup', () => {
+      if (this.wasDrag()) return;
+      value = !value;
+      onChange(value);
+      track.setFillStyle(value ? onColor : offColor);
+      this.tweens.add({
+        targets: knob,
+        x: trackX + (value ? knobOffset : -knobOffset),
+        duration: 120,
+        ease: 'Sine.easeOut',
+      });
+    });
 
     return y + this.rowHeight;
   }
