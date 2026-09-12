@@ -6,13 +6,13 @@ import { WorldSelectScene } from './scenes/WorldSelectScene.js';
 import { LevelPathScene } from './scenes/LevelPathScene.js';
 import { BoardScene } from './scenes/BoardScene.js';
 import { SettingsScene } from './scenes/SettingsScene.js';
-import { BOARD_PIXEL_SIZE } from './config.js';
+import { CANVAS_SIZE } from './config.js';
 
 const config = {
   type: Phaser.AUTO,
   parent: 'game-container',
-  width: BOARD_PIXEL_SIZE.width,
-  height: BOARD_PIXEL_SIZE.height,
+  width: CANVAS_SIZE.width,
+  height: CANVAS_SIZE.height,
   backgroundColor: '#241a3d',
   scene: [SplashScene, MainMenuScene, HomeHubScene, WorldSelectScene, LevelPathScene, BoardScene, SettingsScene],
   render: {
@@ -20,7 +20,7 @@ const config = {
   },
   // Render the game's backing framebuffer at the device's real pixel
   // density instead of 1 CSS pixel = 1 canvas pixel. Without this, the
-  // fixed 516x624 canvas gets drawn once at that low resolution and then
+  // fixed-resolution canvas gets drawn once at that low resolution and then
   // stretched up by both Phaser.Scale.FIT and the phone's own pixel
   // ratio (100vw/100vh in index.html routinely blows this up 1.5-3x) -
   // that's what was making every icon and image look soft/blurry, not

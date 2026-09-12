@@ -14,6 +14,30 @@ export const BOARD_PIXEL_SIZE = {
   height: BOARD_SIZE * (TILE_SIZE + TILE_GAP) + BOARD_TOP_MARGIN + BOARD_SIDE_MARGIN,
 };
 
+// The actual Phaser canvas resolution used by main.js - deliberately
+// NOT the same as BOARD_PIXEL_SIZE. BOARD_PIXEL_SIZE is just "how big
+// the 6x6 grid + its header naturally is"; using that as the whole
+// canvas made every screen (menus included) get boxed into a stubby
+// 516x624 window and letterboxed top/bottom on real phones, which are
+// much taller and narrower than that.
+//
+// Every other scene (MainMenu, HomeHub, WorldSelect, LevelPath,
+// Settings, Splash) already lays itself out proportionally from
+// `this.scale.width/height` (or scrolls via camera bounds), so they
+// stretch correctly to whatever canvas size we give them. Only
+// BoardScene assumed canvas === BOARD_PIXEL_SIZE for its full-screen
+// dim overlay - that's fixed separately in BoardScene.js to use the
+// real canvas size instead.
+//
+// 516 wide (unchanged - it's a good tap-target width for a 6-col grid)
+// x a height matching a common modern phone aspect ratio (~19.5:9),
+// so FIT letterboxes only a sliver on outlier aspect ratios instead of
+// boxing everything into the middle of the screen.
+export const CANVAS_SIZE = {
+  width: BOARD_PIXEL_SIZE.width,
+  height: Math.round(BOARD_PIXEL_SIZE.width * (19.5 / 9)),
+};
+
 export const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 // Full-alphabet pool, weighted by standard English/Scrabble-style letter

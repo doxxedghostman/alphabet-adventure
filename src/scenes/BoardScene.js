@@ -807,11 +807,14 @@ export class BoardScene extends Phaser.Scene {
   // one or two buttons. Used for both win and lose - which buttons/colors
   // show is entirely driven by the config object passed in.
   showEndPopup({ title, titleColor, message, messageColor, primaryLabel, primaryAction, secondaryLabel, secondaryAction }) {
-    const centerX = BOARD_PIXEL_SIZE.width / 2;
-    const centerY = BOARD_PIXEL_SIZE.height / 2;
+    // Use the real canvas size here, not BOARD_PIXEL_SIZE - the canvas is
+    // now taller than the board+header content so the dim overlay needs
+    // to cover the whole screen, not just the old 516x624 board area.
+    const centerX = this.scale.width / 2;
+    const centerY = this.scale.height / 2;
 
     const overlay = this.add
-      .rectangle(centerX, centerY, BOARD_PIXEL_SIZE.width, BOARD_PIXEL_SIZE.height, 0x000000, 0.6)
+      .rectangle(centerX, centerY, this.scale.width, this.scale.height, 0x000000, 0.6)
       .setAlpha(0);
 
     const cardWidth = BOARD_PIXEL_SIZE.width - 60;
