@@ -953,6 +953,26 @@ despite PLAN.md listing Capacitor as the intended stack. So Music/SFX
 toggles will need real audio assets + a sound setup before they control
 anything, and Vibration needs `@capacitor/haptics` added first.
 
+### Milestone 22 — Support & Legal: Privacy/Terms/Contact wired up (placeholder destinations)
+
+Per chat, the Support & Legal section of `SettingsScene` is real now
+for three of its five rows — new `addLinkRow()` helper opens a URL via
+`window.open(url, '_blank', 'noopener')` on tap:
+
+- **Privacy Policy** / **Terms of Service** → placeholder URLs
+  (`PLACEHOLDER_PRIVACY_URL`/`PLACEHOLDER_TERMS_URL` constants at the
+  top of the file) since neither page exists yet — swap these once
+  they're published.
+- **Contact Support** → `mailto:wordswoop@gmail.com`. Per chat this was
+  meant to be a studio-level address rather than a per-game one, but
+  that address doesn't exist yet, so this is the placeholder until it
+  does (`SUPPORT_EMAIL` constant, same file).
+
+**Rate the App** and **Restore Purchases** stay as "Coming soon"
+placeholders, not converted to dead links — no store listing exists
+yet for the former, no IAP/RevenueCat setup exists yet for the latter
+(see Milestone 21's note on the codebase having neither).
+
 ### Next up (not started) — Google sign-in + Supabase for account data
 
 Per chat: person wants to wire up Google sign-in and a Supabase backend

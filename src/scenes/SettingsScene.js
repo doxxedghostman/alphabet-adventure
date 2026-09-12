@@ -16,11 +16,24 @@ import { resetProgress } from '../utils/progressStore.js';
 // visibly-disabled "Coming soon" row rather than being omitted, so
 // nothing looks missing while it's still pending.
 //
+// Support & Legal links (per chat): Privacy Policy / Terms of Service
+// point at placeholder URLs — nothing real published yet, swap
+// PLACEHOLDER_PRIVACY_URL / PLACEHOLDER_TERMS_URL once they exist.
+// Contact Support opens a mailto: to wordswoop@gmail.com — per chat
+// this should really be a studio-level address rather than a
+// per-game one, but that hasn't been created yet, so this is a
+// placeholder to swap once it is. Rate the App and Restore Purchases
+// stay as "Coming soon" placeholders (no store listing yet, no IAP
+// wired up yet) rather than half-real links to nothing.
+const PLACEHOLDER_PRIVACY_URL = 'https://example.com/wordswoop/privacy';
+const PLACEHOLDER_TERMS_URL = 'https://example.com/wordswoop/terms';
+const SUPPORT_EMAIL = 'wordswoop@gmail.com';
+//
 // Status per section (update as each lands):
 //   Account         - placeholder (blocked on Google sign-in / Supabase decision)
 //   Audio           - placeholder
 //   Notifications   - placeholder (explicitly deferred per chat)
-//   Support & Legal - placeholder
+//   Support & Legal - Privacy/Terms/Contact real (placeholder destinations); Rate/Restore still placeholder
 //   Data            - Reset Progress is real; Sign Out placeholder (blocked with Account)
 //   About           - real (live app version from package.json)
 export class SettingsScene extends Phaser.Scene {
@@ -58,9 +71,9 @@ export class SettingsScene extends Phaser.Scene {
     y += this.sectionGap;
 
     y = this.addSection(y, 'Support & Legal');
-    y = this.addPlaceholderRow(y, 'Privacy Policy', 'Coming soon');
-    y = this.addPlaceholderRow(y, 'Terms of Service', 'Coming soon');
-    y = this.addPlaceholderRow(y, 'Contact Support', 'Coming soon');
+    y = this.addLinkRow(y, 'Privacy Policy', PLACEHOLDER_PRIVACY_URL);
+    y = this.addLinkRow(y, 'Terms of Service', PLACEHOLDER_TERMS_URL);
+    y = this.addLinkRow(y, 'Contact Support', `mailto:${SUPPORT_EMAIL}`);
     y = this.addPlaceholderRow(y, 'Rate the App', 'Coming soon');
     y = this.addPlaceholderRow(y, 'Restore Purchases', 'Coming soon');
     y += this.sectionGap;
@@ -139,6 +152,32 @@ export class SettingsScene extends Phaser.Scene {
       color: '#c9c0e6',
     });
     valueText.setOrigin(1, 0.5);
+
+    return y + this.rowHeight;
+  }
+
+  addLinkRow(y, label, url) {
+    const bg = this.rowBackground(y);
+    bg.setInteractive({ useHandCursor: true });
+
+    const labelText = this.add.text(this.margin + 14, y, label, {
+      fontFamily: 'Arial',
+      fontSize: '15px',
+      color: '#ffffff',
+    });
+    labelText.setOrigin(0, 0.5);
+
+    const chevron = this.add.text(this.scale.width - this.margin - 14, y, '\u2192', {
+      fontFamily: 'Arial',
+      fontSize: '16px',
+      color: '#ffd93d',
+    });
+    chevron.setOrigin(1, 0.5);
+
+    bg.on('pointerup', () => {
+      if (this.wasDrag()) return;
+      window.open(url, '_blank', 'noopener');
+    });
 
     return y + this.rowHeight;
   }
