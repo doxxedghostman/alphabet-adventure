@@ -798,3 +798,84 @@ used elsewhere. Settings-panel code is duplicated between
 `MainMenuScene` and `HomeHubScene` rather than factored into a shared
 file, matching the existing pattern of duplicating the drag-scroll
 logic between `WorldSelectScene` and `LevelPathScene`.
+
+---
+
+### Milestone 19 — Home Hub real art, then a separate session's rework, then animations stripped back out
+
+Three rounds of work landed on `HomeHubScene.js`/`MainMenuScene.js` in
+quick succession, from two different chat sessions working on the same
+repo - noting all three here since only the first was previously
+logged.
+
+**Round 1 (this session, commits `4aafc7c`/`6b08c66`):** swapped
+Milestone 18's code-drawn top bar/banner/map-preview/icons for the
+real generated art (forest bg, wood top bar, "Word Map" banner, map
+preview parchment card cropped to a wide strip, 8 side icons re-keyed
+for real alpha transparency since the source PNGs had a flat white
+background baked in) and added a first animation pass (breathing Word
+Map button, spinning wheel icon, pulsing calendar/currency button,
+glowing map-preview star, floating letter blocks).
+
+**Round 2 (a separate session, commits `a5821e8`/`3fe7a45`, not
+previously logged here):** re-exported several icon assets at higher
+resolution and swapped `menu-characters.png` for a `.jpg`; added a
+`resolution: devicePixelRatio` setting to `main.js`'s Phaser config to
+fix blurry UI (the fixed 516x624 canvas was being upscaled by both
+Phaser's FIT mode and the device's own pixel ratio); replaced Round
+1's bespoke per-element animations with a shared
+`src/utils/effects.js` (`applyGlow`/`applyShine`/
+`applyRandomIdleEffect`, picking one of exactly two idle-effect kinds
+at random per element) and applied it everywhere Round 1 had used a
+bespoke tween; and rebuilt `MainMenuScene` entirely around a single
+poster art image (`menu-characters.jpg`) with a template-matched
+`PLAY_BANNER_BOX` so the real interactive Play button crop lines up
+pixel-for-pixel with the banner already painted into the poster,
+replacing the previous layered logo/characters/button/badge/gear
+approach.
+
+**Round 3 (this session, commits `354e860`/`813562b`/`5d7369d`):**
+per chat, review of an on-device screenshot found the Round 2
+glow/shine effects (plus Round 1's semi-transparent white icon backing
+card) were producing a "white blink" artifact - removed all of it
+rather than reworking it further. Landed as three small batches:
+
+1. Removed every `applyRandomIdleEffect()` call in `HomeHubScene.js`
+   (the "+" currency button, every icon, the map preview's star node,
+   the letter-block strip, the Word Map button) and the white backing
+   rect behind every icon; dropped the spin-wheel icon from the right
+   column entirely (not needed) - right column is 3 icons now (coin
+   shop, calendar, video), left stays 4.
+2. Removed the "Coming Soon" toast on icon tap (tap now just does the
+   press-down/up bounce, nothing else) and removed the "Guest_Player"
+   placeholder text from the top bar.
+3. Removed the same `applyRandomIdleEffect()` call from
+   `MainMenuScene`'s Play button.
+
+`src/utils/effects.js` is unreferenced by any scene now - left in
+place rather than deleted in case it's useful again, but nothing
+currently imports it. The devicePixelRatio fix and the poster-based
+`MainMenuScene` rebuild from Round 2 were untouched by Round 3 - only
+the idle-animation layer was removed, not the underlying art/layout
+changes.
+
+**Still open, not addressed in any of the three rounds above:** icons
+drifting out of their fixed column position on some devices, and
+swapping the bottom "Word Map" button for the finished text-baked-in
+banner art the person supplied
+(`ChatGPT_Image_Sep_12__2026__01_42_03_PM.png`, not yet added to
+`public/assets/`) instead of the current code-drawn rect+label.
+
+---
+
+### Next up (not started) — Google sign-in + Supabase for account data
+
+Per chat: person wants to wire up Google sign-in and a Supabase backend
+to persist user data (currently everything - progress, settings reset,
+etc. - is local-only via `progressStore.js`), and expand the Settings
+panel accordingly. New profile/settings icon art is coming to replace
+the current code-drawn avatar circle and gear glyph. Needs from the
+person before this can start: whether this project gets its own new
+Supabase project or reuses an existing one, and the Google OAuth
+client setup (web client ID at minimum) - nothing here yet, flagging
+so the next session picks it up rather than guessing at credentials.
