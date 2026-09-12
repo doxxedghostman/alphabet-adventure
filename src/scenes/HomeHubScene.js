@@ -1,20 +1,18 @@
 import Phaser from 'phaser';
 import { resetProgress } from '../utils/progressStore.js';
-import { applyRandomIdleEffect } from '../utils/effects.js';
 
 // Home Hub (per chat): sits between the splash/logo Main Menu and the
 // World Map. Modeled on the reference mockup image the user provided -
 // avatar/name/currency/settings bar, a shop/gallery/trophy/leaderboard
-// column on the left, a shop/calendar/spin-wheel/video column on the
-// right, a logo + mini map preview in the center, and a big "Word Map"
-// button at the bottom that's the only way forward from here.
+// column on the left, a coin-shop/calendar/video column on the right,
+// a logo + mini map preview in the center, and a big "Word Map" button
+// at the bottom that's the only way forward from here.
 //
 // Per chat: only the Word Map button and Settings (reset progress,
-// reusing the same panel as MainMenuScene) are real. Every other icon
-// (shop x2, gallery, trophy, leaderboard, calendar, spin wheel, video)
-// is shown fully styled and tappable per the user's explicit choice,
-// even though none of those systems exist yet - tapping one shows a
-// "Coming Soon" toast rather than doing nothing or looking disabled.
+// reusing the same panel as MainMenuScene) are real. The remaining
+// icons (shop, gallery, trophy, leaderboard, coin shop, calendar,
+// video) are shown but tapping just bounces + shows a "Coming Soon"
+// toast, since none of those systems exist yet.
 //
 // Art: swapped from code-drawn placeholders to the real generated art
 // (forest bg, wood top bar, word-map banner, mini map parchment card,
@@ -22,18 +20,15 @@ import { applyRandomIdleEffect } from '../utils/effects.js';
 // Icons were re-keyed for transparency on our end (originals had a flat
 // white background baked in, not real alpha) before being added.
 //
-// Animation pass (per chat): kept it selective rather than animating every
-// element, but every idle effect below is now one of exactly two kinds -
-// "glow" (soft pulsing halo) or "shine" (diagonal light sweep) - assigned
-// at random per element via applyRandomIdleEffect(), instead of the old
-// bespoke pulse/spin/breathe/float animations -
-//  - Word Map button (the only real action here)
-//  - Spin wheel icon
-//  - Daily-reward calendar icon (classic "come back today" nudge)
-//  - The map preview's star/goal node
-//  - The letter-block strip
-//  - Every tappable icon still gets the existing press-down bounce (that's
-//    interaction feedback, not a decorative idle animation, so it's unchanged)
+// Per chat follow-up: the glow/shine idle-animation pass from
+// utils/effects.js (applied here to the "+" button, every icon, the
+// map preview's star node, the letter blocks, and the Word Map button)
+// plus the semi-transparent white backing card behind every icon were
+// producing a "white blink" artifact on-device - removed entirely.
+// Icons now sit directly on the forest background with no backing box
+// and no idle animation anywhere in this scene, only the existing
+// press-down/up tap bounce. The spin-wheel icon was dropped from the
+// right column too (not needed) rather than kept and fixed.
 export class HomeHubScene extends Phaser.Scene {
   constructor() {
     super('HomeHubScene');
@@ -55,7 +50,6 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('iconLeaderboard', 'assets/icon-leaderboard.png');
     this.load.image('iconCoinShop', 'assets/icon-coin-shop.png');
     this.load.image('iconCalendar', 'assets/icon-calendar.png');
-    this.load.image('iconSpinWheel', 'assets/icon-spin-wheel.png');
     this.load.image('iconVideo', 'assets/icon-video.png');
   }
 
@@ -119,12 +113,6 @@ export class HomeHubScene extends Phaser.Scene {
 
     this.createSmallIconButton(width - 78, cy, '+', '#c0392b', () => this.comingSoon());
     this.createSmallIconButton(width - 34, cy, '\u2699', '#8e44ad', () => this.openSettings());
-
-    // Idle effect on the "+" currency button - it's the one spot in the
-    // bar that's an actual call-to-action (buy currency), same nudge
-    // pattern as the daily-reward calendar icon below. Glow or shine,
-    // picked at random.
-    applyRandomIdleEffect(this, { x: width - 78, y: cy, radius: 18 });
   }
 
   createSmallIconButton(x, y, glyph, color, onTap) {
@@ -203,80 +191,46 @@ export class HomeHubScene extends Phaser.Scene {
       dot.strokeCircle(x, y, 13);
       const glyph = n.state === 'star' ? '\u2605' : '\u{1F512}';
       this.add.text(x, y, glyph, { fontSize: '13px' }).setOrigin(0.5);
-
-      // The star/goal node gets an idle effect (glow or shine, at random)
-      // - it's the "prize at the end of the path" and deserves to draw
-      // the eye, same idea as the star used at the end of the real
-      // LevelPathScene/WorldSelect.
-      if (n.state === 'star') {
-        applyRandomIdleEffect(this, { x, y, radius: 13 });
-      }
     });
 
     this.mapPreviewBottom = cardY + cardH;
 
-    // Decorative letter-block strip, floated just under the map preview
-    // - purely for flavor (per chat, "skip if you don't care" - kept it
-    // in since the user sent it), not interactive.
+    // Decorative letter-block strip under the map preview - purely for
+    // flavor, not interactive, no idle animation.
     const blocks = this.add.image(width / 2, this.mapPreviewBottom + 26, 'hubLetterBlocks');
     blocks.setDisplaySize(width * 0.5, (width * 0.5) * (300 / 900));
-    applyRandomIdleEffect(this, {
-      x: blocks.x,
-      y: blocks.y,
-      width: blocks.displayWidth,
-      height: blocks.displayHeight,
-    });
   }
 
   // --- Side icon columns ---------------------------------------------------
 
   createIconColumn(side, x) {
+    // Spin-wheel icon removed per chat - not needed.
     const icons = side === 'left'
-      ? [
-        { key: 'iconShop', anim: null },
-        { key: 'iconGallery', anim: null },
-        { key: 'iconTrophy', anim: null },
-        { key: 'iconLeaderboard', anim: null },
-      ]
-      : [
-        { key: 'iconCoinShop', anim: null },
-        { key: 'iconCalendar', anim: 'pulse' }, // daily reward - invite a tap
-        { key: 'iconSpinWheel', anim: 'spin' }, // spin wheel - idle rotation
-        { key: 'iconVideo', anim: null },
-      ];
+      ? ['iconShop', 'iconGallery', 'iconTrophy', 'iconLeaderboard']
+      : ['iconCoinShop', 'iconCalendar', 'iconVideo'];
 
     const top = 90;
     const gap = 78;
-    icons.forEach((icon, i) => this.createColumnIcon(x, top + i * gap, icon.key, icon.anim));
+    icons.forEach((key, i) => this.createColumnIcon(x, top + i * gap, key));
   }
 
-  createColumnIcon(x, y, textureKey, anim) {
+  createColumnIcon(x, y, textureKey) {
     const size = 52;
     const cx = x + size / 2;
     const cy = y + size / 2;
 
-    // Soft rounded backing card, same role the solid color badge used
-    // to play, so every icon still reads as a tappable tile even though
-    // the art itself has an irregular silhouette.
-    const bg = this.add.graphics();
-    bg.fillStyle(0xffffff, 0.14);
-    bg.fillRoundedRect(x, y, size, size, 12);
-    bg.lineStyle(2, 0xffffff, 0.6);
-    bg.strokeRoundedRect(x, y, size, size, 12);
-
+    // No backing card and no idle animation - icons sit directly on the
+    // forest background. Tap just does a press-down/up bounce plus the
+    // "Coming Soon" toast; these systems don't exist yet.
     const icon = this.add.image(cx, cy, textureKey);
     icon.setDisplaySize(42, 42);
 
     const hit = this.add.rectangle(x, y, size, size, 0xffffff, 0).setOrigin(0).setInteractive({ useHandCursor: true });
-    hit.on('pointerdown', () => this.tweens.add({ targets: [bg, icon], scale: 0.88, duration: 70 }));
+    hit.on('pointerdown', () => this.tweens.add({ targets: icon, scale: 0.88, duration: 70 }));
     hit.on('pointerup', () => {
-      this.tweens.add({ targets: [bg, icon], scale: 1, duration: 100 });
+      this.tweens.add({ targets: icon, scale: 1, duration: 100 });
       this.comingSoon();
     });
-
-    if (anim) {
-      applyRandomIdleEffect(this, { x: cx, y: cy, width: size, height: size });
-    }
   }
 
   comingSoon() {
@@ -324,15 +278,8 @@ export class HomeHubScene extends Phaser.Scene {
       color: '#ffffff',
     }).setOrigin(0.5);
 
-    // Idle effect (glow or shine, at random) - this is the only real way
-    // forward from this screen, so it gets a loop nudging the eye toward
-    // it. Paused/resumed around the press-down tween so the two never
-    // fight each other.
-    const idle = applyRandomIdleEffect(this, { x, y, width: w, height: h });
-
     const hit = this.add.rectangle(x, y, w, h, 0xffffff, 0).setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => {
-      idle.tween.pause();
       this.tweens.add({ targets: [bg, label], scale: 0.96, duration: 70 });
     });
     hit.on('pointerup', () => {
