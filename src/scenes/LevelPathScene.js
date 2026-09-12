@@ -74,6 +74,13 @@ export class LevelPathScene extends Phaser.Scene {
     this.input.on('pointerup', () => {
       this.dragActive = false;
     });
+
+    // Same reasoning as WorldSelectScene: drag-only misses desktop's
+    // scroll-wheel/trackpad instinct.
+    this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+      const maxScroll = Math.max(0, this.bgDisplayHeight - viewportHeight);
+      this.cameras.main.scrollY = Phaser.Math.Clamp(this.cameras.main.scrollY + deltaY, 0, maxScroll);
+    });
   }
 
   // A node/back-button tap should be ignored if the pointer actually

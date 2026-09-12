@@ -130,6 +130,14 @@ export class WorldSelectScene extends Phaser.Scene {
     this.input.on('pointerup', () => {
       this.dragActive = false;
     });
+
+    // Desktop testing/playing: drag-to-scroll alone misses the natural
+    // instinct of reaching for the scroll wheel / trackpad. Same clamp
+    // math as the drag handler above.
+    this.input.on('wheel', (pointer, gameObjects, deltaX, deltaY) => {
+      const maxScroll = Math.max(0, this.contentHeight - viewportHeight);
+      this.cameras.main.scrollY = Phaser.Math.Clamp(this.cameras.main.scrollY + deltaY, 0, maxScroll);
+    });
   }
 
   wasDrag() {
