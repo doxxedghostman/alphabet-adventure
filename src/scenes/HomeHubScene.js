@@ -155,58 +155,14 @@ export class HomeHubScene extends Phaser.Scene {
       color: '#4a2f10',
     }).setOrigin(0.5);
 
-    // Mini map preview - real parchment art (cropped to a wide strip
-    // from the square source) with the same code-drawn lock/star nodes
-    // and dashed path overlaid on top, same visual language as the real
-    // WorldSelectScene/LevelPathScene. Not interactive - it's a teaser
-    // for the button just below it, not a shortcut around it.
-    const cardW = width * 0.64;
-    const cardH = 130;
-    const cardX = width / 2 - cardW / 2;
-    const cardY = ribbonY + 40;
+    // Mini map preview removed per chat (parchment card, dashed path,
+    // and lock/star nodes all taken out) - the letter-block strip below
+    // now sits directly under the "Word Map" ribbon/text instead of
+    // under the map card, moved up to close the gap that removal left.
+    this.mapPreviewBottom = ribbonY + 33;
 
-    const card = this.add.image(width / 2, cardY, 'hubMapPreviewCard').setOrigin(0.5, 0);
-    // Crop a horizontal band out of the square source so it reads as a
-    // wide map strip instead of a squished square.
-    card.setCrop(0, 218, 700, 263);
-    card.setDisplaySize(cardW, cardH);
-    const frameBorder = this.add.graphics();
-    frameBorder.lineStyle(3, 0x8b6b3d, 1);
-    frameBorder.strokeRoundedRect(cardX, cardY, cardW, cardH, 10);
-
-    const previewNodes = [
-      { dx: 0.18, dy: 0.72, state: 'locked' },
-      { dx: 0.38, dy: 0.42, state: 'locked' },
-      { dx: 0.62, dy: 0.62, state: 'locked' },
-      { dx: 0.82, dy: 0.28, state: 'star' },
-    ];
-    const line = this.add.graphics();
-    line.lineStyle(3, 0x8b6b3d, 0.7);
-    line.beginPath();
-    previewNodes.forEach((n, i) => {
-      const x = cardX + cardW * n.dx;
-      const y = cardY + cardH * n.dy;
-      if (i === 0) line.moveTo(x, y);
-      else line.lineTo(x, y);
-    });
-    line.strokePath();
-
-    previewNodes.forEach((n) => {
-      const x = cardX + cardW * n.dx;
-      const y = cardY + cardH * n.dy;
-      const dot = this.add.graphics();
-      dot.fillStyle(n.state === 'star' ? 0xffc93c : 0x8f8f9c, 1);
-      dot.fillCircle(x, y, 13);
-      dot.lineStyle(2, 0xffffff, 0.9);
-      dot.strokeCircle(x, y, 13);
-      const glyph = n.state === 'star' ? '\u2605' : '\u{1F512}';
-      this.add.text(x, y, glyph, { fontSize: '13px' }).setOrigin(0.5);
-    });
-
-    this.mapPreviewBottom = cardY + cardH;
-
-    // Decorative letter-block strip under the map preview - purely for
-    // flavor, not interactive, no idle animation.
+    // Decorative letter-block strip - purely for flavor, not
+    // interactive, no idle animation.
     const blocks = this.add.image(width / 2, this.mapPreviewBottom + 26, 'hubLetterBlocks');
     blocks.setDisplaySize(width * 0.5, (width * 0.5) * (300 / 900));
   }
