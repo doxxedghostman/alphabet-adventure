@@ -45,7 +45,7 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('hubWordMapButton', 'assets/word-map-button.png');
     this.load.image('hubMapPreviewCard', 'assets/map-preview-card.jpg');
     this.load.image('hubForestBg', 'assets/forest-background.jpg');
-    this.load.video('hubBgVideo', 'assets/hub-background-loop.mp4', false);
+    this.load.video('hubBgVideo', 'assets/hub-background-loop-v2.mp4', false);
     this.load.image('hubLetterBlocks', 'assets/letter-blocks-strip.png');
 
     this.load.image('iconShop', 'assets/icon-shop.png');
