@@ -29,17 +29,23 @@ Next.js if a web/PWA build is wanted later.
    each rather than animating smoothly). Whole sequence stays under 3
    seconds, and plays on every app open, not just first launch.
 2. **Main menu** — see section 1 below.
-3. **Board** — reached by tapping Play.
+3. **Home Hub** — see section 8.6 below. Reached by tapping Play.
+4. **World map / Level path / Board** — reached by tapping Home Hub's
+   Word Map button. See section 8.5 below.
 
 ## 1. Main menu
 
-Currently implemented: **Play** only, which opens the board directly.
-Everything else below is planned, not yet built:
+Currently implemented: full-bleed poster art (logo + two scout
+characters + baked-in "Play" banner) with a single real Play button
+overlaid on top, leading to the Home Hub (section 8.6) rather than
+straight to the board.
 
-- World map
-- Daily challenge
-- Achievements
-- Settings
+Everything below now lives on the Home Hub instead of here:
+
+- World map (button)
+- Daily challenge, shop, gallery, trophy, leaderboard (icons shown,
+  not yet functional - see 8.6)
+- Settings (reset progress)
 
 Player starts at World 1, Level 1.
 
@@ -185,6 +191,40 @@ only 5 demo levels (see levels.js's own note) so most level nodes past
 Candy Garden's first few currently load placeholder content via
 `getLevel()`'s fallback rather than unique target words/score
 targets - a content-authoring gap, not a World Map code gap.
+
+## 8.6 Home Hub — implementation notes
+
+Reference mockup: person-provided screenshot of a richer "home" screen
+(top bar, shop/gallery/trophy/leaderboard column, coin-shop/calendar/
+video column, logo + mini map preview, Word Map button). Inserted as a
+new middle screen: Main Menu (Play) -> **Home Hub** -> World Map ->
+Level Path -> Board, replacing the old direct Main Menu -> World Map
+jump described in section 1.
+
+**Built** (`src/scenes/HomeHubScene.js`): top bar (avatar circle,
+currency count + gem icon, "+" button, real settings-icon button); a
+left icon column (shop, gallery, trophy, leaderboard) and right icon
+column (coin shop, calendar, video); the menu logo, a "Word Map" real
+ribbon banner, and a decorative mini map preview (code-drawn lock/star
+nodes over real parchment art, teaser for the World Map, not a
+shortcut); a real "Word Map" button (real banner art, text baked in)
+that's the only way forward; and a Settings panel (reset progress)
+duplicated from the old `MainMenuScene` pattern rather than shared.
+
+Real art throughout (forest background, wood top bar, banners, map
+preview card, 8 side icons, settings icon, gem icon) - full detail and
+the several rounds of animation-effects-added-then-stripped-back-out
+is in `update.md` (Milestones 18-20), not repeated here since it's
+implementation history rather than design intent. Design intent that
+*is* still true: shop/gallery/trophy/leaderboard/coin-shop/calendar/
+video are all placeholders with no real system behind any of them yet
+(tap just bounces, does nothing) - section 14 below is the plan for
+what most of them eventually become. Avatar/currency/name are also
+placeholders pending the Google sign-in + Supabase work (not started
+as of this writing - see update.md's "Next up" note).
+
+**Not done:** every icon besides Word Map/Settings is still a stub;
+account system; currency/economy is display-only (hardcoded to 0).
 
 ## 9. World map
 
