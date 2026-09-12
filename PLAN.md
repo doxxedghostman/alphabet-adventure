@@ -207,28 +207,39 @@ jump described in section 1.
 currency count + gem icon, real settings-icon button — the "+"
 add-currency button was removed, no economy system exists for it to
 add to); a left icon column (shop, gallery, trophy, leaderboard) and
-right icon column (coin shop, calendar, video); the menu logo, a "Word
-Map" real ribbon banner, and a decorative mini map preview (code-drawn
-lock/star nodes over real parchment art, teaser for the World Map, not
-a shortcut); a real "Word Map" button (real banner art, text baked in)
-that's the only way forward. Settings is no longer a popup here at all
-— it's its own scene (`src/scenes/SettingsScene.js`), reached via
-`scene.start`, since a real settings list (Account, Audio,
-Notifications, Support/Legal, Data, About) doesn't fit a small overlay
-panel. See update.md Milestones 21-24 for that history.
+right icon column (coin shop, calendar, video), both enlarged twice
+over (see update.md Milestones 24 and 26); the menu logo, a "Word
+Map" real ribbon banner, and a letter-block strip beneath it. The
+decorative mini map preview (parchment card + code-drawn lock/star
+nodes + dashed path) that used to sit between the ribbon and the
+letter blocks was removed entirely per chat — see update.md Milestone
+26 for why the first attempt (path/nodes only) didn't free up any
+layout space and the card had to go too. A real "Word Map" button
+(real banner art, text baked in) that's the only way forward. Settings
+is no longer a popup here at all — it's its own scene
+(`src/scenes/SettingsScene.js`), reached via `scene.start`, since a
+real settings list (Account, Audio, Notifications, Support/Legal,
+Data, About) doesn't fit a small overlay panel. See update.md
+Milestones 21-24 for that history.
 
-Real art throughout (forest background, wood top bar, banners, map
-preview card, 8 side icons, settings icon, gem icon) - full detail and
-the several rounds of animation-effects-added-then-stripped-back-out
-is in `update.md` (Milestones 18-20), not repeated here since it's
-implementation history rather than design intent. Design intent that
-*is* still true: shop/gallery/trophy/leaderboard/coin-shop/calendar/
-video are all placeholders with no real system behind any of them yet
-(tap just bounces, does nothing) - section 14 below is the plan for
-what most of them eventually become. Avatar/currency/name are also
-placeholders pending the Google sign-in work (Supabase schema is live
-— see update.md Milestone 25 — but the client-side auth flow isn't
-wired up yet).
+Background is a looping waterfall video (`hub-background-loop.mp4`,
+muted, boomerang-looped for a seamless cycle despite a camera move in
+the source clip — see update.md Milestone 26 for how the watermark
+removal and loop were done), falling back to the original static
+`forest-background.jpg` if video playback isn't available. Real art
+throughout otherwise (wood top bar, banners, 8 side icons, settings
+icon, gem icon, and a newer transparent-background logo swapped in
+per Milestone 26) - full detail and the several rounds of
+animation-effects-added-then-stripped-back-out is in `update.md`
+(Milestones 18-20), not repeated here since it's implementation
+history rather than design intent. Design intent that *is* still
+true: shop/gallery/trophy/leaderboard/coin-shop/calendar/video are all
+placeholders with no real system behind any of them yet (tap just
+bounces, does nothing) - section 14 below is the plan for what most of
+them eventually become. Avatar/currency/name are also placeholders
+pending the Google sign-in work (Supabase schema is live — see
+update.md Milestone 25 — but the client-side auth flow isn't wired up
+yet).
 
 **Account / sign-in model (decided, see update.md Milestone 25):**
 guest play is never blocked — Home Hub, World Map, and every level are

@@ -1082,3 +1082,76 @@ new one's needed. Client side: `@supabase/supabase-js` isn't installed
 yet, and none of `SettingsScene`'s Account-section placeholder rows
 are wired to real auth calls yet.
 
+### Milestone 26 — Map preview removed, Home Hub spacing pass, looping waterfall background
+
+Per chat, the decorative mini map preview (parchment card + code-drawn
+dashed path + lock/star nodes, see Milestone 18-20 for when that was
+built) is gone entirely from the Home Hub. First pass only pulled the
+dashed path/nodes off the card and left the parchment card itself in
+place — but the card doesn't shrink just because what's drawn on it
+does, so there was nothing for the letter-block strip to move up into.
+Person confirmed: drop the whole card. `createLogoAndMapPreview()` no
+longer creates the card/frame/path/nodes at all; `mapPreviewBottom` is
+now derived from the ribbon/"Word Map" text position instead of the
+(now nonexistent) card's bottom edge, and the letter-block strip sits
+directly under that.
+
+Follow-up spacing/sizing pass once that was live, all per chat against
+a screenshot of the result:
+
+- **Letter blocks were sitting too close to the logo** now that the
+  card's ~130px of vertical space is gone - gap from the ribbon text
+  widened 26px -> 55px.
+- **All 7 side icons enlarged again** (58px -> 74px display, hit box
+  64px -> 82px) - second enlargement pass on top of Milestone 24's,
+  person wants them bigger still. Gap between icons in each column
+  grown proportionally more than the size increase (96px -> 108px) to
+  keep clearance, same "grow the gap by more than the size" approach
+  as Milestone 24. Right column's x-offset (`width - 12 - <hitbox>`)
+  updated to match the new 82px hit box, otherwise the column would've
+  sat 18px further right than intended and clipped closer to the edge.
+- **"Word Map" button nudged up** from flush-bottom (`height - 44`) to
+  `height - 62` - it read as sitting right on the bottom edge.
+- **Logo art swapped** for a new transparent-background version the
+  person generated and sent over (`menu-logo.png` replaced in place,
+  same asset key, no code changes needed beyond the file itself).
+
+Checked math on the enlarged icons before shipping: left column (4
+icons, gap 108) runs y=92 to y=498; right column (3 icons) runs y=92
+to y=390. Word Map button's top edge lands ~y=516 at its new position
+- 18px clear of the left column's bottom, no overlap.
+
+**Looping waterfall background.** Person generated a 5s image-to-video
+clip (PixVerse) from a painted forest/waterfall reference image, with
+a prompt asking for static camera + only water/foliage motion. What
+came back instead was a continuous camera move - push in on the falls,
+then pull back out to a wider mountain view - plus a baked-in
+"PixVerse.ai" watermark (fixed screen position, doesn't move with the
+zoom). Person had used up their generation credits, so re-generating
+wasn't an option; fixed the existing clip instead:
+
+- **Watermark removed** by cropping the fixed watermark region every
+  frame, box-blurring just that crop, and compositing it back over the
+  original at the same position (`crop` -> `boxblur` -> `overlay` in
+  one filter graph) - cheaper than a proper inpaint/delogo and the
+  region is sky/cloud, so a blurred patch reads as atmospheric haze
+  rather than an obvious edit.
+- **Made it loop seamlessly despite the camera move** with a boomerang
+  (play the (now watermark-blurred) clip forward, then the same clip
+  reversed, concatenated) rather than trying to crossfade a loop point
+  - a boomerang is guaranteed to return to the exact starting frame by
+  construction, no matching-frames search needed. Net effect: the
+  background now reads as a slow zoom-in/zoom-out breathing motion
+  rather than the originally-intended fully-static shot, which the
+  person accepted after previewing it (trade-off explicitly surfaced
+  before wiring it in, not discovered after).
+- Re-encoded smaller for a mobile background (832x1024 -> 624x768,
+  ~8.2MB -> ~3.75MB) and stripped the audio track entirely - not
+  needed for a background loop and it doesn't loop cleanly with the
+  boomerang anyway.
+- `HomeHubScene.createBackground()` now tries `this.add.video(...)`
+  first (muted, looped, scaled to cover exactly like the old static
+  image), falling back to the original `forest-background.jpg` image
+  if video creation throws - some mobile browsers block autoplay even
+  when muted, or don't support the format, and a dead background is
+  worse than a static one.
