@@ -652,3 +652,44 @@ same caveat as Milestone 13.
 
 Not done here: `WorldSelectScene`, `LevelPathScene`, wiring into
 `BoardScene`.
+
+---
+
+### Milestone 15 — LevelPathScene built (Candy Garden)
+
+`src/scenes/LevelPathScene.js` — the per-world node path screen from
+the Milestone 10 plan. Shows a world's 20 levels as numbered nodes
+over its background art, node 1 (Start signpost) at the bottom, node
+20 (boss, gold ring) at the top, matching the decided bottom-to-top
+reading direction. All node/lock/signpost visuals are code-drawn
+(Phaser Graphics + text), not art assets, per the original plan.
+
+Node coordinates come from a new `src/data/levelPaths.js` - hand-eyeballed
+against `candy-garden-bg.jpg` for World 1 (a first pass, not
+pixel-perfect against the art's organic curves), with a generic
+sine-wave serpentine as a fallback for every other world until each
+one gets the same hand-placement treatment (deferred - those worlds
+aren't reachable yet anyway, only World 1 is unlocked at the start).
+
+The background (600x900) is taller than the game's fixed 516x624
+canvas, so the scene scrolls vertically by drag rather than shrinking
+to fit - camera bounds are set to the scaled background height, and a
+small pointer-drag handler pans `scrollY` between the top and bottom.
+A drag-distance guard stops an accidental node/back-button tap from
+firing mid-pan. View starts scrolled to the bottom, where Level 1 is.
+
+Node state (locked / unlocked / completed) reads directly from
+`progressStore.js` from Milestone 13. Tapping an unlocked node goes to
+`BoardScene` with the right global level id; locked nodes do nothing.
+
+Registered in `main.js`'s scene list so it's reachable for testing via
+`game.scene.start('LevelPathScene', { worldId: 1 })` from the browser
+console - nothing links to it in-game yet.
+
+TEMPORARY: the Back button currently falls back to `MainMenuScene`
+since `WorldSelectScene` (its real destination) doesn't exist yet -
+flagged in a code comment to swap once that scene lands next.
+
+Not done here: `WorldSelectScene`, wiring the Play button or
+`BoardScene`'s win flow to any of this, hand-placed paths for the
+other 9 worlds.
