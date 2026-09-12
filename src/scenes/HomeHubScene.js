@@ -45,6 +45,7 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('hubWordMapButton', 'assets/word-map-button.png');
     this.load.image('hubMapPreviewCard', 'assets/map-preview-card.jpg');
     this.load.image('hubForestBg', 'assets/forest-background.jpg');
+    this.load.video('hubBgVideo', 'assets/hub-background-loop.mp4', false);
     this.load.image('hubLetterBlocks', 'assets/letter-blocks-strip.png');
 
     this.load.image('iconShop', 'assets/icon-shop.png');
@@ -72,13 +73,35 @@ export class HomeHubScene extends Phaser.Scene {
   // --- Background -----------------------------------------------------------
 
   createBackground(width, height) {
-    // Forest bg is portrait-ish (600x900) but not the same aspect as the
-    // fixed game canvas - scale to cover width and center vertically so
-    // it fills the frame with no letterboxing, same idea as a CSS
-    // background-size: cover.
-    const bg = this.add.image(width / 2, height / 2, 'hubForestBg');
-    const scale = Math.max(width / bg.width, height / bg.height);
-    bg.setScale(scale);
+    // Looping waterfall video background (per chat) - falls back to the
+    // static forest-background.jpg if video playback fails for any
+    // reason (some mobile browsers block autoplay even when muted, or
+    // the format isn't supported).
+    let bg;
+    try {
+      const video = this.add.video(width / 2, height / 2, 'hubBgVideo');
+      video.setMute(true);
+      video.setLoop(true);
+      video.play(true);
+      const vw = video.width || 624;
+      const vh = video.height || 768;
+      const scale = Math.max(width / vw, height / vh);
+      video.setScale(scale);
+      bg = video;
+    } catch (e) {
+      bg = null;
+    }
+
+    if (!bg) {
+      // Forest bg is portrait-ish (600x900) but not the same aspect as
+      // the fixed game canvas - scale to cover width and center
+      // vertically so it fills the frame with no letterboxing, same
+      // idea as a CSS background-size: cover.
+      bg = this.add.image(width / 2, height / 2, 'hubForestBg');
+      const scale = Math.max(width / bg.width, height / bg.height);
+      bg.setScale(scale);
+    }
+
     // Dim it slightly so the UI on top stays readable, same role the
     // flat 0x241a3d rectangle used to play.
     this.add.rectangle(0, 0, width, height, 0x1a1030, 0.45).setOrigin(0);
