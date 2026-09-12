@@ -15,7 +15,9 @@ Think: Bookworm + Candy Crush + Adventure.
 Published by **Wobblewing Studios**.
 
 Stack: Phaser + Capacitor (reusing patterns from Kid Number Adventure),
-Next.js if a web/PWA build is wanted later.
+Next.js if a web/PWA build is wanted later. Backend: Supabase, reusing
+Kid Number Adventure's existing project (`wordswoop_`-prefixed tables)
+rather than a separate one — see section 8.6 for the account model.
 
 > **Status:** Phase 1 prototype, live on `main`. See `update.md` for the
 > detailed progress log — this file is the design doc, not the changelog.
@@ -202,14 +204,18 @@ Level Path -> Board, replacing the old direct Main Menu -> World Map
 jump described in section 1.
 
 **Built** (`src/scenes/HomeHubScene.js`): top bar (avatar circle,
-currency count + gem icon, "+" button, real settings-icon button); a
-left icon column (shop, gallery, trophy, leaderboard) and right icon
-column (coin shop, calendar, video); the menu logo, a "Word Map" real
-ribbon banner, and a decorative mini map preview (code-drawn lock/star
-nodes over real parchment art, teaser for the World Map, not a
-shortcut); a real "Word Map" button (real banner art, text baked in)
-that's the only way forward; and a Settings panel (reset progress)
-duplicated from the old `MainMenuScene` pattern rather than shared.
+currency count + gem icon, real settings-icon button — the "+"
+add-currency button was removed, no economy system exists for it to
+add to); a left icon column (shop, gallery, trophy, leaderboard) and
+right icon column (coin shop, calendar, video); the menu logo, a "Word
+Map" real ribbon banner, and a decorative mini map preview (code-drawn
+lock/star nodes over real parchment art, teaser for the World Map, not
+a shortcut); a real "Word Map" button (real banner art, text baked in)
+that's the only way forward. Settings is no longer a popup here at all
+— it's its own scene (`src/scenes/SettingsScene.js`), reached via
+`scene.start`, since a real settings list (Account, Audio,
+Notifications, Support/Legal, Data, About) doesn't fit a small overlay
+panel. See update.md Milestones 21-24 for that history.
 
 Real art throughout (forest background, wood top bar, banners, map
 preview card, 8 side icons, settings icon, gem icon) - full detail and
@@ -220,11 +226,30 @@ implementation history rather than design intent. Design intent that
 video are all placeholders with no real system behind any of them yet
 (tap just bounces, does nothing) - section 14 below is the plan for
 what most of them eventually become. Avatar/currency/name are also
-placeholders pending the Google sign-in + Supabase work (not started
-as of this writing - see update.md's "Next up" note).
+placeholders pending the Google sign-in work (Supabase schema is live
+— see update.md Milestone 25 — but the client-side auth flow isn't
+wired up yet).
+
+**Account / sign-in model (decided, see update.md Milestone 25):**
+guest play is never blocked — Home Hub, World Map, and every level are
+reachable with no account at all, progress saved locally
+(`progressStore.js`). Sign-in is only prompted at natural checkpoints
+(Settings' "Playing as guest" row, eventually first level win), not as
+a wall before the app is usable. On first sign-in, a guest's local
+`completedLevelIds` are merged (unioned) into their new cloud profile,
+never overwritten — matches how most casual puzzle games (Candy
+Crush/Bookworm-style) treat guest-to-account conversion. Backend is
+Supabase, reusing Kid Number Adventure's existing project rather than
+a new one (`wordswoop_`-prefixed tables so the two games' schemas
+don't collide) — `wordswoop_profiles` (display name, avatar,
+gems, completed levels, settings, RLS'd to each user's own row) is
+live; Google as the sign-in provider still needs its OAuth client
+configured in the Supabase dashboard before any of this is reachable
+from the client.
 
 **Not done:** every icon besides Word Map/Settings is still a stub;
-account system; currency/economy is display-only (hardcoded to 0).
+account system (schema exists, no client-side auth flow yet); currency/
+economy is display-only (hardcoded to 0).
 
 ## 9. World map
 

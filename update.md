@@ -1022,14 +1022,63 @@ vertical position, so there's no overlap in either axis. Top-bar
 elements (avatar/gem+label/settings) checked the same way - closest
 gap is ~30px between the gem's currency label and the settings icon.
 
-### Next up (not started) — Google sign-in + Supabase for account data
+### Milestone 25 — Supabase schema live: `wordswoop_profiles` table, RLS, auto-provisioning trigger
 
-Per chat: person wants to wire up Google sign-in and a Supabase backend
-to persist user data (currently everything - progress, settings reset,
-etc. - is local-only via `progressStore.js`), and expand the Settings
-panel accordingly. New profile/settings icon art is coming to replace
-the current code-drawn avatar circle and gear glyph. Needs from the
-person before this can start: whether this project gets its own new
-Supabase project or reuses an existing one, and the Google OAuth
-client setup (web client ID at minimum) - nothing here yet, flagging
-so the next session picks it up rather than guessing at credentials.
+Per chat, decided: guest play stays fully unblocked (Home Hub, World
+Map, levels — everything) with no forced sign-in wall; sign-in is only
+prompted at natural checkpoints (Settings' guest row, eventually first
+level win), matching how Candy Crush/Bookworm-style casual games do
+it, since gating the map behind an account before anyone's even seen
+the game is a conversion killer. First-sign-in behavior for a guest
+with existing local progress: merge (union `completedLevelIds` into
+the cloud row), never overwrite — a guest could have real progress
+worth keeping.
+
+Reusing Kid Number Adventure's existing Supabase project
+(`kaeiaiesavwsebyhkgig`, org `doxxedghostman's Project`) rather than
+creating a new one, per chat — it had zero tables/migrations before
+this, so nothing was retrofitted. Since one project now serves two
+separate games, every WordSwoop table is `wordswoop_`-prefixed to
+avoid colliding with whatever KNA adds later.
+
+Applied three migrations:
+
+- **`create_wordswoop_profiles`** — one row per authenticated user
+  (`id` = `auth.users.id`, cascade-deleted with the auth user). Columns:
+  `display_name`, `avatar_url`, `gems` (int, default 0),
+  `completed_level_ids` (jsonb array, mirrors `progressStore.js`'s
+  local shape), `settings` (jsonb, mirrors `settingsStore.js`'s
+  musicOn/sfxOn/hapticsOn), `created_at`/`updated_at`. RLS on, with
+  select/insert/update policies all scoped to `auth.uid() = id` — a
+  user can only ever touch their own row. `wordswoop_set_updated_at()`
+  trigger keeps `updated_at` current on every write without relying on
+  the client to set it. `wordswoop_handle_new_user()` trigger on
+  `auth.users` insert auto-creates the profile row on first sign-in,
+  pre-filled from whatever the OAuth provider returned — checks both
+  `full_name`/`name` and `avatar_url`/`picture` keys in
+  `raw_user_meta_data` since the field name varies by provider
+  version (Google's response includes a profile photo URL under one
+  of these).
+- **`harden_wordswoop_trigger_functions`** — the security advisor
+  (`Supabase:get_advisors`) flagged `wordswoop_set_updated_at` as
+  missing a pinned `search_path` (recreated with `security invoker` +
+  `set search_path = public`), and `wordswoop_handle_new_user` as a
+  `SECURITY DEFINER` function directly callable via the exposed REST
+  RPC endpoint rather than only through its trigger. Revoked EXECUTE
+  from `anon`/`authenticated` for the latter.
+- **`revoke_public_execute_on_handle_new_user`** — the previous
+  per-role revoke didn't actually clear the lint, because Postgres
+  grants EXECUTE to the `PUBLIC` pseudo-role by default on function
+  creation and both `anon`/`authenticated` were resolving through that
+  implicit grant, not a role-specific one. Revoking from `PUBLIC`
+  itself cleared it. Re-ran `get_advisors` after — zero findings.
+
+**Still needed before any of this is reachable from the game:**
+enabling the Google provider in Supabase Auth needs a Google Cloud
+OAuth client ID/secret, which can't be created from here (requires a
+Google Cloud Console project under the person's account) — open
+question whether Kid Number Adventure already has one to reuse or a
+new one's needed. Client side: `@supabase/supabase-js` isn't installed
+yet, and none of `SettingsScene`'s Account-section placeholder rows
+are wired to real auth calls yet.
+
