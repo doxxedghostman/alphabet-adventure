@@ -64,8 +64,8 @@ export class HomeHubScene extends Phaser.Scene {
     this.createBackground(width, height);
     this.createTopBar(width);
     this.createLogoAndMapPreview(width);
-    this.createIconColumn('left', 16);
-    this.createIconColumn('right', width - 16 - 56);
+    this.createIconColumn('left', 12);
+    this.createIconColumn('right', width - 12 - 64);
     this.createWordMapButton(width, height);
   }
 
@@ -87,54 +87,45 @@ export class HomeHubScene extends Phaser.Scene {
   // --- Top bar: avatar, name, currency, add-currency, settings -----------
 
   createTopBar(width) {
-    const barHeight = 64;
-    const barY = 8;
+    const barHeight = 74;
+    const barY = 6;
 
+    // Widened (closer to the canvas edges) and thicker per chat, so the
+    // wood bar reads as a proper substantial header instead of a thin
+    // strip.
     const bar = this.add.image(width / 2, barY, 'hubTopBar').setOrigin(0.5, 0);
-    bar.setDisplaySize(width - 20, barHeight);
+    bar.setDisplaySize(width - 8, barHeight);
 
     const cy = barY + barHeight / 2;
 
     // Avatar (placeholder - no account system yet; real profile icon +
     // account data coming with the Google sign-in / Supabase work).
-    this.add.circle(38, cy, 18, 0x8f5c3c, 1).setStrokeStyle(2, 0xffffff, 0.9);
-    this.add.text(38, cy, '\u{1F9D2}', { fontSize: '20px' }).setOrigin(0.5);
+    this.add.circle(40, cy, 20, 0x8f5c3c, 1).setStrokeStyle(2, 0xffffff, 0.9);
+    this.add.text(40, cy, '\u{1F9D2}', { fontSize: '22px' }).setOrigin(0.5);
 
-    // Currency (placeholder - no economy system yet)
-    const currencyX = width - 118;
+    // Currency (placeholder - no economy system yet). Enlarged per
+    // chat, and the "+" add-currency button removed entirely (no
+    // economy system exists for it to add to yet) rather than left as
+    // a dead tap target.
+    const currencyX = width - 108;
     const gem = this.add.image(currencyX, cy, 'iconGem');
-    gem.setDisplaySize(20, 20);
-    this.add.text(currencyX + 16, cy, '0', {
+    gem.setDisplaySize(30, 30);
+    this.add.text(currencyX + 22, cy, '0', {
       fontFamily: 'Arial',
-      fontSize: '15px',
+      fontSize: '17px',
       fontStyle: 'bold',
       color: '#8a5a1c',
     }).setOrigin(0, 0.5);
 
-    this.createSmallIconButton(width - 78, cy, '+', '#c0392b', () => {});
-    this.createImageIconButton(width - 34, cy, 'iconSettings', () => this.scene.start('SettingsScene'));
+    this.createImageIconButton(width - 40, cy, 'iconSettings', () => this.scene.start('SettingsScene'), 46);
   }
 
-  createSmallIconButton(x, y, glyph, color, onTap) {
-    const r = 16;
-    const circle = this.add.circle(x, y, r, Phaser.Display.Color.HexStringToColor(color).color, 1);
-    circle.setStrokeStyle(2, 0xffffff, 0.85);
-    const label = this.add.text(x, y, glyph, { fontFamily: 'Arial', fontSize: '16px', fontStyle: 'bold', color: '#ffffff' }).setOrigin(0.5);
-    const hit = this.add.circle(x, y, r, 0xffffff, 0).setInteractive({ useHandCursor: true });
-    hit.on('pointerdown', () => this.tweens.add({ targets: [circle, label], scale: 0.85, duration: 70 }));
-    hit.on('pointerup', () => {
-      this.tweens.add({ targets: [circle, label], scale: 1, duration: 100 });
-      onTap();
-    });
-    return { targets: [circle, label] };
-  }
-
-  // Same role as createSmallIconButton() but for a real icon image
-  // (wooden settings tile, etc.) instead of a color circle + glyph.
-  // Uses the baseScale-relative tween pattern - see the icon pop-out
-  // fix in createColumnIcon() for why that matters.
-  createImageIconButton(x, y, textureKey, onTap) {
-    const size = 34;
+  // Real icon image (wooden settings tile, gem, etc.) with a tap
+  // bounce. Uses the baseScale-relative tween pattern - see the icon
+  // pop-out fix in createColumnIcon() for why that matters (tweening
+  // to a literal scale value instead of baseScale * factor is what
+  // caused icons to balloon up on tap).
+  createImageIconButton(x, y, textureKey, onTap, size = 34) {
     const icon = this.add.image(x, y, textureKey);
     icon.setDisplaySize(size, size);
     const baseScale = icon.scale;
@@ -228,13 +219,16 @@ export class HomeHubScene extends Phaser.Scene {
       ? ['iconShop', 'iconGallery', 'iconTrophy', 'iconLeaderboard']
       : ['iconCoinShop', 'iconCalendar', 'iconVideo'];
 
-    const top = 90;
-    const gap = 78;
+    // Enlarged per chat (was 42px display / 78px gap) - gap grown by
+    // more than the size increase so bigger icons still clear each
+    // other with room to spare, not just touching edge-to-edge.
+    const top = 92;
+    const gap = 96;
     icons.forEach((key, i) => this.createColumnIcon(x, top + i * gap, key));
   }
 
   createColumnIcon(x, y, textureKey) {
-    const size = 52;
+    const size = 64;
     const cx = x + size / 2;
     const cy = y + size / 2;
 
@@ -242,7 +236,7 @@ export class HomeHubScene extends Phaser.Scene {
     // forest background. Tap just does a press-down/up bounce; these
     // systems don't exist yet so there's nothing further to trigger.
     const icon = this.add.image(cx, cy, textureKey);
-    icon.setDisplaySize(42, 42);
+    icon.setDisplaySize(58, 58);
     // setDisplaySize gives this image a non-1 base scale (native art is
     // 280x280, shown at 42x42, so baseScale ~= 0.15). The tap-bounce
     // tween below must scale *relative to that*, not set scale to a

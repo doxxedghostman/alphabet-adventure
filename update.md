@@ -988,6 +988,40 @@ switch position. `isMusicOn()`/`isSfxOn()`/`isHapticsOn()` are the
 getters whatever adds real audio/haptics next should check before
 playing anything.
 
+### Milestone 24 — Home Hub sizing pass: bigger icons, wider top bar, "+" button removed
+
+Per chat, off a screenshot review, before moving on to the next
+feature set:
+
+- **Side icon columns** (shop/gallery/trophy/leaderboard left,
+  coin-shop/calendar/video right): display size 42px -> 58px. Gap
+  between icons grown from 78px to 96px (more than the size increase
+  alone) so the bigger icons still clear each other with room, not
+  edge-to-edge. Column x-offsets adjusted (16px margin -> 12px, right
+  column's inset now sized off the new 64px hit-box) to keep both
+  columns hugging the same edges as before rather than drifting inward.
+- **Top wood bar**: widened from `width - 20` to `width - 8` and
+  thickened from 64px to 74px tall, so it reads as a proper substantial
+  header rather than a thin strip.
+- **Settings icon**: 34px -> 46px. **Currency gem**: 20px -> 30px
+  (avatar circle bumped slightly too, 36px -> 40px, to stay
+  proportional with the thicker bar). `createImageIconButton()` now
+  takes an optional `size` param instead of a hardcoded 34, so this and
+  future icon buttons can each pick their own size.
+- **"+" add-currency button removed entirely** - there's no economy
+  system for it to add currency to yet, so per chat it's gone rather
+  than kept as a dead tap target. `createSmallIconButton()` (the
+  color-circle-+-glyph button factory, only ever used for this one
+  button) removed too rather than left as dead code.
+
+Checked the arithmetic for collisions rather than eyeballing it: at the
+new sizes, the tallest column (left, 4 icons) runs from y=92 to y=444;
+the map-preview card sits at x=93-423, both icon columns sit outside
+that horizontally (left: x=12-76, right: x=440-504) regardless of
+vertical position, so there's no overlap in either axis. Top-bar
+elements (avatar/gem+label/settings) checked the same way - closest
+gap is ~30px between the gem's currency label and the settings icon.
+
 ### Next up (not started) — Google sign-in + Supabase for account data
 
 Per chat: person wants to wire up Google sign-in and a Supabase backend
