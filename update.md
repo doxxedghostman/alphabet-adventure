@@ -633,3 +633,22 @@ for testing the unlock chain without manually clearing localStorage.
 Not done here: `worlds.js`, `WorldSelectScene`, `LevelPathScene`, or
 wiring any of this into `BoardScene`'s win flow (currently `BoardScene`
 doesn't call `completeLevel()` at all — that's the next batch).
+
+---
+
+### Milestone 14 — worlds.js data file
+
+`src/data/worlds.js` lists all 10 worlds (id, name, slug) in play
+order and derives each one's texture keys/asset paths and global
+level-id range from that single slug + `progressStore.js`'s
+`LEVELS_PER_WORLD`/`levelIdFor()` — so the level-numbering scheme
+lives in exactly one place instead of being repeated here.
+
+Listed all 10 worlds now (not just Candy Garden) since all 10 already
+have art from Milestones 11-12 — no reason to hold the data file back
+to one world when the assets it points to already exist for every
+world. Only Candy Garden has real level content behind its range yet,
+same caveat as Milestone 13.
+
+Not done here: `WorldSelectScene`, `LevelPathScene`, wiring into
+`BoardScene`.
