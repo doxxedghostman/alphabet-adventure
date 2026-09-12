@@ -693,3 +693,28 @@ flagged in a code comment to swap once that scene lands next.
 Not done here: `WorldSelectScene`, wiring the Play button or
 `BoardScene`'s win flow to any of this, hand-placed paths for the
 other 9 worlds.
+
+---
+
+### Milestone 16 — WorldSelectScene built
+
+`src/scenes/WorldSelectScene.js` — the World Map's entry screen. Shows
+all 10 worlds as a 2-column grid of thumbnail tiles (5 rows - taller
+than the fixed canvas, so it scrolls vertically by drag, same pattern
+as `LevelPathScene`). Locked worlds (everything but Candy Garden,
+until World 1's boss level 20 is completed) show greyed out via
+`setTint` plus a dark overlay and the same code-drawn padlock icon
+style as `LevelPathScene`. Tapping an unlocked tile goes to
+`LevelPathScene` for that world; locked tiles do nothing.
+
+This closes the loop `LevelPathScene`'s Back button was left pointing
+away from in Milestone 15 - it now goes to `WorldSelectScene` instead
+of the temporary `MainMenuScene` fallback. `WorldSelectScene`'s own
+Back button goes to `MainMenuScene`.
+
+Registered in `main.js`. Still nothing in-game links INTO
+`WorldSelectScene` yet - the Main Menu's Play button still goes
+straight to `BoardScene` Level 1, same as before. That's the last
+piece (wiring the Play button + `BoardScene`'s win flow to actually
+call `completeLevel()` and return to the path instead of chaining
+global level ids) - next batch.

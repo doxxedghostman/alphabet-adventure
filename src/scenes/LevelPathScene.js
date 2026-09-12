@@ -221,12 +221,9 @@ export class LevelPathScene extends Phaser.Scene {
   }
 
   goBack() {
-    // TEMPORARY: WorldSelectScene doesn't exist yet (next batch) -
-    // falls back to the main menu so this scene is testable on its
-    // own in the meantime. Swap to 'WorldSelectScene' once it lands.
     this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
     this.cameras.main.once('camerafadeoutcomplete', () => {
-      this.scene.start('MainMenuScene');
+      this.scene.start('WorldSelectScene');
     });
   }
 }
