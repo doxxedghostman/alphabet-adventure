@@ -43,6 +43,7 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('menuLogo', 'assets/menu-logo.png');
     this.load.image('hubTopBar', 'assets/top-bar.png');
     this.load.image('hubWordMapBanner', 'assets/word-map-banner.png');
+    this.load.image('hubWordMapButton', 'assets/word-map-button.png');
     this.load.image('hubMapPreviewCard', 'assets/map-preview-card.jpg');
     this.load.image('hubForestBg', 'assets/forest-background.jpg');
     this.load.image('hubLetterBlocks', 'assets/letter-blocks-strip.png');
@@ -238,31 +239,23 @@ export class HomeHubScene extends Phaser.Scene {
 
   createWordMapButton(width, height) {
     const w = width * 0.7;
-    const h = 54;
     const x = width / 2;
     const y = height - 44;
 
-    const bg = this.add.graphics();
-    bg.fillStyle(0x2980b9, 1);
-    bg.fillRoundedRect(x - w / 2, y - h / 2, w, h, 16);
-    bg.lineStyle(3, 0xffffff, 0.9);
-    bg.strokeRoundedRect(x - w / 2, y - h / 2, w, h, 16);
+    // Real art with "Word Map" already baked in, replacing the
+    // code-drawn blue rect + text label - image is the whole button now.
+    const button = this.add.image(x, y, 'hubWordMapButton');
+    button.setDisplaySize(w, w * (button.height / button.width));
+    const baseScale = button.scale;
 
-    const label = this.add.text(x, y, 'Word Map', {
-      fontFamily: 'Arial',
-      fontSize: '22px',
-      fontStyle: 'bold',
-      color: '#ffffff',
-    }).setOrigin(0.5);
-
-    const hit = this.add.rectangle(x, y, w, h, 0xffffff, 0).setInteractive({ useHandCursor: true });
+    const hit = this.add.rectangle(x, y, button.displayWidth, button.displayHeight, 0xffffff, 0).setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => {
-      this.tweens.add({ targets: [bg, label], scale: 0.96, duration: 70 });
+      this.tweens.add({ targets: button, scale: baseScale * 0.96, duration: 70 });
     });
     hit.on('pointerup', () => {
       this.tweens.add({
-        targets: [bg, label],
-        scale: 1,
+        targets: button,
+        scale: baseScale,
         duration: 100,
         onComplete: () => {
           this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
