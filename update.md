@@ -1197,3 +1197,29 @@ alone. Re-encoded to 624x840 for size (~3.4MB -> ~1.3MB).
 new clip (same asset key, no scene code changes needed there), updated
 the fallback natural-size constants (768 -> 840) used when
 `video.height` isn't populated yet, and the overlay opacity fix above.
+
+### Milestone 26 — Supabase client wired in (WIP, not yet reachable from UI)
+
+Checkpoint commit — installed `@supabase/supabase-js` and added
+`src/utils/supabaseClient.js` (shared client instance, pointed at the
+KNA project's URL + publishable key from Milestone 25). Also added
+`setCompletedLevelIds()` to `progressStore.js` — a bulk-replace used by
+the upcoming guest->cloud merge-on-sign-in logic (union of local +
+cloud completed levels, written back so both agree), as opposed to
+`completeLevel()` which stays the one-at-a-time path normal gameplay
+uses.
+
+Committed now rather than held pending, since multiple recent commits
+have landed on `main` from elsewhere (mobile editor) while this was in
+progress — two rounds of stash/pull/reapply already happened this
+session (the Capacitor Android scaffold + immersive-mode commits
+landed in between). Committing checkpoints as they're verified avoids
+compounding that conflict risk further.
+
+**Not done yet:** no auth store (sign-in/sign-out/session functions),
+`SettingsScene`'s Account rows are still the same placeholders from
+Milestone 21 — none of this is reachable from the UI yet. Also still
+blocked on the Google OAuth client ID/secret from KNA before the
+provider can be enabled in Supabase and any of this becomes testable
+end-to-end.
+

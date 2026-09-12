@@ -112,6 +112,14 @@ export function resetProgress() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
+/** Bulk-replace the completed set — used by authStore's guest->cloud
+ * merge on first sign-in (union of local + cloud, written back here so
+ * local and cloud agree after a sync), not by normal gameplay (which
+ * should keep using completeLevel() one at a time). */
+export function setCompletedLevelIds(ids) {
+  saveRaw({ completedLevelIds: [...new Set(ids)] });
+}
+
 /** Count of worlds currently unlocked, out of WORLDS.length -- used for the
  * home screen's "Worlds Unlocked" badge. Takes worldCount as a param
  * rather than importing worlds.js, to avoid a circular import (worlds.js
