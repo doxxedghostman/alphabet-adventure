@@ -55,6 +55,7 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('iconCoinShop', 'assets/icon-coin-shop.png');
     this.load.image('iconCalendar', 'assets/icon-calendar.png');
     this.load.image('iconVideo', 'assets/icon-video.png');
+    this.load.image('iconSettings', 'assets/icon-settings.png');
   }
 
   create() {
@@ -110,7 +111,7 @@ export class HomeHubScene extends Phaser.Scene {
     }).setOrigin(0, 0.5);
 
     this.createSmallIconButton(width - 78, cy, '+', '#c0392b', () => {});
-    this.createSmallIconButton(width - 34, cy, '\u2699', '#8e44ad', () => this.openSettings());
+    this.createImageIconButton(width - 34, cy, 'iconSettings', () => this.openSettings());
   }
 
   createSmallIconButton(x, y, glyph, color, onTap) {
@@ -125,6 +126,25 @@ export class HomeHubScene extends Phaser.Scene {
       onTap();
     });
     return { targets: [circle, label] };
+  }
+
+  // Same role as createSmallIconButton() but for a real icon image
+  // (wooden settings tile, etc.) instead of a color circle + glyph.
+  // Uses the baseScale-relative tween pattern - see the icon pop-out
+  // fix in createColumnIcon() for why that matters.
+  createImageIconButton(x, y, textureKey, onTap) {
+    const size = 34;
+    const icon = this.add.image(x, y, textureKey);
+    icon.setDisplaySize(size, size);
+    const baseScale = icon.scale;
+
+    const hit = this.add.circle(x, y, size / 2, 0xffffff, 0).setInteractive({ useHandCursor: true });
+    hit.on('pointerdown', () => this.tweens.add({ targets: icon, scale: baseScale * 0.85, duration: 70 }));
+    hit.on('pointerup', () => {
+      this.tweens.add({ targets: icon, scale: baseScale, duration: 100 });
+      onTap();
+    });
+    return icon;
   }
 
   // --- Center: logo + decorative mini map preview -------------------------
