@@ -580,3 +580,56 @@ bg.jpg`.
 Not done here: the other 9 worlds' art, and no code wired up yet
 (`WorldSelectScene`/`LevelPathScene` from Milestone 10's plan don't
 exist yet — this is art assets only).
+
+---
+
+### Milestone 12 — Remaining 9 worlds' art generated + compressed
+
+Same treatment as Milestone 11, one world at a time: Jungle Jumble,
+Ocean Words, Dino Valley, Cloud Kingdom, Crystal Forest, Magic
+Mountain, Space Words, Ancient Valley, and WordSwoop Kingdom each got
+a thumbnail (cropped from a square AI-gen source to 480x360) and a
+level-path background (resized from a 1024x1536 portrait source to
+600x900), re-encoded as JPEG at quality 82. File sizes landed in the
+same 49-72KB (thumb) / 146-220KB (bg) range as Candy Garden. Saved to
+`public/assets/<world-slug>-thumb.jpg` and `-bg.jpg`, each world
+committed and pushed individually rather than in one batch.
+
+All 10 worlds now have their World Map art. Still not done: any of the
+code from Milestone 10's plan (`worlds.js`, the progress store,
+`WorldSelectScene`, `LevelPathScene`) — art only, again.
+
+---
+
+### Milestone 13 — Progress store built
+
+First piece of actual persistence in the game — `src/utils/
+progressStore.js`, a localStorage-backed store that unblocks the rest
+of the World Map plan from Milestone 10.
+
+Rather than store "unlocked" flags directly, it stores only a set of
+completed global level ids and derives all lock state from that on
+demand (`isWorldUnlocked`, `isLevelUnlocked`), so there's a single
+source of truth to update (`completeLevel(id)`) and no way for
+"completed" and "unlocked" bookkeeping to drift apart. Lock rules
+match the Milestone 10 decision exactly: World 1 always unlocked,
+World N unlocks when World N-1's level 20 (its boss) is completed;
+Level 1 of an unlocked world always unlocked, Level K unlocks when
+Level K-1 in that world completes.
+
+`levelIdFor(worldId, levelNum)` / `worldAndLevelFor(levelId)` bridge
+the gap between `levels.js`'s flat global numbering (1, 2, 3, ...) and
+the World Map's per-world numbering (1-20 within each world): world 1
+= global ids 1-20, world 2 = 21-40, etc. Since only 5 real levels exist
+in `levels.js` today, most ids past Candy Garden's first few will
+currently resolve via `getLevel()`'s existing fallback rather than
+unique content — a content gap, not a bug in the store itself; the
+lock/unlock chain works correctly regardless of how much real content
+sits behind each id.
+
+Also added a console escape hatch, `window.__wordswoopResetProgress()`,
+for testing the unlock chain without manually clearing localStorage.
+
+Not done here: `worlds.js`, `WorldSelectScene`, `LevelPathScene`, or
+wiring any of this into `BoardScene`'s win flow (currently `BoardScene`
+doesn't call `completeLevel()` at all — that's the next batch).
