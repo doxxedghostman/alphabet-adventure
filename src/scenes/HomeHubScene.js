@@ -221,10 +221,17 @@ export class HomeHubScene extends Phaser.Scene {
     // systems don't exist yet so there's nothing further to trigger.
     const icon = this.add.image(cx, cy, textureKey);
     icon.setDisplaySize(42, 42);
+    // setDisplaySize gives this image a non-1 base scale (native art is
+    // 280x280, shown at 42x42, so baseScale ~= 0.15). The tap-bounce
+    // tween below must scale *relative to that*, not set scale to a
+    // literal 0.88 - doing that was the bug that made icons balloon up
+    // to ~6x size on every tap (0.88 absolute vs ~0.15 base), which is
+    // the "icon pops out" the person flagged.
+    const baseScale = icon.scale;
 
     const hit = this.add.rectangle(x, y, size, size, 0xffffff, 0).setOrigin(0).setInteractive({ useHandCursor: true });
-    hit.on('pointerdown', () => this.tweens.add({ targets: icon, scale: 0.88, duration: 70 }));
-    hit.on('pointerup', () => this.tweens.add({ targets: icon, scale: 1, duration: 100 }));
+    hit.on('pointerdown', () => this.tweens.add({ targets: icon, scale: baseScale * 0.88, duration: 70 }));
+    hit.on('pointerup', () => this.tweens.add({ targets: icon, scale: baseScale, duration: 100 }));
   }
 
   // --- Bottom: the real navigation forward ----------------------------------
