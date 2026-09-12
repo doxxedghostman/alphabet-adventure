@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { resetProgress } from '../utils/progressStore.js';
 
 // Home Hub (per chat): sits between the splash/logo Main Menu and the
 // World Map. Modeled on the reference mockup image the user provided -
@@ -8,8 +7,8 @@ import { resetProgress } from '../utils/progressStore.js';
 // a logo + mini map preview in the center, and a big "Word Map" button
 // at the bottom that's the only way forward from here.
 //
-// Per chat: only the Word Map button and Settings (reset progress,
-// reusing the same panel as MainMenuScene) are real. The remaining
+// Per chat: only the Word Map button and the Settings gear (which now
+// opens its own SettingsScene, see that file) are real. The remaining
 // icons (shop, gallery, trophy, leaderboard, coin shop, calendar,
 // video) are shown but inert - tap just does the press-down bounce,
 // no toast/popup, since none of those systems exist yet.
@@ -113,7 +112,7 @@ export class HomeHubScene extends Phaser.Scene {
     }).setOrigin(0, 0.5);
 
     this.createSmallIconButton(width - 78, cy, '+', '#c0392b', () => {});
-    this.createImageIconButton(width - 34, cy, 'iconSettings', () => this.openSettings());
+    this.createImageIconButton(width - 34, cy, 'iconSettings', () => this.scene.start('SettingsScene'));
   }
 
   createSmallIconButton(x, y, glyph, color, onTap) {
@@ -289,106 +288,4 @@ export class HomeHubScene extends Phaser.Scene {
     });
   }
 
-  // --- Settings (identical behavior to MainMenuScene's panel) --------------
-
-  openSettings() {
-    if (this.settingsPanel) return;
-    const { width, height } = this.scale;
-
-    const scrim = this.add.rectangle(0, 0, width, height, 0x000000, 0.55).setOrigin(0);
-    scrim.setInteractive();
-
-    const panelWidth = width * 0.78;
-    const panelHeight = 220;
-    const panelX = width / 2;
-    const panelY = height / 2;
-
-    const panel = this.add.graphics();
-    panel.fillStyle(0x2f2350, 1);
-    panel.fillRoundedRect(panelX - panelWidth / 2, panelY - panelHeight / 2, panelWidth, panelHeight, 14);
-    panel.lineStyle(3, 0xffffff, 0.8);
-    panel.strokeRoundedRect(panelX - panelWidth / 2, panelY - panelHeight / 2, panelWidth, panelHeight, 14);
-
-    const title = this.add
-      .text(panelX, panelY - panelHeight / 2 + 28, 'Settings', {
-        fontFamily: 'Arial',
-        fontSize: '20px',
-        fontStyle: 'bold',
-        color: '#ffffff',
-      })
-      .setOrigin(0.5);
-
-    this.settingsPanel = this.add.container(0, 0, [scrim, panel, title]);
-    this.settingsPanel.setScale(0.85);
-    this.settingsPanel.alpha = 0;
-    this.tweens.add({ targets: this.settingsPanel, scale: 1, alpha: 1, duration: 220, ease: 'Back.easeOut' });
-
-    this.createResetButton(panelX, panelY - 10);
-    this.createCloseButton(panelX, panelY + panelHeight / 2 - 34);
-  }
-
-  createResetButton(x, y) {
-    const btn = this.makeSettingsButton(x, y, 'Reset Progress', '#c0392b');
-    btn.on('pointerup', () => {
-      this.confirmingReset ? this.doReset() : this.armResetConfirm(btn);
-    });
-    this.settingsPanel.add([btn.bg, btn.label, btn]);
-  }
-
-  armResetConfirm(btn) {
-    this.confirmingReset = true;
-    btn.label.setText('Tap again to confirm');
-    this.tweens.add({ targets: [btn.bg, btn.label], scale: 1.06, duration: 90, yoyo: true, ease: 'Sine.easeOut' });
-    this.time.delayedCall(2500, () => {
-      this.confirmingReset = false;
-      if (btn.label.active) btn.label.setText('Reset Progress');
-    });
-  }
-
-  doReset() {
-    resetProgress();
-    this.confirmingReset = false;
-    this.closeSettings();
-    this.scene.restart();
-  }
-
-  createCloseButton(x, y) {
-    const btn = this.makeSettingsButton(x, y, 'Close', '#3a2a5c');
-    btn.on('pointerup', () => this.closeSettings());
-    this.settingsPanel.add([btn.bg, btn.label, btn]);
-  }
-
-  makeSettingsButton(x, y, label, color) {
-    const w = 200;
-    const h = 40;
-    const bg = this.add.rectangle(x, y, w, h, Phaser.Display.Color.HexStringToColor(color).color, 1);
-    bg.setStrokeStyle(2, 0xffffff, 0.8);
-    const text = this.add.text(x, y, label, {
-      fontFamily: 'Arial',
-      fontSize: '15px',
-      fontStyle: 'bold',
-      color: '#ffffff',
-    });
-    text.setOrigin(0.5);
-
-    const hit = this.add.rectangle(x, y, w, h, 0xffffff, 0).setInteractive({ useHandCursor: true });
-    hit.on('pointerdown', () => this.tweens.add({ targets: [bg, text], scale: 0.95, duration: 70 }));
-    hit.on('pointerup', () => this.tweens.add({ targets: [bg, text], scale: 1, duration: 100 }));
-    return Object.assign(hit, { bg, label: text });
-  }
-
-  closeSettings() {
-    if (!this.settingsPanel) return;
-    const panel = this.settingsPanel;
-    this.settingsPanel = null;
-    this.confirmingReset = false;
-    this.tweens.add({
-      targets: panel,
-      scale: 0.85,
-      alpha: 0,
-      duration: 160,
-      ease: 'Sine.easeIn',
-      onComplete: () => panel.destroy(),
-    });
-  }
 }

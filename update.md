@@ -909,6 +909,50 @@ specifically re-verified since.
 
 ---
 
+### Milestone 21 — Settings rebuilt as its own scrollable scene, filling in one section at a time
+
+Per chat: expanding Settings from "Reset Progress + Close" to a real
+list (Account, Audio, Notifications, Support & Legal, Data, About).
+The old 220px-tall popup panel in `HomeHubScene` couldn't fit that, so
+it's been replaced outright with `src/scenes/SettingsScene.js` — a
+full scene using the same fixed-HUD + drag/wheel-scroll pattern as
+`WorldSelectScene`/`LevelPathScene`, reached via `scene.start` from the
+Home Hub's settings gear instead of an overlay. `HomeHubScene`'s old
+`openSettings()`/reset-confirm/button-factory code (the whole
+"Settings" block at the bottom of the file) is deleted, not kept
+alongside the new scene.
+
+All six sections render now so the whole surface is navigable, but
+each row is only wired up in the commit that actually builds it —
+until then it renders as a visibly-dimmed row with a "Coming soon"
+note (never just omitted). This first pass:
+
+- **Data → Reset Progress**: real, carried over from the old popup
+  (same tap-to-arm / tap-again-to-confirm pattern, 2.5s to reset before
+  it disarms).
+- **About**: real. Version reads live from `package.json` (imported
+  directly — Vite supports JSON imports, no build config needed) so it
+  never drifts from the actual shipped version; Credits is static
+  "Wobblewing Studios" text.
+- **Account, Audio, Notifications, Support & Legal, Data → Sign Out**:
+  placeholder rows only, landing in their own follow-up commits per
+  chat. Account is specifically blocked on the Google sign-in /
+  Supabase decision noted below; Notifications is intentionally left
+  as placeholder-only for now per chat, not because of a technical
+  blocker like Account.
+
+New `src/utils/settingsStore.js` also added (localStorage, same
+pattern as `progressStore.js`) with `musicOn`/`sfxOn`/`hapticsOn`
+getters/setters — not wired to any row yet (that's the Audio section's
+own commit), added now so it's ready to plug into. Worth noting for
+whoever builds Audio/Notifications next: there's currently no audio
+system in the codebase at all (no `this.sound` usage anywhere) and no
+Capacitor dependency installed (`package.json` only has `phaser` +
+`vite` — no `@capacitor/*` packages, no `capacitor.config` file),
+despite PLAN.md listing Capacitor as the intended stack. So Music/SFX
+toggles will need real audio assets + a sound setup before they control
+anything, and Vibration needs `@capacitor/haptics` added first.
+
 ### Next up (not started) — Google sign-in + Supabase for account data
 
 Per chat: person wants to wire up Google sign-in and a Supabase backend
