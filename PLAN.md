@@ -223,10 +223,14 @@ Data, About) doesn't fit a small overlay panel. See update.md
 Milestones 21-24 for that history.
 
 Background is a looping waterfall video (`hub-background-loop.mp4`,
-muted, boomerang-looped for a seamless cycle despite a camera move in
-the source clip — see update.md Milestone 26 for how the watermark
-removal and loop were done), falling back to the original static
-`forest-background.jpg` if video playback isn't available. Real art
+muted, static-camera source with a seamless 1s crossfade loop point —
+see update.md Milestone 27 for why a crossfade replaced Milestone 26's
+boomerang once the source clip itself had a fixed camera), falling
+back to the original static `forest-background.jpg` if video playback
+isn't available. Dim overlay over the background is 0.15 opacity, not
+0.45 — the original figure (sized for the old static image) combined
+with the video's own brighter palette to produce a washed-out look
+that read as "blurry," fixed in Milestone 27. Real art
 throughout otherwise (wood top bar, banners, 8 side icons, settings
 icon, gem icon, and a newer transparent-background logo swapped in
 per Milestone 26) - full detail and the several rounds of

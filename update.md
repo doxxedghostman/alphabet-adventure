@@ -1155,3 +1155,45 @@ wasn't an option; fixed the existing clip instead:
   if video creation throws - some mobile browsers block autoplay even
   when muted, or don't support the format, and a dead background is
   worse than a static one.
+
+### Milestone 27 — Diagnosed the "blurry/faded" background report, swapped in a proper static-camera loop
+
+Person flagged the Home Hub background as looking blurry/faded after
+Milestone 26 shipped. Wasn't actual blur - confirmed by compositing a
+video frame with the scene's existing 45%-opacity dark overlay
+rectangle offline (Python/PIL) and reproducing the exact washed-out
+look from the screenshot. The overlay's opacity had been unchanged
+since it was sized for the old *static* forest-background.jpg; the
+video's own naturally brighter/hazier palette stacked with that same
+0.45 alpha read as "faded" in a way the static image never had.
+Fixed by dropping the overlay to 0.15 - confirmed against the same
+composite test before shipping, not just by eye in-engine.
+
+Separately, the person supplied a new source clip
+(`waterfall_nature_loop.mp4`, 832x1120, 6s, no audio) - genuinely
+static-camera this time (first/last frames match almost exactly,
+confirmed by diffing them), which sidesteps the Milestone 26 clip's
+camera-drift problem entirely. Traded one problem for a different
+constraint though: this clip's watermark ("CapCutAI", top-left) sits
+over detailed foliage/sky rather than the previous clip's plain sky,
+and a boomerang loop was no longer an option - reversing a *waterfall*
+specifically (water visibly flowing upward) is far more noticeable
+than reversing a camera pan, so a straight crossfade loop was used
+instead (1s crossfade blending the tail into the head via `xfade`,
+built with `trim`/`split`/`concat` rather than a hard cut).
+
+Watermark removal took three attempts to get fully illegible rather
+than just faded: a feathered mask (blurred-edge rounded rect) driving
+`maskedmerge` between the sharp and blurred frame gave clean edges,
+but the first two blur strengths (sigma 14, then 22) still left a
+faint ghost of the bold white text readable through the blur - bold
+high-contrast text needs a much larger blur radius to fully smear away
+than the previous clip's plain-sky watermark did. sigma=45 (final:
+60, for margin) was what actually made it illegible, confirmed by
+direct crop-and-zoom inspection, not assumed from the filter graph
+alone. Re-encoded to 624x840 for size (~3.4MB -> ~1.3MB).
+
+`HomeHubScene.js` changes: swapped `hub-background-loop.mp4` for the
+new clip (same asset key, no scene code changes needed there), updated
+the fallback natural-size constants (768 -> 840) used when
+`video.height` isn't populated yet, and the overlay opacity fix above.
