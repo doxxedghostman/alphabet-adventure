@@ -868,6 +868,47 @@ banner art the person supplied
 
 ---
 
+### Milestone 20 — icon pop-out bug fixed, 3 more emoji/placeholder swaps for real art
+
+Per chat, a device screenshot showed icons visibly "popping out" of
+their slot on tap. Root cause: `createColumnIcon()`'s icons are 280x280
+native art shown at 42x42 via `setDisplaySize()` (an implicit base
+scale of ~0.15), but the tap-bounce tween set `scale: 0.88` directly -
+Phaser's `scale` is absolute, not relative to display size, so tapping
+any icon jumped it to ~0.88 absolute scale (~6x its real size) for the
+duration of the bounce. Fixed by capturing `baseScale = icon.scale`
+right after `setDisplaySize()` and tweening to `baseScale * 0.88` /
+`baseScale` instead - same pattern `MainMenuScene`'s Play button
+already used correctly. Applied the same fix while wiring in the new
+image-based buttons below, so neither repeats the bug.
+
+Also landed, closing out the "still open" item above plus two new
+emoji-to-real-art swaps the person asked for:
+
+- **Bottom Word Map button** - replaced the code-drawn blue rounded
+  rect + text label with the finished banner art the person sent
+  (`word-map-button.png`, "Word Map" already baked into the art,
+  already background-removed on their end). Image is the whole button
+  now, same tap/navigate behavior as before.
+- **Settings button** - replaced the `\u2699` gear emoji + purple
+  circle with real wooden gear icon art (`icon-settings.png`). New
+  `createImageIconButton()` helper added alongside the existing
+  `createSmallIconButton()` (emoji+circle) since the currency "+"
+  button still uses the old style - only settings was swapped here.
+- **Currency icon** - replaced the `\u{1F451}` crown emoji with a real
+  blue gem icon (`icon-gem.png`). Static display only, not a button.
+
+All three new assets arrived already background-removed by the person
+- just trimmed/resized/compressed on our end, no alpha re-keying
+needed this time (unlike the original 8 side icons in Milestone 19).
+
+**Still open:** icons drifting out of their column position on some
+devices - the pop-out *bug* above is fixed, but the earlier *layout
+drift* complaint from the Milestone 19 open-issue note hasn't been
+specifically re-verified since.
+
+---
+
 ### Next up (not started) — Google sign-in + Supabase for account data
 
 Per chat: person wants to wire up Google sign-in and a Supabase backend
