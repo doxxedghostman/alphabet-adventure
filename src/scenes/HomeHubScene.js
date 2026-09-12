@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { resetProgress } from '../utils/progressStore.js';
+import { applyRandomIdleEffect } from '../utils/effects.js';
 
 // Home Hub (per chat): sits between the splash/logo Main Menu and the
 // World Map. Modeled on the reference mockup image the user provided -
@@ -21,20 +22,27 @@ import { resetProgress } from '../utils/progressStore.js';
 // Icons were re-keyed for transparency on our end (originals had a flat
 // white background baked in, not real alpha) before being added.
 //
-// Animation pass (per chat, "add effect where necessary"): kept it
-// selective rather than animating every element -
-//  - Word Map button breathes gently (it's the only real action here)
-//  - Spin wheel idles with a continuous slow rotation
-//  - Daily-reward calendar pulses (classic "come back today" nudge)
-//  - The map preview's star/goal node has a soft glow pulse
-//  - The letter-block strip has a slow float for a little life
-//  - Every tappable icon still gets the existing press-down bounce
+// Animation pass (per chat): kept it selective rather than animating every
+// element, but every idle effect below is now one of exactly two kinds -
+// "glow" (soft pulsing halo) or "shine" (diagonal light sweep) - assigned
+// at random per element via applyRandomIdleEffect(), instead of the old
+// bespoke pulse/spin/breathe/float animations -
+//  - Word Map button (the only real action here)
+//  - Spin wheel icon
+//  - Daily-reward calendar icon (classic "come back today" nudge)
+//  - The map preview's star/goal node
+//  - The letter-block strip
+//  - Every tappable icon still gets the existing press-down bounce (that's
+//    interaction feedback, not a decorative idle animation, so it's unchanged)
 export class HomeHubScene extends Phaser.Scene {
   constructor() {
     super('HomeHubScene');
   }
 
   preload() {
+    // Loaded here directly (not inherited from MainMenuScene's load order)
+    // since this scene owns its own use of the logo.
+    this.load.image('menuLogo', 'assets/menu-logo.png');
     this.load.image('hubTopBar', 'assets/top-bar.png');
     this.load.image('hubWordMapBanner', 'assets/word-map-banner.png');
     this.load.image('hubMapPreviewCard', 'assets/map-preview-card.jpg');
@@ -109,20 +117,14 @@ export class HomeHubScene extends Phaser.Scene {
       color: '#8a5a1c',
     }).setOrigin(0, 0.5);
 
-    const addBtn = this.createSmallIconButton(width - 78, cy, '+', '#c0392b', () => this.comingSoon());
+    this.createSmallIconButton(width - 78, cy, '+', '#c0392b', () => this.comingSoon());
     this.createSmallIconButton(width - 34, cy, '\u2699', '#8e44ad', () => this.openSettings());
 
-    // Gentle pulse on the "+" currency button - it's the one spot in the
+    // Idle effect on the "+" currency button - it's the one spot in the
     // bar that's an actual call-to-action (buy currency), same nudge
-    // pattern as the daily-reward calendar icon below.
-    this.tweens.add({
-      targets: addBtn.targets,
-      scale: 1.12,
-      duration: 620,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
+    // pattern as the daily-reward calendar icon below. Glow or shine,
+    // picked at random.
+    applyRandomIdleEffect(this, { x: width - 78, y: cy, radius: 18 });
   }
 
   createSmallIconButton(x, y, glyph, color, onTap) {
@@ -202,19 +204,12 @@ export class HomeHubScene extends Phaser.Scene {
       const glyph = n.state === 'star' ? '\u2605' : '\u{1F512}';
       this.add.text(x, y, glyph, { fontSize: '13px' }).setOrigin(0.5);
 
-      // The star/goal node gets a soft glow pulse - it's the "prize at
-      // the end of the path" and deserves to draw the eye, same idea as
-      // the star used at the end of the real LevelPathScene/WorldSelect.
+      // The star/goal node gets an idle effect (glow or shine, at random)
+      // - it's the "prize at the end of the path" and deserves to draw
+      // the eye, same idea as the star used at the end of the real
+      // LevelPathScene/WorldSelect.
       if (n.state === 'star') {
-        const glow = this.add.circle(x, y, 13, 0xffe38a, 0.55);
-        this.tweens.add({
-          targets: glow,
-          scale: 1.7,
-          alpha: 0,
-          duration: 1100,
-          repeat: -1,
-          ease: 'Sine.easeOut',
-        });
+        applyRandomIdleEffect(this, { x, y, radius: 13 });
       }
     });
 
@@ -225,13 +220,11 @@ export class HomeHubScene extends Phaser.Scene {
     // in since the user sent it), not interactive.
     const blocks = this.add.image(width / 2, this.mapPreviewBottom + 26, 'hubLetterBlocks');
     blocks.setDisplaySize(width * 0.5, (width * 0.5) * (300 / 900));
-    this.tweens.add({
-      targets: blocks,
-      y: blocks.y - 5,
-      duration: 1600,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
+    applyRandomIdleEffect(this, {
+      x: blocks.x,
+      y: blocks.y,
+      width: blocks.displayWidth,
+      height: blocks.displayHeight,
     });
   }
 
@@ -281,23 +274,8 @@ export class HomeHubScene extends Phaser.Scene {
       this.comingSoon();
     });
 
-    if (anim === 'spin') {
-      this.tweens.add({
-        targets: icon,
-        angle: 360,
-        duration: 6000,
-        repeat: -1,
-        ease: 'Linear',
-      });
-    } else if (anim === 'pulse') {
-      this.tweens.add({
-        targets: icon,
-        scale: 1.12,
-        duration: 620,
-        yoyo: true,
-        repeat: -1,
-        ease: 'Sine.easeInOut',
-      });
+    if (anim) {
+      applyRandomIdleEffect(this, { x: cx, y: cy, width: size, height: size });
     }
   }
 
@@ -346,22 +324,15 @@ export class HomeHubScene extends Phaser.Scene {
       color: '#ffffff',
     }).setOrigin(0.5);
 
-    // Idle "breathing" pulse - this is the only real way forward from
-    // this screen, so it gets a gentle loop nudging the eye toward it.
-    // Paused/resumed around the press-down tween so the two never
+    // Idle effect (glow or shine, at random) - this is the only real way
+    // forward from this screen, so it gets a loop nudging the eye toward
+    // it. Paused/resumed around the press-down tween so the two never
     // fight each other.
-    const breathe = this.tweens.add({
-      targets: [bg, label],
-      scale: 1.035,
-      duration: 780,
-      yoyo: true,
-      repeat: -1,
-      ease: 'Sine.easeInOut',
-    });
+    const idle = applyRandomIdleEffect(this, { x, y, width: w, height: h });
 
     const hit = this.add.rectangle(x, y, w, h, 0xffffff, 0).setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => {
-      breathe.pause();
+      idle.tween.pause();
       this.tweens.add({ targets: [bg, label], scale: 0.96, duration: 70 });
     });
     hit.on('pointerup', () => {
