@@ -758,3 +758,43 @@ real target word or score target. Authoring the full 200-level list
 (update.md's outstanding item 6, still open) is what actually fills
 that in - the World Map itself now works correctly end to end
 regardless of how much real content sits behind each node.
+
+---
+
+### Milestone 18 — Home Hub screen added between Main Menu and World Map
+
+Per chat: the user provided a reference mockup for a richer "home"
+screen and wanted it inserted between the existing splash/logo Main
+Menu (Play button) and the World Map grid, rather than Play jumping
+straight to the World Map as it did before.
+
+New `src/scenes/HomeHubScene.js`, modeled on that mockup: a top bar
+(avatar, name, currency, "+", settings gear), a left icon column (shop,
+gallery, trophy, leaderboard), a right icon column (coin shop, daily
+calendar, spin wheel, video reward), the existing menu logo plus a
+"Word Map" ribbon and a decorative mini-map preview card (a few
+code-drawn lock/star nodes, same visual language as the real World
+Map - not interactive, just a teaser), and a real "Word Map" button at
+the bottom.
+
+Per explicit chat decision: every icon without a real system behind it
+(both shop icons, gallery, trophy, leaderboard, calendar, spin wheel,
+video) is shown fully styled and tappable rather than omitted or
+greyed out - tapping one shows a "Coming Soon" toast. Avatar/name/
+currency are placeholders (no account or economy system exists). Only
+Settings (reset progress - duplicated from `MainMenuScene`'s panel,
+same behavior) and the Word Map button are real.
+
+Navigation updated: `MainMenuScene`'s Play button now goes to
+`HomeHubScene` instead of straight to `WorldSelectScene`;
+`WorldSelectScene`'s Back button now returns to `HomeHubScene` instead
+of `MainMenuScene`, since Home Hub is the new middle layer. Full chain
+is now: Main Menu (Play) -> Home Hub (Word Map button) -> World Map ->
+Level Path -> Board, with Back buttons unwinding the same path.
+
+All icons are code-drawn (rounded-rect badge + Unicode glyph) - no new
+art assets needed, consistent with the lock/star glyph style already
+used elsewhere. Settings-panel code is duplicated between
+`MainMenuScene` and `HomeHubScene` rather than factored into a shared
+file, matching the existing pattern of duplicating the drag-scroll
+logic between `WorldSelectScene` and `LevelPathScene`.

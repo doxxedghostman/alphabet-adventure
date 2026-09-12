@@ -174,7 +174,7 @@ export class WorldSelectScene extends Phaser.Scene {
       if (this.wasDrag()) return;
       this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
       this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('MainMenuScene');
+        this.scene.start('HomeHubScene');
       });
     });
   }
