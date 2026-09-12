@@ -1,5 +1,4 @@
 import Phaser from 'phaser';
-import { applyRandomIdleEffect } from '../utils/effects.js';
 
 // Landing screen after the splash. Per chat: this now shows nothing but
 // the full forest-adventure poster art (logo + two scout characters +
@@ -12,8 +11,10 @@ import { applyRandomIdleEffect } from '../utils/effects.js';
 // art the poster itself was generated from), so at matching scale/position
 // it lines up pixel-for-pixel with the banner already drawn into the
 // poster - it reads as one seamless piece of art, but the crop on top is
-// a real interactive Phaser object with tap feedback and an idle glow/
-// shine effect, while the full poster underneath is static.
+// a real interactive Phaser object with tap feedback, while the full
+// poster underneath is static. Per chat follow-up: no idle animation on
+// this button anymore either (see HomeHubScene.js's header comment for
+// why - same "white blink" complaint applied here too).
 //
 // The poster (720x1482) is much taller/narrower than this game's fixed
 // canvas (516x624 - see config.js/main.js), so it's shown at "contain"
@@ -80,12 +81,7 @@ export class MainMenuScene extends Phaser.Scene {
 
     const baseScale = button.scale;
 
-    // Idle effect (glow or shine, at random) so the button still reads
-    // as tappable even though it's sitting flush on top of matching art.
-    const idle = applyRandomIdleEffect(this, { x, y, width: displayWidth, height: displayHeight });
-
     button.on('pointerdown', () => {
-      idle.tween.pause();
       this.tweens.add({ targets: button, scale: baseScale * 0.94, duration: 80, ease: 'Sine.easeOut' });
     });
     button.on('pointerup', () => {
@@ -96,9 +92,6 @@ export class MainMenuScene extends Phaser.Scene {
         ease: 'Sine.easeOut',
         onComplete: () => this.startGame(),
       });
-    });
-    button.on('pointerout', () => {
-      if (idle.tween.isPaused()) idle.tween.resume();
     });
 
     return button;
