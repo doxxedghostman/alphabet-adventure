@@ -64,8 +64,8 @@ export class HomeHubScene extends Phaser.Scene {
     this.createBackground(width, height);
     this.createTopBar(width);
     this.createLogoAndMapPreview(width);
-    this.createIconColumn('left', 12);
-    this.createIconColumn('right', width - 12 - 82);
+    this.createIconColumn('left', 14);
+    this.createIconColumn('right', width - 14 - 100);
     this.createWordMapButton(width, height);
   }
 
@@ -112,12 +112,13 @@ export class HomeHubScene extends Phaser.Scene {
   // --- Top bar: avatar, name, currency, add-currency, settings -----------
 
   createTopBar(width) {
-    const barHeight = 74;
-    const barY = 6;
+    // Enlarged per chat (74 -> 96) along with everything else on this
+    // screen now that the canvas is a proper phone-height, not the old
+    // stubby 624-tall one - there's real room to make the header read as
+    // substantial instead of thin.
+    const barHeight = 96;
+    const barY = 8;
 
-    // Widened (closer to the canvas edges) and thicker per chat, so the
-    // wood bar reads as a proper substantial header instead of a thin
-    // strip.
     const bar = this.add.image(width / 2, barY, 'hubTopBar').setOrigin(0.5, 0);
     bar.setDisplaySize(width - 8, barHeight);
 
@@ -125,24 +126,24 @@ export class HomeHubScene extends Phaser.Scene {
 
     // Avatar (placeholder - no account system yet; real profile icon +
     // account data coming with the Google sign-in / Supabase work).
-    this.add.circle(40, cy, 20, 0x8f5c3c, 1).setStrokeStyle(2, 0xffffff, 0.9);
-    this.add.text(40, cy, '\u{1F9D2}', { fontSize: '22px' }).setOrigin(0.5);
+    this.add.circle(52, cy, 26, 0x8f5c3c, 1).setStrokeStyle(2, 0xffffff, 0.9);
+    this.add.text(52, cy, '\u{1F9D2}', { fontSize: '28px' }).setOrigin(0.5);
 
     // Currency (placeholder - no economy system yet). Enlarged per
     // chat, and the "+" add-currency button removed entirely (no
     // economy system exists for it to add to yet) rather than left as
     // a dead tap target.
-    const currencyX = width - 108;
+    const currencyX = width - 128;
     const gem = this.add.image(currencyX, cy, 'iconGem');
-    gem.setDisplaySize(30, 30);
-    this.add.text(currencyX + 22, cy, '0', {
+    gem.setDisplaySize(38, 38);
+    this.add.text(currencyX + 26, cy, '0', {
       fontFamily: 'Arial',
-      fontSize: '17px',
+      fontSize: '20px',
       fontStyle: 'bold',
       color: '#8a5a1c',
     }).setOrigin(0, 0.5);
 
-    this.createImageIconButton(width - 40, cy, 'iconSettings', () => this.scene.start('SettingsScene'), 46);
+    this.createImageIconButton(width - 48, cy, 'iconSettings', () => this.scene.start('SettingsScene'), 58);
   }
 
   // Real icon image (wooden settings tile, gem, etc.) with a tap
@@ -167,15 +168,17 @@ export class HomeHubScene extends Phaser.Scene {
   // --- Center: logo + decorative mini map preview -------------------------
 
   createLogoAndMapPreview(width) {
-    const logo = this.add.image(width / 2, 76, 'menuLogo').setOrigin(0.5, 0);
-    logo.setScale(Math.min(1, (width * 0.42) / logo.width));
+    // Logo, banner, and letter-block strip all enlarged per chat, and
+    // pushed down slightly (98 vs 76) to sit below the now-taller top bar.
+    const logo = this.add.image(width / 2, 118, 'menuLogo').setOrigin(0.5, 0);
+    logo.setScale(Math.min(1, (width * 0.56) / logo.width));
 
-    const ribbonY = logo.y + logo.displayHeight + 6;
+    const ribbonY = logo.y + logo.displayHeight + 10;
     const banner = this.add.image(width / 2, ribbonY, 'hubWordMapBanner').setOrigin(0.5, 0);
-    banner.setDisplaySize(210, 66);
-    this.add.text(width / 2, ribbonY + 33, 'Word Map', {
+    banner.setDisplaySize(266, 84);
+    this.add.text(width / 2, ribbonY + 42, 'Word Map', {
       fontFamily: 'Arial',
-      fontSize: '15px',
+      fontSize: '19px',
       fontStyle: 'bold',
       color: '#4a2f10',
     }).setOrigin(0.5);
@@ -183,15 +186,13 @@ export class HomeHubScene extends Phaser.Scene {
     // Mini map preview removed per chat (parchment card, dashed path,
     // and lock/star nodes all taken out) - the letter-block strip below
     // now sits under the "Word Map" ribbon/text instead of under the
-    // map card. Gap widened (26 -> 55) per chat: with the map gone the
-    // blocks had ended up sitting right under the logo/ribbon with no
-    // breathing room.
-    this.mapPreviewBottom = ribbonY + 33;
+    // map card.
+    this.mapPreviewBottom = ribbonY + 42;
 
     // Decorative letter-block strip - purely for flavor, not
     // interactive, no idle animation.
-    const blocks = this.add.image(width / 2, this.mapPreviewBottom + 55, 'hubLetterBlocks');
-    blocks.setDisplaySize(width * 0.5, (width * 0.5) * (300 / 900));
+    const blocks = this.add.image(width / 2, this.mapPreviewBottom + 64, 'hubLetterBlocks');
+    blocks.setDisplaySize(width * 0.64, (width * 0.64) * (300 / 900));
   }
 
   // --- Side icon columns ---------------------------------------------------
@@ -202,16 +203,17 @@ export class HomeHubScene extends Phaser.Scene {
       ? ['iconShop', 'iconGallery', 'iconTrophy', 'iconLeaderboard']
       : ['iconCoinShop', 'iconCalendar', 'iconVideo'];
 
-    // Enlarged again per chat (58px -> 74px display) - gap grown by
-    // more than the size increase (96 -> 108) so the bigger icons still
+    // Enlarged again per chat (74px -> 92px display) - gap grown by
+    // more than the size increase (108 -> 130) so the bigger icons still
     // clear each other with room to spare, not just touching edge-to-edge.
-    const top = 92;
-    const gap = 108;
+    // Nudged down (92 -> 130) to clear the now-taller top bar/logo.
+    const top = 130;
+    const gap = 130;
     icons.forEach((key, i) => this.createColumnIcon(x, top + i * gap, key));
   }
 
   createColumnIcon(x, y, textureKey) {
-    const size = 82;
+    const size = 100;
     const cx = x + size / 2;
     const cy = y + size / 2;
 
@@ -219,7 +221,7 @@ export class HomeHubScene extends Phaser.Scene {
     // forest background. Tap just does a press-down/up bounce; these
     // systems don't exist yet so there's nothing further to trigger.
     const icon = this.add.image(cx, cy, textureKey);
-    icon.setDisplaySize(74, 74);
+    icon.setDisplaySize(92, 92);
     // setDisplaySize gives this image a non-1 base scale (native art is
     // 280x280, shown at 42x42, so baseScale ~= 0.15). The tap-bounce
     // tween below must scale *relative to that*, not set scale to a
@@ -236,11 +238,13 @@ export class HomeHubScene extends Phaser.Scene {
   // --- Bottom: the real navigation forward ----------------------------------
 
   createWordMapButton(width, height) {
-    const w = width * 0.7;
+    // Enlarged (0.7 -> 0.88 of canvas width) and moved further up from
+    // the bottom edge (height - 62 -> height - 150) per chat - on the
+    // new taller canvas the old position/size left it small and stranded
+    // right at the bottom edge instead of reading as the main CTA.
+    const w = width * 0.88;
     const x = width / 2;
-    // Nudged up per chat (was height - 44) - it was sitting flush at
-    // the very bottom edge.
-    const y = height - 62;
+    const y = height - 150;
 
     // Real art with "Word Map" already baked in, replacing the
     // code-drawn blue rect + text label - image is the whole button now.
