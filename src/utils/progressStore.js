@@ -108,11 +108,27 @@ export function nextPlayableLevelNum(worldId) {
   return LEVELS_PER_WORLD; // whole world already completed
 }
 
+export function resetProgress() {
+  localStorage.removeItem(STORAGE_KEY);
+}
+
+/** Count of worlds currently unlocked, out of WORLDS.length -- used for the
+ * home screen's "Worlds Unlocked" badge. Takes worldCount as a param
+ * rather than importing worlds.js, to avoid a circular import (worlds.js
+ * already imports from this file). */
+export function unlockedWorldCount(worldCount) {
+  let count = 0;
+  for (let w = 1; w <= worldCount; w += 1) {
+    if (isWorldUnlocked(w)) count += 1;
+  }
+  return count;
+}
+
 // Escape hatch for testing/debugging from the browser console:
 // window.__wordswoopResetProgress()
 if (typeof window !== 'undefined') {
   window.__wordswoopResetProgress = () => {
-    localStorage.removeItem(STORAGE_KEY);
+    resetProgress();
     console.log('WordSwoop progress reset.');
   };
 }
