@@ -84,7 +84,7 @@ export class HomeHubScene extends Phaser.Scene {
       video.setLoop(true);
       video.play(true);
       const vw = video.width || 624;
-      const vh = video.height || 768;
+      const vh = video.height || 840;
       const scale = Math.max(width / vw, height / vh);
       video.setScale(scale);
       bg = video;
@@ -103,8 +103,13 @@ export class HomeHubScene extends Phaser.Scene {
     }
 
     // Dim it slightly so the UI on top stays readable, same role the
-    // flat 0x241a3d rectangle used to play.
-    this.add.rectangle(0, 0, width, height, 0x1a1030, 0.45).setOrigin(0);
+    // flat 0x241a3d rectangle used to play. Opacity dropped 0.45 -> 0.15
+    // per chat - at 0.45 the video's own bright/hazy palette plus the
+    // dark wash combined into a washed-out "faded" look across the
+    // whole screen (confirmed by compositing the two to reproduce it),
+    // not the actual blur the person suspected - see update.md
+    // Milestone 27.
+    this.add.rectangle(0, 0, width, height, 0x1a1030, 0.15).setOrigin(0);
   }
 
   // --- Top bar: avatar, name, currency, add-currency, settings -----------
