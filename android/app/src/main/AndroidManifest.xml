@@ -22,6 +22,19 @@
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
 
+            <!-- Google sign-in callback: the system browser (Chrome
+                 Custom Tabs) hands control back to this app via this
+                 custom scheme once Google OAuth completes. Must match
+                 AUTH_REDIRECT_URL in src/utils/authStore.js exactly,
+                 and must also be added to Supabase's Authentication ->
+                 URL Configuration -> Redirect URLs allowlist. -->
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <category android:name="android.intent.category.BROWSABLE" />
+                <data android:scheme="com.wobblewingstudios.wordswoop" android:host="auth-callback" />
+            </intent-filter>
+
         </activity>
 
         <provider

@@ -7,15 +7,34 @@
 // a post-level-win prompt), never automatically on load. A guest who
 // never signs in never touches Supabase at all.
 //
-// OAuth flow shape: signInWithOAuth() redirects the whole page to
-// Google and back (standard web OAuth redirect, not a popup) - see
-// signInWithGoogle() below for why, and initAuth()'s comment for how
-// the merge gets triggered after the redirect returns.
+// OAuth flow shape: signInWithGoogle() opens Google's consent screen in
+// the *system* browser via @capacitor/browser, not this app's own
+// WebView - Google blocks its OAuth screen from loading inside embedded
+// WebViews outright, so an in-app redirect can never work here. The
+// system browser hands control back via a custom URL scheme
+// (AUTH_REDIRECT_URL below), caught by initAuth()'s appUrlOpen listener,
+// which is what actually completes the sign-in and triggers the merge.
+import { Browser } from '@capacitor/browser';
+import { App } from '@capacitor/app';
 import { supabase } from './supabaseClient.js';
 import { getCompletedLevelIds, setCompletedLevelIds } from './progressStore.js';
 import { getSettings, setMusicOn, setSfxOn, setHapticsOn } from './settingsStore.js';
 
+// Google actively blocks its OAuth consent screen from loading inside an
+// embedded WebView (the exact environment this Capacitor app runs in) -
+// it detects the WebView user agent and refuses with "Error 403:
+// disallowed_useragent" / "This browser or app may not be secure",
+// regardless of how correctly Google Cloud/Supabase are configured. The
+// fix isn't a config change, it's that Google sign-in has to happen in
+// the *system* browser (Chrome Custom Tabs), not this app's WebView -
+// hence Browser.open() below instead of an in-page redirect, and the
+// custom URL scheme to hand control back once Google's done. This must
+// match an intent-filter in AndroidManifest.xml and be added to
+// Supabase's Authentication -> URL Configuration -> Redirect URLs list.
+const AUTH_REDIRECT_URL = 'com.wobblewingstudios.wordswoop://auth-callback';
+
 let cachedUser = null;
+let appUrlListenerRegistered = false;
 const listeners = new Set();
 
 function notifyListeners() {
@@ -77,24 +96,50 @@ export async function initAuth() {
       await mergeGuestProgressIntoCloud(cachedUser.id);
     }
   });
+
+  // Catches the deep link back from the system browser once Google
+  // sign-in completes (see AUTH_REDIRECT_URL above). Registered once -
+  // initAuth() itself only ever runs once, at boot, but guard anyway
+  // since App listeners would otherwise stack up on any future re-init.
+  if (!appUrlListenerRegistered) {
+    appUrlListenerRegistered = true;
+    App.addListener('appUrlOpen', async ({ url }) => {
+      if (!url || !url.startsWith(AUTH_REDIRECT_URL)) return;
+
+      const code = new URL(url).searchParams.get('code');
+      if (code) {
+        const { error } = await supabase.auth.exchangeCodeForSession(code);
+        if (error) console.warn('exchangeCodeForSession failed', error);
+        // onAuthStateChange above picks up the resulting session and
+        // runs the guest-to-cloud merge - nothing else to do here.
+      }
+      await Browser.close();
+    });
+  }
 }
 
-/** Starts the Google OAuth flow. Full-page redirect (not a popup) -
- * this is a Capacitor/WebView app, and popup-based OAuth is unreliable
- * or outright blocked in WebViews on some devices, whereas a plain
- * redirect works the same everywhere. redirectTo brings the user back
- * to wherever they started (this same page/app), where initAuth()'s
- * onAuthStateChange listener picks up the new session automatically. */
+/** Starts the Google OAuth flow in the system browser (see the file
+ * header comment for why it can't run in this app's own WebView).
+ * initAuth()'s appUrlOpen listener picks up the redirect back and
+ * completes the sign-in via exchangeCodeForSession(). */
 export async function signInWithGoogle() {
-  const { error } = await supabase.auth.signInWithOAuth({
+  // skipBrowserRedirect: true - don't let supabase-js try to navigate
+  // this WebView anywhere; it just returns the Google auth URL, which
+  // Browser.open() then loads in the system browser instead (the part
+  // that actually gets past Google's embedded-WebView block).
+  const { data, error } = await supabase.auth.signInWithOAuth({
     provider: 'google',
     options: {
-      redirectTo: window.location.origin + window.location.pathname,
+      redirectTo: AUTH_REDIRECT_URL,
+      skipBrowserRedirect: true,
     },
   });
   if (error) {
     console.warn('signInWithGoogle failed', error);
     return { error };
+  }
+  if (data?.url) {
+    await Browser.open({ url: data.url });
   }
   return { error: null };
 }
