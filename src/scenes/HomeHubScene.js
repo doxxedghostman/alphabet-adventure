@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
+import { getGems } from '../utils/currencyStore.js';
 
 // Home Hub (per chat): sits between the splash/logo Main Menu and the
 // World Map. Modeled on the reference mockup image the user provided -
@@ -145,14 +146,15 @@ export class HomeHubScene extends Phaser.Scene {
     this.add.circle(52, cy, 26, 0x8f5c3c, 1).setStrokeStyle(2, 0xffffff, 0.9);
     this.add.text(52, cy, '\u{1F9D2}', { fontSize: '28px' }).setOrigin(0.5);
 
-    // Currency (placeholder - no economy system yet). Enlarged per
-    // chat, and the "+" add-currency button removed entirely (no
-    // economy system exists for it to add to yet) rather than left as
-    // a dead tap target.
+    // Currency: now reads a real balance (currencyStore.js), first
+    // populated by the Calendar's gem rewards — per chat, previously
+    // hardcoded to 0 since nothing granted gems yet. The "+"
+    // add-currency button stays removed (still no way to buy gems,
+    // just earn them) rather than left as a dead tap target.
     const currencyX = width - 128;
     const gem = this.add.image(currencyX, cy, 'iconGem');
     gem.setDisplaySize(38, 38);
-    this.add.text(currencyX + 26, cy, '0', {
+    this.add.text(currencyX + 26, cy, `${getGems()}`, {
       fontFamily: 'Arial',
       fontSize: '20px',
       fontStyle: 'bold',
@@ -214,9 +216,10 @@ export class HomeHubScene extends Phaser.Scene {
     // Stripped down to the 4 icons actually worth building next (per
     // chat) - see the header comment for why Gallery/Trophy/Coin Shop
     // were cut rather than kept as before.
+    // Calendar is real now (CalendarScene) - the rest are still stubs.
     const icons = side === 'left'
       ? [{ key: 'iconShop', label: 'Shop \u2013 coming soon' }, { key: 'iconLeaderboard', label: 'Leaderboard \u2013 coming soon' }]
-      : [{ key: 'iconCalendar', label: 'Daily Rewards \u2013 coming soon' }, { key: 'iconVideo', label: 'Watch to Earn \u2013 coming soon' }];
+      : [{ key: 'iconCalendar', label: 'Daily Rewards', action: () => this.scene.start('CalendarScene') }, { key: 'iconVideo', label: 'Watch to Earn \u2013 coming soon' }];
 
     // Enlarged again per chat (74px -> 92px display) - gap grown by
     // more than the size increase (108 -> 130) so the bigger icons still
@@ -224,10 +227,13 @@ export class HomeHubScene extends Phaser.Scene {
     // Nudged down (92 -> 130) to clear the now-taller top bar/logo.
     const top = 130;
     const gap = 130;
-    icons.forEach(({ key, label }, i) => this.createColumnIcon(x, top + i * gap, key, label));
+    icons.forEach(({ key, label, action }, i) => this.createColumnIcon(x, top + i * gap, key, label, action));
   }
 
-  createColumnIcon(x, y, textureKey, label) {
+  // `action`, when given, replaces the default "coming soon" toast -
+  // used by Calendar now that it's a real screen. Icons without one
+  // still just toast, same as before.
+  createColumnIcon(x, y, textureKey, label, action) {
     const size = 100;
     const cx = x + size / 2;
     const cy = y + size / 2;
@@ -247,7 +253,8 @@ export class HomeHubScene extends Phaser.Scene {
     hit.on('pointerdown', () => this.tweens.add({ targets: icon, scale: baseScale * 0.88, duration: 70 }));
     hit.on('pointerup', () => {
       this.tweens.add({ targets: icon, scale: baseScale, duration: 100 });
-      this.showComingSoonToast(label);
+      if (action) action();
+      else this.showComingSoonToast(label);
     });
 
     // Slow float (per chat): a small, gentle up/down drift so the icon

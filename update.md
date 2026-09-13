@@ -1406,5 +1406,66 @@ tween, no alpha/tint — a different mechanism from the glow/shine pass
 removed in Milestone 26 for its "white blink" artifact, so it isn't
 expected to reproduce that bug).
 
+### Milestone 31 — Calendar (daily rewards) is real, plus the gem balance and a minimal booster inventory to back it
+
+Per chat: of the 4 Home Hub icons, Calendar was picked to build first
+(cheapest, highest retention value, no dependency on an economy or an
+ad SDK existing first). This also required building two things that
+didn't exist at all yet — gems were purely a display value (hardcoded
+"0"), and Bomb/Shuffle boosters were only ever documented in PLAN.md
+§14 as "planned, not built."
+
+**New `src/utils/currencyStore.js`** — the first real gem balance,
+localStorage-backed (same pattern as `progressStore.js`/
+`settingsStore.js`). `getGems()`/`addGems(amount)`. Local-only for
+now, same as progress — `wordswoop_profiles.gems` already exists in
+Supabase (Milestone 25) but nothing client-side reads/writes it;
+wiring real cloud sync (with the same guest-merge care
+`completedLevelIds` gets) is separate follow-up work.
+
+**New `src/utils/boosterStore.js`** — deliberately minimal: just a
+count per booster type (`bomb`, `shuffle`) in localStorage. Makes
+Bomb/Shuffle a real, grantable thing for the first time, but does
+**not** make them usable — spending one on the board is separate,
+bigger follow-up work (BoardScene needs a way to consume one and
+apply its effect). Chosen over the alternative (skip the item reward
+entirely until boosters are fully built) per chat, since a small
+always-visible inventory now was worth it over a delayed reward.
+
+**New `src/utils/dailyRewardStore.js`** — the actual 7-day cycle
+logic. Reward schedule (per chat): days 1-3 pay 3 gems, days 4-6 pay 5
+gems, day 7 pays one random booster instead of gems. Dates are
+compared as local `YYYY-MM-DD` strings, not timestamps, so "today"
+matches the player's own calendar day. `getStatus()` is read-only
+(viewing the screen never consumes a claim or resets a streak) —
+`claimToday()` is the only thing that mutates state. Missing a day
+(last claim isn't today or yesterday) resets the streak to Day 1 on
+the next claim, per chat's explicit choice of the stricter reset
+pattern over a softer pause.
+
+**New `src/scenes/CalendarScene.js`** — the display. Per chat's
+direction to make this bolder than the rest of the app and to reuse
+existing art rather than invent a new visual language: wood/parchment
+textures and the gem icon are the same source files as
+`SettingsScene`'s (loaded under their own scene-local keys, matching
+the codebase's existing per-scene asset-ownership convention), and the
+background is a warm cream/light-brown fill using the existing
+`LETTERBOX_BG_COLOR` constant (already the "warm border" tone picked
+for the app's letterbox — see `config.js`) instead of the app's usual
+dark forest-green scene background. Layout: a 4-across-then-3-across
+grid of 7 day cards (7 doesn't divide evenly into a rectangle; 4+3
+reads better than 5+2), today's card pulses with a bold gold
+border, claimed days show a green checkmark, future days sit at
+reduced opacity, and a bottom button reads "CLAIM REWARD" (green,
+tappable) or "COME BACK TOMORROW" (grey, disabled) depending on
+`getStatus().claimedToday`. Day 7's card shows a gift emoji rather
+than a gem count/icon (no dedicated Bomb/Shuffle art exists yet).
+Wired into `main.js`'s scene list and reachable from Home Hub's
+Calendar icon, which previously just showed a "coming soon" toast like
+its 3 sibling icons — that toast path stays for Shop/Leaderboard/Video.
+
+**Home Hub's currency display** now reads `currencyStore.getGems()`
+instead of the hardcoded `'0'` it showed since it was first built.
+
 
 

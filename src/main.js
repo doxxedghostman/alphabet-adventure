@@ -6,6 +6,7 @@ import { WorldSelectScene } from './scenes/WorldSelectScene.js';
 import { LevelPathScene } from './scenes/LevelPathScene.js';
 import { BoardScene } from './scenes/BoardScene.js';
 import { SettingsScene } from './scenes/SettingsScene.js';
+import { CalendarScene } from './scenes/CalendarScene.js';
 import { getCanvasSize, LETTERBOX_BG_HEX } from './config.js';
 import { initAuth } from './utils/authStore.js';
 
@@ -17,7 +18,7 @@ const config = {
   width: CANVAS_SIZE.width,
   height: CANVAS_SIZE.height,
   backgroundColor: LETTERBOX_BG_HEX,
-  scene: [SplashScene, MainMenuScene, HomeHubScene, WorldSelectScene, LevelPathScene, BoardScene, SettingsScene],
+  scene: [SplashScene, MainMenuScene, HomeHubScene, WorldSelectScene, LevelPathScene, BoardScene, SettingsScene, CalendarScene],
   render: {
     antialias: true,
   },

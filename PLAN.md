@@ -270,11 +270,23 @@ another of the person's live apps, sharing that Supabase project's
 identity pool by deliberate choice rather than a dedicated
 WordSwoop-only client.
 
-**Not done:** every icon besides Word Map/Settings is still a stub;
-currency/economy is display-only (hardcoded to 0); account delete/data
-delete (needs a Supabase Edge Function, not a direct client call, to
-use the service-role key safely); display-name editing and a custom
-avatar picker (currently shows Google's own name/photo only).
+**Calendar (daily rewards) is real now** (`src/scenes/CalendarScene.js`
+— see update.md Milestone 31): a 7-day check-in cycle, local-only
+(localStorage, same pattern as progress/settings — does not yet sync
+to `wordswoop_profiles.gems`). Days 1-3 pay 3 gems, days 4-6 pay 5
+gems, day 7 pays a random booster (Bomb or Shuffle — see §14, first
+time either has existed as a real, grantable thing, via the new
+minimal `boosterStore.js`; still not spendable on the board yet).
+Missing a day resets the streak to Day 1. The Home Hub currency
+display now reads this real gem balance (`currencyStore.js`) instead
+of the old hardcoded 0.
+
+**Not done:** Shop, Leaderboard, and Video icons are still stubs;
+account delete/data delete (needs a Supabase Edge Function, not a
+direct client call, to use the service-role key safely); display-name
+editing and a custom avatar picker (currently shows Google's own
+name/photo only); booster inventory has no way to be spent in a level
+yet.
 
 ## 9. World map
 
