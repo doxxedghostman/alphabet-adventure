@@ -1,6 +1,6 @@
 export const WORDS_3 = [
   'ABS', 'ACE', 'ACT', 'ADD', 'ADS', 'AGE', 'AGO', 'AID', 'AIM', 'AIR',
-  'ALE', 'ALL', 'AND', 'ANT', 'ANY', 'APE', 'ARC', 'ARE', 'ARK', 'ARM',
+  'ALL', 'AND', 'ANT', 'ANY', 'APE', 'ARC', 'ARE', 'ARK', 'ARM',
   'ART', 'ASH', 'ASK', 'ASP', 'ATE', 'AWE', 'AXE', 'AYE', 'BAD', 'BAG',
   'BAN', 'BAR', 'BAT', 'BAY', 'BED', 'BEE', 'BEG', 'BEN', 'BET', 'BIB', 'BID', 'BIG',
   'BIN', 'BIT', 'BOA', 'BOB', 'BOD', 'BOO', 'BOW', 'BOX', 'BOY', 'BRA', 'BRO',
@@ -9,10 +9,10 @@ export const WORDS_3 = [
   'DAB', 'DAD', 'DAG', 'DAY', 'DEN', 'DEW', 'DID', 'DIG', 'DIM', 'DIN', 'DIP', 'DOC',
   'DOE', 'DOG', 'DON', 'DOT', 'DRY', 'DUB', 'DUE', 'DUG', 'DUN', 'DUO', 'DYE',
   'EAR', 'EAT', 'EAU', 'EFF', 'EGG', 'EGO', 'ELF', 'ELK', 'ELM', 'EMS', 'EMU', 'END',
-  'ERA', 'ERR', 'ETA', 'EVE', 'EYE', 'FAN', 'FAR', 'FAT', 'FAX', 'FED', 'FEE', 'FEW',
+  'ERA', 'EVE', 'EYE', 'FAN', 'FAR', 'FAT', 'FAX', 'FED', 'FEE', 'FEW',
   'FIG', 'FIR', 'FIT', 'FIX', 'FLU', 'FLY', 'FOB', 'FOG', 'FOR', 'FOX', 'FRY', 'FUN',
   'FUR', 'GAG', 'GAP', 'GAS', 'GEE', 'GEL', 'GEM', 'GET', 'GIG', 'GIN', 'GNU',
-  'GOD', 'GOO', 'GOT', 'GUM', 'GUT', 'GUY', 'GYM', 'HAD', 'HAM', 'HAS', 'HAT', 'HAY',
+  'GOD', 'GOT', 'GUM', 'GUT', 'GUY', 'GYM', 'HAD', 'HAM', 'HAS', 'HAT', 'HAY',
   'HEM', 'HEN', 'HER', 'HEX', 'HEY', 'HID', 'HIM', 'HIP', 'HIS', 'HIT', 'HOG', 'HOP',
   'HOT', 'HOW', 'HUB', 'HUG', 'HUH', 'HUM', 'HUT', 'ICE', 'ILL', 'IMP', 'INK', 'INN',
   'ION', 'ITS', 'IVY', 'JAM', 'JAR', 'JAW', 'JAY', 'JET', 'JOB', 'JOE', 'JOY',
@@ -550,9 +550,25 @@ export const WORDS_6 = [
   'MURMUR', 'MUSCLE', 'MUSEUM', 'MUSKET', 'MUSLIN', 'MUSSEL', 'MUSTER', 'MUTANT', 'MUTATE', 'MUTINY', 'MUTTER',
   'MUTTON', 'MUTUAL', 'MUZZLE', 'MYRIAD', 'MYRTLE', 'MYSELF', 'MYSTIC', 'MYTHIC', 'NABBED', 'NACHOS', 'NAGGED', 'NAILED',
   'NAMELY', 'NAMING', 'NAPKIN', 'NARROW', 'NATION', 'NATIVE', 'NATURE', 'NAUGHT', 'NAUSEA', 'NEARBY', 'NEARER',
-  'NEARLY', 'NEATER', 'NEATLY', 'NEBULA', 'NECTAR', 'NEEDED', 'NEEDLE', 'NEGATE', 'NEPHEW',
+  'NEARLY', 'NEATER', 'NEATLY', 'NEBULA', 'NECTAR', 'NEEDED', 'NEEDLE', 'NEGATE', 'NEIGHS', 'NEPHEW',
   'NERVES', 'NETTED', 'NETTLE', 'NEURAL', 'NEURON', 'NEUTER', 'NEWEST', 'NEWTON', 'NIBBLE', 'NICELY',
   'NICEST', 'NICKED', 'NICKEL', 'NIECES', 'NIGHTS', 'NIMBLE', 'NINETY', 'NINJAS',
   'NIPPED', 'NIPPER', 'NOBLER', 'NOBLES', 'NOBODY', 'NODDED', 'NOGGIN', 'NOISES', 'NOMADS',
   'NOODLE',
 ];
+
+export const WORDS_BY_LENGTH = { 3: WORDS_3, 4: WORDS_4, 5: WORDS_5, 6: WORDS_6 };
+
+export const ALL_WORDS = [...WORDS_3, ...WORDS_4, ...WORDS_5, ...WORDS_6];
+
+export const WORD_SET = new Set(ALL_WORDS);
+
+// Every valid prefix of every word, so the UI can tell the difference
+// between dead-end paths and paths that could still become a word
+// while the player is dragging.
+export const PREFIX_SET = new Set();
+for (const word of ALL_WORDS) {
+  for (let i = 1; i <= word.length; i++) {
+    PREFIX_SET.add(word.slice(0, i));
+  }
+}
