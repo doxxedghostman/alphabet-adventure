@@ -1350,5 +1350,61 @@ not a direct client call - separate follow-up). Display-name editing
 and a custom avatar picker (currently only Google's own name/photo are
 shown, nothing overridable yet).
 
+### Milestone 30 — Settings polish, sign-in/security fixes, and Home Hub icon trim (batch of 9 commits made outside a Claude session)
+
+These landed directly on `main` between sessions and are being logged
+here retroactively so the docs catch back up to the code.
+
+**Settings (`SettingsScene.js`):**
+
+- Bigger/bolder section headers, with sections collapsed by default
+  instead of all expanded at once — the full row list (Account, Audio,
+  Notifications, Support/Legal, Data, About) was too much to scan at a
+  glance otherwise.
+- Real wood/parchment panel art behind each section, replacing the
+  earlier flat colored boxes.
+- Fixed text overlapping the wood-knot/scroll-curl cap art once that
+  panel art was in place.
+
+**Sign-in / security:**
+
+- Google sign-in now routes through the system browser instead of an
+  in-app WebView — some Android WebViews block or flake on Google's
+  OAuth consent screen; a system-browser redirect is the reliable path
+  and is what Milestone 29 intended, just not yet how it launched.
+- Fixed a moderate Dependabot alert: overrode a transitive `uuid`
+  dependency (pulled in by the Capacitor packages added earlier) to a
+  patched version.
+- Fixed a stale purple color hardcoded in the native Android
+  `colors.xml` — missed when the in-JS purple fallback was
+  consolidated into `APP_BG_COLOR`/forest-green (Milestone 28); the
+  native splash/status-bar chrome was still showing the old color
+  since that file lives outside the JS bundle.
+
+**Layout / orientation:**
+
+- Fixed the Home Hub letterbox gap by matching the canvas aspect ratio
+  to the real device instead of a fixed ratio, closing a visible strip
+  of empty space on some screen sizes.
+- App locked to portrait orientation, and the letterbox color switched
+  from forest green to a light creamy tan — green read fine over the
+  in-scene art but looked wrong as a neutral border color once actual
+  devices with varied aspect ratios were tested.
+
+**Home Hub icon set trimmed from 8 to 4** (`HomeHubScene.js`): kept
+Shop, Leaderboard, Calendar (daily rewards), and Video (rewarded ads);
+cut Gallery, Trophy, and Coin Shop rather than leaving them as inert
+decoration — they're collection/achievement polish that only pays off
+once there's real content depth (levels, cosmetics) to reward, which
+doesn't exist yet at 5 demo levels. Coin Shop folded into Shop rather
+than kept as a second currency store. Also removed the duplicate "Word
+Map" wood-ribbon banner that sat above the letter-block strip (it
+labeled the same destination as the real Word Map button at the
+bottom, with no functionality of its own), and added a slow, small
+vertical float to the 4 remaining side icons for a bit of life (y-only
+tween, no alpha/tint — a different mechanism from the glow/shine pass
+removed in Milestone 26 for its "white blink" artifact, so it isn't
+expected to reproduce that bug).
+
 
 

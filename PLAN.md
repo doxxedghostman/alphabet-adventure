@@ -206,21 +206,27 @@ jump described in section 1.
 **Built** (`src/scenes/HomeHubScene.js`): top bar (avatar circle,
 currency count + gem icon, real settings-icon button — the "+"
 add-currency button was removed, no economy system exists for it to
-add to); a left icon column (shop, gallery, trophy, leaderboard) and
-right icon column (coin shop, calendar, video), both enlarged twice
-over (see update.md Milestones 24 and 26); the menu logo, a "Word
-Map" real ribbon banner, and a letter-block strip beneath it. The
-decorative mini map preview (parchment card + code-drawn lock/star
-nodes + dashed path) that used to sit between the ribbon and the
-letter blocks was removed entirely per chat — see update.md Milestone
+add to); a left icon column (Shop, Leaderboard) and right icon column
+(Calendar/daily rewards, Video/watch-to-earn) — trimmed from an
+earlier 8-icon set (see update.md Milestone 30 for why Gallery/
+Trophy/Coin Shop were cut rather than kept as inert decoration); the
+menu logo and a letter-block strip beneath it (a duplicate "Word Map"
+banner that used to sit between them was removed — see Milestone 30).
+The decorative mini map preview (parchment card + code-drawn lock/star
+nodes + dashed path) that used to sit between the logo and the letter
+blocks was removed entirely per chat — see update.md Milestone
 26 for why the first attempt (path/nodes only) didn't free up any
 layout space and the card had to go too. A real "Word Map" button
 (real banner art, text baked in) that's the only way forward. Settings
 is no longer a popup here at all — it's its own scene
-(`src/scenes/SettingsScene.js`), reached via `scene.start`, since a
-real settings list (Account, Audio, Notifications, Support/Legal,
-Data, About) doesn't fit a small overlay panel. See update.md
-Milestones 21-24 for that history.
+(`src/scenes/SettingsScene.js`, real wood/parchment panel art with
+collapsible sections — see update.md Milestone 30), reached via
+`scene.start`, since a real settings list (Account, Audio,
+Notifications, Support/Legal, Data, About) doesn't fit a small overlay
+panel. See update.md Milestones 21-24 for that history. The app is
+locked to portrait orientation, with a light creamy-tan letterbox
+color (see Milestone 30) rather than the forest green used for
+in-scene backgrounds.
 
 Background is a looping waterfall video (`hub-background-loop.mp4`,
 muted, static-camera source with a seamless 1s crossfade loop point —
