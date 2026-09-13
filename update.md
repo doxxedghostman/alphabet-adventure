@@ -1295,4 +1295,60 @@ shared the exact same hex, and having two different "dark" tones
 side by side (old purple bars vs. new green backgrounds) would've
 looked more inconsistent than helped.
 
+### Milestone 29 — Google sign-in is real now: auth store, Settings wiring, guest→cloud merge
+
+Per chat: Google OAuth is enabled in Supabase (reusing an existing
+Google Cloud client already used by another of the person's live
+apps, sharing that Supabase project's identity pool - a deliberate
+choice per chat, not an accident). This lands the client-side half
+that makes it actually usable from WordSwoop.
+
+**New `src/utils/authStore.js`:**
+
+- `initAuth()` — called once from `main.js` at boot (fire-and-forget,
+  doesn't block Phaser starting - guest play never waits on auth).
+  Restores an existing session via `supabase.auth.getSession()`, then
+  subscribes to `onAuthStateChange` for the rest of the app's life.
+- `signInWithGoogle()` — full-page redirect (`signInWithOAuth`), not a
+  popup. Popup-based OAuth is unreliable/blocked in WebViews on some
+  Android versions; a plain redirect works identically everywhere,
+  including inside the Capacitor WebView this app ships in.
+- `signOut()`, `getCurrentUser()`, `isSignedIn()`, `getDisplayName()`,
+  `getAvatarUrl()` (checks both `avatar_url`/`picture` and
+  `full_name`/`name` metadata keys, matching the variance already
+  handled server-side in `wordswoop_handle_new_user`'s SQL).
+- `onAuthChange(callback)` — pub/sub for scenes to react to sign-in/out
+  without polling; fires immediately with current state on subscribe.
+- `mergeGuestProgressIntoCloud()` — runs automatically the moment
+  `initAuth`'s listener sees signed-out -> signed-in. Implements the
+  decision from Milestone 25: unions local + cloud
+  `completed_level_ids` and writes the merged set to both sides (never
+  a plain overwrite either direction). For `settings`, distinguishes a
+  genuinely first sync (cloud row's `created_at === updated_at`, i.e.
+  untouched since the auto-provisioning trigger created it) from a
+  returning sign-in: first sync pushes local settings up; any later
+  sign-in instead pulls the cloud's settings down over local, so a
+  second device doesn't clobber preferences already saved from the
+  first.
+
+**`SettingsScene`'s Account section is real now**, not a placeholder:
+signed-out shows a working "Sign in with Google" row + "Playing as
+guest" status; signed-in shows the Google display name and avatar
+(loaded as a real texture in `preload()`, circle-masked, falling back
+to the plain placeholder circle if no avatar URL exists) + "Data is
+synced" status. The whole scene re-`scene.restart()`s on any
+`onAuthChange` firing while it's open, rather than hand-patching
+individual rows - simplest correct option given how few rows actually
+depend on auth state. Data section's **Sign Out is real now** too
+(hidden/disabled-looking when already signed out, since it's
+meaningless without a session).
+
+**Still not built:** Delete account/delete data (needs care - actually
+deleting an `auth.users` row requires the service-role key, which
+can't safely live in client code; this needs a Supabase Edge Function,
+not a direct client call - separate follow-up). Display-name editing
+and a custom avatar picker (currently only Google's own name/photo are
+shown, nothing overridable yet).
+
+
 

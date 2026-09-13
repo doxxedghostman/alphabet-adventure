@@ -245,26 +245,30 @@ pending the Google sign-in work (Supabase schema is live — see
 update.md Milestone 25 — but the client-side auth flow isn't wired up
 yet).
 
-**Account / sign-in model (decided, see update.md Milestone 25):**
-guest play is never blocked — Home Hub, World Map, and every level are
-reachable with no account at all, progress saved locally
-(`progressStore.js`). Sign-in is only prompted at natural checkpoints
-(Settings' "Playing as guest" row, eventually first level win), not as
-a wall before the app is usable. On first sign-in, a guest's local
-`completedLevelIds` are merged (unioned) into their new cloud profile,
-never overwritten — matches how most casual puzzle games (Candy
-Crush/Bookworm-style) treat guest-to-account conversion. Backend is
-Supabase, reusing Kid Number Adventure's existing project rather than
-a new one (`wordswoop_`-prefixed tables so the two games' schemas
-don't collide) — `wordswoop_profiles` (display name, avatar,
+**Account / sign-in model (decided AND built, see update.md Milestones
+25 + 29):** guest play is never blocked — Home Hub, World Map, and
+every level are reachable with no account at all, progress saved
+locally (`progressStore.js`). Sign-in is only prompted at natural
+checkpoints (Settings' Account section - real now, not a placeholder),
+not as a wall before the app is usable. On first sign-in, a guest's
+local `completedLevelIds` are merged (unioned) into their new cloud
+profile, never overwritten — matches how most casual puzzle games
+(Candy Crush/Bookworm-style) treat guest-to-account conversion.
+Backend is Supabase, reusing Kid Number Adventure's existing project
+rather than a new one (`wordswoop_`-prefixed tables so the two games'
+schemas don't collide) — `wordswoop_profiles` (display name, avatar,
 gems, completed levels, settings, RLS'd to each user's own row) is
-live; Google as the sign-in provider still needs its OAuth client
-configured in the Supabase dashboard before any of this is reachable
-from the client.
+live. Google sign-in is enabled and working (`src/utils/authStore.js`)
+— reusing an existing Google Cloud OAuth client already used by
+another of the person's live apps, sharing that Supabase project's
+identity pool by deliberate choice rather than a dedicated
+WordSwoop-only client.
 
 **Not done:** every icon besides Word Map/Settings is still a stub;
-account system (schema exists, no client-side auth flow yet); currency/
-economy is display-only (hardcoded to 0).
+currency/economy is display-only (hardcoded to 0); account delete/data
+delete (needs a Supabase Edge Function, not a direct client call, to
+use the service-role key safely); display-name editing and a custom
+avatar picker (currently shows Google's own name/photo only).
 
 ## 9. World map
 

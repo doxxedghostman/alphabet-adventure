@@ -7,6 +7,7 @@ import { LevelPathScene } from './scenes/LevelPathScene.js';
 import { BoardScene } from './scenes/BoardScene.js';
 import { SettingsScene } from './scenes/SettingsScene.js';
 import { CANVAS_SIZE, APP_BG_COLOR_HEX } from './config.js';
+import { initAuth } from './utils/authStore.js';
 
 const config = {
   type: Phaser.AUTO,
@@ -38,3 +39,9 @@ const config = {
 };
 
 window.game = new Phaser.Game(config);
+
+// Fire-and-forget: picks up an existing session and starts listening
+// for sign-in/sign-out. Doesn't block game boot - Phaser starts
+// immediately with SplashScene regardless, since guest play never
+// waits on auth (see authStore.js's header comment).
+initAuth();

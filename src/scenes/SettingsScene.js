@@ -3,6 +3,7 @@ import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 import pkg from '../../package.json';
 import { resetProgress } from '../utils/progressStore.js';
 import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } from '../utils/settingsStore.js';
+import { isSignedIn, getDisplayName, getAvatarUrl, signInWithGoogle, signOut, onAuthChange } from '../utils/authStore.js';
 
 // Settings — was a small fixed-height popup inside HomeHubScene with
 // exactly two buttons (Reset Progress, Close). That doesn't scale to a
@@ -40,15 +41,26 @@ const SUPPORT_EMAIL = 'wordswoop@gmail.com';
 // isMusicOn()/isSfxOn()/isHapticsOn() before playing anything.
 //
 // Status per section (update as each lands):
-//   Account         - placeholder (blocked on Google sign-in / Supabase decision)
+//   Account         - real: Sign in with Google / guest+synced messaging / Sign Out
 //   Audio           - real toggles, persisted, not yet wired to actual sound/haptics (none exist)
 //   Notifications   - placeholder (explicitly deferred per chat)
 //   Support & Legal - Privacy/Terms/Contact real (placeholder destinations); Rate/Restore still placeholder
-//   Data            - Reset Progress is real; Sign Out placeholder (blocked with Account)
+//   Data            - Reset Progress and Sign Out are both real
 //   About           - real (live app version from package.json)
 export class SettingsScene extends Phaser.Scene {
   constructor() {
     super('SettingsScene');
+  }
+
+  preload() {
+    // Loaded here (not create()) since preload() is the correct place
+    // for asset loads - getAvatarUrl() is safe to call this early
+    // because authStore's initAuth() already ran at app boot in
+    // main.js, well before anyone could navigate here.
+    const avatarUrl = getAvatarUrl();
+    if (avatarUrl) {
+      this.load.image('userAvatarSettings', avatarUrl);
+    }
   }
 
   create() {
@@ -61,11 +73,19 @@ export class SettingsScene extends Phaser.Scene {
     this.rows = [];
     this.confirmingReset = false;
 
+    // Re-render the whole scene on any sign-in/sign-out while it's
+    // open, rather than hand-maintaining which specific rows need to
+    // change - simplest correct approach given how few rows actually
+    // depend on auth state. Unsubscribe on shutdown so this doesn't
+    // pile up a listener per visit.
+    this._unsubscribeAuth = onAuthChange(() => {
+      if (this.scene.isActive()) this.scene.restart();
+    });
+    this.events.once('shutdown', () => this._unsubscribeAuth());
+
     let y = this.hudHeight + 16;
     y = this.addSection(y, 'Account');
-    y = this.addPlaceholderRow(y, 'Sign in with Google', 'Coming soon');
-    y = this.addPlaceholderRow(y, 'Display name & avatar', 'Coming soon');
-    y = this.addPlaceholderRow(y, 'Playing as guest', 'Sign in to save progress');
+    y = this.addAccountRows(y);
     y += this.sectionGap;
 
     y = this.addSection(y, 'Audio');
@@ -90,7 +110,7 @@ export class SettingsScene extends Phaser.Scene {
 
     y = this.addSection(y, 'Data');
     y = this.addResetProgressRow(y);
-    y = this.addPlaceholderRow(y, 'Sign Out', 'Coming soon');
+    y = this.addSignOutRow(y);
     y += this.sectionGap;
 
     y = this.addSection(y, 'About');
@@ -122,6 +142,70 @@ export class SettingsScene extends Phaser.Scene {
     bg.setOrigin(0, 0.5);
     bg.setStrokeStyle(1, 0xffffff, 0.12);
     return bg;
+  }
+
+  // Renders either the signed-out state (Sign in with Google + a guest
+  // status line) or the signed-in state (avatar/name + a synced status
+  // line), depending on authStore's current state at the moment this
+  // scene was (re)built - see the onAuthChange->scene.restart() wiring
+  // in create() for how this stays current while the scene is open.
+  addAccountRows(y) {
+    if (isSignedIn()) {
+      y = this.addSignedInRow(y);
+      y = this.addStaticRow(y, 'Status', 'Data is synced');
+      return y;
+    }
+
+    y = this.addSignInRow(y);
+    y = this.addStaticRow(y, 'Status', 'Playing as guest');
+    return y;
+  }
+
+  addSignInRow(y) {
+    const bg = this.rowBackground(y);
+    bg.setFillStyle(0x3a6b3f, 1);
+    bg.setInteractive({ useHandCursor: true });
+
+    const labelText = this.add.text(this.margin + 14, y, 'Sign in with Google', {
+      fontFamily: 'Arial',
+      fontSize: '15px',
+      fontStyle: 'bold',
+      color: '#ffffff',
+    });
+    labelText.setOrigin(0, 0.5);
+
+    bg.on('pointerup', () => {
+      if (this.wasDrag()) return;
+      labelText.setText('Opening Google...');
+      signInWithGoogle();
+    });
+
+    return y + this.rowHeight;
+  }
+
+  addSignedInRow(y) {
+    const bg = this.rowBackground(y);
+    const displayName = getDisplayName() || 'Signed in';
+
+    const avatarX = this.margin + 26;
+    if (this.textures.exists('userAvatarSettings')) {
+      const avatar = this.add.image(avatarX, y, 'userAvatarSettings');
+      avatar.setDisplaySize(32, 32);
+      const mask = this.add.circle(avatarX, y, 16, 0xffffff).setVisible(false);
+      avatar.setMask(mask.createGeometryMask());
+    } else {
+      this.add.circle(avatarX, y, 16, 0x8f5c3c, 1).setStrokeStyle(1, 0xffffff, 0.8);
+    }
+
+    const labelText = this.add.text(this.margin + 48, y, displayName, {
+      fontFamily: 'Arial',
+      fontSize: '15px',
+      fontStyle: 'bold',
+      color: '#ffffff',
+    });
+    labelText.setOrigin(0, 0.5);
+
+    return y + this.rowHeight;
   }
 
   addPlaceholderRow(y, label, note) {
@@ -263,6 +347,39 @@ export class SettingsScene extends Phaser.Scene {
 
     return y + this.rowHeight;
   }
+
+  // Only rendered while signed in (addAccountRows/create() decide
+  // that) - signing out is meaningless for a guest with no session.
+  addSignOutRow(y) {
+    const bg = this.rowBackground(y);
+    bg.setInteractive({ useHandCursor: true });
+
+    const labelText = this.add.text(this.margin + 14, y, 'Sign Out', {
+      fontFamily: 'Arial',
+      fontSize: '15px',
+      color: isSignedIn() ? '#ffffff' : '#9a90b8',
+    });
+    labelText.setOrigin(0, 0.5);
+
+    if (!isSignedIn()) {
+      const note = this.add.text(this.scale.width - this.margin - 14, y, 'Not signed in', {
+        fontFamily: 'Arial',
+        fontSize: '13px',
+        fontStyle: 'italic',
+        color: '#77709a',
+      });
+      note.setOrigin(1, 0.5);
+      return y + this.rowHeight;
+    }
+
+    bg.on('pointerup', () => {
+      if (this.wasDrag()) return;
+      signOut();
+    });
+
+    return y + this.rowHeight;
+  }
+
 
   // --- Drag-to-scroll (same pattern as WorldSelectScene/LevelPathScene) ----
 
