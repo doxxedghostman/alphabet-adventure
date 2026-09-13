@@ -32,6 +32,15 @@ const PLACEHOLDER_PRIVACY_URL = 'https://example.com/wordswoop/privacy';
 const PLACEHOLDER_TERMS_URL = 'https://example.com/wordswoop/terms';
 const SUPPORT_EMAIL = 'wordswoop@gmail.com';
 //
+// Section collapse state (per chat): each section (Account, Audio,
+// etc.) starts collapsed and expands on tap. Kept at module scope
+// (not on the scene instance) so it survives the scene.restart()
+// calls that already happen on auth changes and on toggling a
+// section itself - otherwise every restart would snap everything
+// back to collapsed. Resets to all-collapsed on a fresh app load,
+// which is fine for a settings screen.
+const sectionCollapsed = {};
+//
 // Audio toggles (per chat): Music/SFX/Vibration are real, persisted
 // switches now (see settingsStore.js) — but there is still no audio
 // system in the codebase (no this.sound usage anywhere) and no
@@ -84,39 +93,43 @@ export class SettingsScene extends Phaser.Scene {
     this.events.once('shutdown', () => this._unsubscribeAuth());
 
     let y = this.hudHeight + 16;
-    y = this.addSection(y, 'Account');
-    y = this.addAccountRows(y);
-    y += this.sectionGap;
 
-    y = this.addSection(y, 'Audio');
-    y = this.addToggleRow(y, 'Music', isMusicOn(), (value) => setMusicOn(value));
-    y = this.addToggleRow(y, 'Sound effects', isSfxOn(), (value) => setSfxOn(value));
-    y = this.addToggleRow(y, 'Vibration', isHapticsOn(), (value) => setHapticsOn(value));
-    y += this.sectionGap;
+    y = this.addCollapsibleSection(y, 'account', 'Account', (y) => this.addAccountRows(y));
 
-    y = this.addSection(y, 'Notifications');
-    y = this.addPlaceholderRow(y, 'Daily reward reminder', 'Coming soon');
-    y = this.addPlaceholderRow(y, 'Energy full reminder', 'Coming soon');
-    y = this.addPlaceholderRow(y, 'Allow notifications', 'Coming soon');
-    y += this.sectionGap;
+    y = this.addCollapsibleSection(y, 'audio', 'Audio', (y) => {
+      y = this.addToggleRow(y, 'Music', isMusicOn(), (value) => setMusicOn(value));
+      y = this.addToggleRow(y, 'Sound effects', isSfxOn(), (value) => setSfxOn(value));
+      y = this.addToggleRow(y, 'Vibration', isHapticsOn(), (value) => setHapticsOn(value));
+      return y;
+    });
 
-    y = this.addSection(y, 'Support & Legal');
-    y = this.addLinkRow(y, 'Privacy Policy', PLACEHOLDER_PRIVACY_URL);
-    y = this.addLinkRow(y, 'Terms of Service', PLACEHOLDER_TERMS_URL);
-    y = this.addLinkRow(y, 'Contact Support', `mailto:${SUPPORT_EMAIL}`);
-    y = this.addPlaceholderRow(y, 'Rate the App', 'Coming soon');
-    y = this.addPlaceholderRow(y, 'Restore Purchases', 'Coming soon');
-    y += this.sectionGap;
+    y = this.addCollapsibleSection(y, 'notifications', 'Notifications', (y) => {
+      y = this.addPlaceholderRow(y, 'Daily reward reminder', 'Coming soon');
+      y = this.addPlaceholderRow(y, 'Energy full reminder', 'Coming soon');
+      y = this.addPlaceholderRow(y, 'Allow notifications', 'Coming soon');
+      return y;
+    });
 
-    y = this.addSection(y, 'Data');
-    y = this.addResetProgressRow(y);
-    y = this.addSignOutRow(y);
-    y += this.sectionGap;
+    y = this.addCollapsibleSection(y, 'support', 'Support & Legal', (y) => {
+      y = this.addLinkRow(y, 'Privacy Policy', PLACEHOLDER_PRIVACY_URL);
+      y = this.addLinkRow(y, 'Terms of Service', PLACEHOLDER_TERMS_URL);
+      y = this.addLinkRow(y, 'Contact Support', `mailto:${SUPPORT_EMAIL}`);
+      y = this.addPlaceholderRow(y, 'Rate the App', 'Coming soon');
+      y = this.addPlaceholderRow(y, 'Restore Purchases', 'Coming soon');
+      return y;
+    });
 
-    y = this.addSection(y, 'About');
-    y = this.addStaticRow(y, 'Version', pkg.version);
-    y = this.addStaticRow(y, 'Credits', 'Wobblewing Studios');
-    y += this.sectionGap;
+    y = this.addCollapsibleSection(y, 'data', 'Data', (y) => {
+      y = this.addResetProgressRow(y);
+      y = this.addSignOutRow(y);
+      return y;
+    });
+
+    y = this.addCollapsibleSection(y, 'about', 'About', (y) => {
+      y = this.addStaticRow(y, 'Version', pkg.version);
+      y = this.addStaticRow(y, 'Credits', 'Wobblewing Studios');
+      return y;
+    });
 
     this.contentHeight = y + this.margin;
     this.setupDragScroll(height);
@@ -125,15 +138,50 @@ export class SettingsScene extends Phaser.Scene {
 
   // --- Row builders ----------------------------------------------------
 
-  addSection(y, label) {
-    const text = this.add.text(this.margin, y, label.toUpperCase(), {
+  // Collapsible section header (per chat: bigger/bolder header text,
+  // sub-rows collapsed until tapped). `rowBuilder(y)` is only called
+  // when the section is expanded, so collapsed sections don't pay for
+  // rows they're not showing - it must return the y position after
+  // whatever it added, same contract as the individual row builders.
+  addCollapsibleSection(y, key, label, rowBuilder) {
+    const { width } = this.scale;
+    const collapsed = sectionCollapsed[key] ?? true;
+    const headerHeight = 44;
+
+    const headerBg = this.add.rectangle(this.margin, y, width - this.margin * 2, headerHeight, 0x241a3d, 1);
+    headerBg.setOrigin(0, 0.5);
+    headerBg.setStrokeStyle(1, 0xffd93d, 0.4);
+    headerBg.setInteractive({ useHandCursor: true });
+
+    const labelText = this.add.text(this.margin + 14, y, label.toUpperCase(), {
       fontFamily: 'Arial',
-      fontSize: '13px',
+      fontSize: '19px',
       fontStyle: 'bold',
       color: '#ffd93d',
     });
-    text.setOrigin(0, 0.5);
-    return y + 26;
+    labelText.setOrigin(0, 0.5);
+
+    const chevron = this.add.text(width - this.margin - 14, y, collapsed ? '\u25B8' : '\u25BE', {
+      fontFamily: 'Arial',
+      fontSize: '20px',
+      fontStyle: 'bold',
+      color: '#ffd93d',
+    });
+    chevron.setOrigin(1, 0.5);
+
+    headerBg.on('pointerup', () => {
+      if (this.wasDrag()) return;
+      sectionCollapsed[key] = !collapsed;
+      this.scene.restart();
+    });
+
+    y += headerHeight + 10;
+
+    if (!collapsed) {
+      y = rowBuilder(y);
+    }
+
+    return y + this.sectionGap;
   }
 
   rowBackground(y) {
