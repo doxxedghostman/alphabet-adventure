@@ -1254,3 +1254,45 @@ HUD-layout adjustment in the specific scene, not global body padding).
 Verified in the built output (`dist/index.html`) that the padding rule
 itself is gone post-build, not just in source.
 
+### Milestone 28 — Main Menu poster now fills the screen (cover, not contain); purple fallback color replaced everywhere
+
+Per chat, off two more screenshots: Milestone 27's CSS fix made the
+Home Hub "manageable" but Main Menu still had an obvious flat-color
+strip - a genuinely different bug, not the same one recurring.
+
+**Root cause:** `MainMenuScene`'s poster art was deliberately shown at
+"contain" scale (`Math.min` of the two axis ratios) - fits the whole
+720x1482 poster on screen with no cropping, letterboxing the leftover
+space instead. That was a reasonable choice on the old, squarer
+516x624 canvas; on the current 516x1118 canvas (stretched to match
+real phone aspect ratios per Milestone whatever changed
+`CANVAS_SIZE`), this poster's proportions vs. the canvas's proportions
+put a visible gap at the top/bottom - and unlike the Home Hub (which
+has a wood top bar sitting over the equivalent area), Main Menu has
+nothing covering it, so it read as an obvious mistake. Switched the
+scale calc to `Math.max` ("cover") - poster now fills the canvas edge
+to edge, cropping a small amount off the sides instead (fine here
+since the poster's composition - logo, characters, Play banner - is
+centered, not near the edges).
+
+**Also, per chat:** consolidated every hardcoded occurrence of the old
+purple fallback color (`0x241a3d` / `#241a3d`, 17 call sites across 7
+scene files, `main.js`, and `index.html`) into three shared constants
+in `config.js` - `APP_BG_COLOR` (Phaser fill color, number),
+`APP_BG_COLOR_HEX` (CSS string), `APP_BG_COLOR_RGB` (array, for
+`Camera.fadeOut()`'s separate r/g/b args) - and changed the color
+itself to a dark forest green (`#17241b`) that blends with the actual
+art (both the bright alpine Home Hub and the dusky Main Menu poster)
+instead of a distinctly different brand-purple that looks wrong
+wherever it's visible. `index.html` can't import the JS constant
+directly (it's plain CSS in a static file), so it's hardcoded there
+too with a comment to keep it in sync by hand if it ever changes.
+
+Deliberately left the semi-transparent top-bar HUD chrome in
+`WorldSelectScene`/`SettingsScene`/`LevelPathScene` using this same
+constant rather than carving out an exception - those bars already
+shared the exact same hex, and having two different "dark" tones
+side by side (old purple bars vs. new green backgrounds) would've
+looked more inconsistent than helped.
+
+

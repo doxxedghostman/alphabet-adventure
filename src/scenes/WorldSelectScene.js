@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 import { WORLDS } from '../data/worlds.js';
 import { isWorldUnlocked } from '../utils/progressStore.js';
 
@@ -147,7 +148,7 @@ export class WorldSelectScene extends Phaser.Scene {
   // --- HUD + navigation -----------------------------------------------------
 
   createHud(width) {
-    const bar = this.add.rectangle(0, 0, width, this.hudHeight, 0x241a3d, 0.85).setOrigin(0);
+    const bar = this.add.rectangle(0, 0, width, this.hudHeight, APP_BG_COLOR, 0.85).setOrigin(0);
     bar.setScrollFactor(0);
 
     const title = this.add.text(width / 2, this.hudHeight / 2, 'World Map', {
@@ -172,7 +173,7 @@ export class WorldSelectScene extends Phaser.Scene {
 
     backButton.on('pointerup', () => {
       if (this.wasDrag()) return;
-      this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
+      this.cameras.main.fadeOut(220, ...APP_BG_COLOR_RGB);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start('HomeHubScene');
       });
@@ -180,7 +181,7 @@ export class WorldSelectScene extends Phaser.Scene {
   }
 
   selectWorld(worldId) {
-    this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
+    this.cameras.main.fadeOut(220, ...APP_BG_COLOR_RGB);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('LevelPathScene', { worldId });
     });

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 
 // Landing screen after the splash. Per chat: this now shows nothing but
 // the full forest-adventure poster art (logo + two scout characters +
@@ -17,11 +18,10 @@ import Phaser from 'phaser';
 // why - same "white blink" complaint applied here too).
 //
 // The poster (720x1482) is much taller/narrower than this game's fixed
-// canvas (516x624 - see config.js/main.js), so it's shown at "contain"
-// scale (nothing cropped, full art visible - title, characters, and the
-// Play banner all stay on-screen) with the leftover width filled by the
-// same flat background color used elsewhere, rather than cropping into
-// the art to go full-bleed.
+// canvas (516x1118 - see config.js/main.js), so it's shown at "cover"
+// scale (fills the canvas edge to edge, cropping the minimal side
+// overflow) rather than "contain" - see the scale calc below for why
+// contain was the original choice and why it stopped working.
 const POSTER_SIZE = { width: 720, height: 1482 };
 // Exact pixel bounding box of the Play banner within the poster, found by
 // template-matching menu-play-button.png against menu-characters.jpg.
@@ -40,9 +40,20 @@ export class MainMenuScene extends Phaser.Scene {
   create() {
     const { width, height } = this.scale;
 
-    this.add.rectangle(0, 0, width, height, 0x241a3d).setOrigin(0);
+    this.add.rectangle(0, 0, width, height, APP_BG_COLOR).setOrigin(0);
 
-    const scale = Math.min(width / POSTER_SIZE.width, height / POSTER_SIZE.height);
+    // "Cover" scale (was "contain"): fills the canvas edge to edge with
+    // no flat-color gap, cropping the minimal overflow off the sides
+    // instead. Contain (Math.min) was the original choice specifically
+    // to show the whole poster uncropped, but on this app's actual
+    // canvas aspect ratio (516x1118, stretched to match real phones -
+    // see config.js's CANVAS_SIZE comment) vs. this poster's own
+    // proportions, the leftover gap landed at the top/bottom with
+    // nothing over it to hide it (unlike the Home Hub's wood bar) - see
+    // update.md for the screenshot that flagged this. Cover crops a
+    // little off the sides instead, which is fine here since the
+    // poster's composition (logo, characters, Play banner) is centered.
+    const scale = Math.max(width / POSTER_SIZE.width, height / POSTER_SIZE.height);
     const posterW = POSTER_SIZE.width * scale;
     const posterH = POSTER_SIZE.height * scale;
     const posterX = (width - posterW) / 2;
@@ -98,7 +109,7 @@ export class MainMenuScene extends Phaser.Scene {
   }
 
   startGame() {
-    this.cameras.main.fadeOut(280, 0x24, 0x1a, 0x3d);
+    this.cameras.main.fadeOut(280, ...APP_BG_COLOR_RGB);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('HomeHubScene');
     });

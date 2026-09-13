@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 import pkg from '../../package.json';
 import { resetProgress } from '../utils/progressStore.js';
 import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } from '../utils/settingsStore.js';
@@ -125,7 +126,7 @@ export class SettingsScene extends Phaser.Scene {
 
   addPlaceholderRow(y, label, note) {
     const bg = this.rowBackground(y);
-    bg.setFillStyle(0x241a3d, 1);
+    bg.setFillStyle(APP_BG_COLOR, 1);
 
     const labelText = this.add.text(this.margin + 14, y, label, {
       fontFamily: 'Arial',
@@ -305,7 +306,7 @@ export class SettingsScene extends Phaser.Scene {
   // --- HUD + navigation -------------------------------------------------
 
   createHud(width) {
-    const bar = this.add.rectangle(0, 0, width, this.hudHeight, 0x241a3d, 0.95).setOrigin(0);
+    const bar = this.add.rectangle(0, 0, width, this.hudHeight, APP_BG_COLOR, 0.95).setOrigin(0);
     bar.setScrollFactor(0);
 
     const title = this.add.text(width / 2, this.hudHeight / 2, 'Settings', {

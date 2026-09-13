@@ -5,10 +5,13 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <title>WordSwoop — Phase 1 Prototype</title>
     <style>
+      /* #17241b must match src/config.js's APP_BG_COLOR_HEX - this is
+         plain CSS in a static HTML file, so it can't import that JS
+         constant directly; keep the two in sync by hand if it changes. */
       html, body {
         margin: 0;
         padding: 0;
-        background: #241a3d;
+        background: #17241b;
         overflow: hidden;
         height: 100%;
         font-family: system-ui, -apple-system, sans-serif;
@@ -43,7 +46,7 @@
         width: 100vw;
         height: 100vh;
         height: 100dvh;
-        background: #241a3d;
+        background: #17241b;
       }
       #game-container {
         width: 100%;

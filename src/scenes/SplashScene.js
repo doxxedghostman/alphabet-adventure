@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 
 const STUDIO_NAME = 'Wobblewing Studios';
 const GAME_TITLE = 'WordSwoop';
@@ -33,7 +34,7 @@ export class SplashScene extends Phaser.Scene {
     const { width, height } = this.scale;
     this.finished = false;
 
-    this.add.rectangle(0, 0, width, height, 0x241a3d).setOrigin(0);
+    this.add.rectangle(0, 0, width, height, APP_BG_COLOR).setOrigin(0);
 
     this.buildSparkleTexture();
 
@@ -234,7 +235,7 @@ export class SplashScene extends Phaser.Scene {
     if (this.finished) return;
     this.finished = true;
 
-    this.cameras.main.fadeOut(300, 0x24, 0x1a, 0x3d);
+    this.cameras.main.fadeOut(300, ...APP_BG_COLOR_RGB);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('MainMenuScene');
     });

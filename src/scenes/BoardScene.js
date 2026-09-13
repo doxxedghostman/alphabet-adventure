@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 import {
   BOARD_SIZE,
   TILE_SIZE,
@@ -761,7 +762,7 @@ export class BoardScene extends Phaser.Scene {
   // sense: LevelPathScene if we got here via the World Map, otherwise
   // the actual main menu for direct/legacy BoardScene launches.
   goToMainMenu() {
-    this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
+    this.cameras.main.fadeOut(220, ...APP_BG_COLOR_RGB);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       if (this.worldId) {
         this.scene.start('LevelPathScene', { worldId: this.worldId });
@@ -774,7 +775,7 @@ export class BoardScene extends Phaser.Scene {
   goToNextLevelOrMenu() {
     if (this.worldId) {
       const isBoss = this.levelNum === LEVELS_PER_WORLD;
-      this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
+      this.cameras.main.fadeOut(220, ...APP_BG_COLOR_RGB);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         if (isBoss) {
           // Beating a boss may have just unlocked the next world -
@@ -794,7 +795,7 @@ export class BoardScene extends Phaser.Scene {
     }
 
     if (this.nextLevelId) {
-      this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
+      this.cameras.main.fadeOut(220, ...APP_BG_COLOR_RGB);
       this.cameras.main.once('camerafadeoutcomplete', () => {
         this.scene.start('BoardScene', { levelId: this.nextLevelId });
       });

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 import { getWorld } from '../data/worlds.js';
 import { getPathNodes } from '../data/levelPaths.js';
 import { levelIdFor, isLevelUnlocked, isLevelComplete, LEVELS_PER_WORLD } from '../utils/progressStore.js';
@@ -188,7 +189,7 @@ export class LevelPathScene extends Phaser.Scene {
   }
 
   createHud(width) {
-    const bar = this.add.rectangle(0, 0, width, 56, 0x241a3d, 0.85).setOrigin(0);
+    const bar = this.add.rectangle(0, 0, width, 56, APP_BG_COLOR, 0.85).setOrigin(0);
     bar.setScrollFactor(0);
 
     const title = this.add.text(width / 2, 28, this.world.name, {
@@ -221,14 +222,14 @@ export class LevelPathScene extends Phaser.Scene {
 
   selectLevel(levelNum) {
     const levelId = levelIdFor(this.worldId, levelNum);
-    this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
+    this.cameras.main.fadeOut(220, ...APP_BG_COLOR_RGB);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('BoardScene', { levelId, worldId: this.worldId, levelNum });
     });
   }
 
   goBack() {
-    this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
+    this.cameras.main.fadeOut(220, ...APP_BG_COLOR_RGB);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('WorldSelectScene');
     });

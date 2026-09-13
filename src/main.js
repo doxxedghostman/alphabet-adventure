@@ -6,14 +6,14 @@ import { WorldSelectScene } from './scenes/WorldSelectScene.js';
 import { LevelPathScene } from './scenes/LevelPathScene.js';
 import { BoardScene } from './scenes/BoardScene.js';
 import { SettingsScene } from './scenes/SettingsScene.js';
-import { CANVAS_SIZE } from './config.js';
+import { CANVAS_SIZE, APP_BG_COLOR_HEX } from './config.js';
 
 const config = {
   type: Phaser.AUTO,
   parent: 'game-container',
   width: CANVAS_SIZE.width,
   height: CANVAS_SIZE.height,
-  backgroundColor: '#241a3d',
+  backgroundColor: APP_BG_COLOR_HEX,
   scene: [SplashScene, MainMenuScene, HomeHubScene, WorldSelectScene, LevelPathScene, BoardScene, SettingsScene],
   render: {
     antialias: true,

@@ -38,6 +38,20 @@ export const CANVAS_SIZE = {
   height: Math.round(BOARD_PIXEL_SIZE.width * (19.5 / 9)),
 };
 
+// Single source of truth for the app's dark fallback/background color -
+// shows through wherever a scene's own art doesn't reach (letterbox
+// edges, HUD chrome bars, transition fades). Was 0x241a3d (a purple)
+// picked to match an earlier splash rebrand; per chat, switched to a
+// dark forest tone since the purple looked like an obvious mistake
+// wherever it peeked through the actual forest/nature art (most
+// visibly as a gap above the Main Menu poster - see update.md). Three
+// forms since call sites need different shapes: Phaser fill colors and
+// main.js's config want a 0xRRGGBB number, CSS wants a #rrggbb string,
+// and Camera.fadeOut() wants separate r/g/b integers.
+export const APP_BG_COLOR = 0x17241b;
+export const APP_BG_COLOR_HEX = '#17241b';
+export const APP_BG_COLOR_RGB = [0x17, 0x24, 0x1b];
+
 export const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 // Full-alphabet pool, weighted by standard English/Scrabble-style letter

@@ -1,4 +1,5 @@
 import Phaser from 'phaser';
+import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 
 // Home Hub (per chat): sits between the splash/logo Main Menu and the
 // World Map. Modeled on the reference mockup image the user provided -
@@ -105,7 +106,7 @@ export class HomeHubScene extends Phaser.Scene {
     });
 
     // Dim it slightly so the UI on top stays readable, same role the
-    // flat 0x241a3d rectangle used to play.
+    // flat APP_BG_COLOR rectangle used to play.
     this.add.rectangle(0, 0, width, height, 0x1a1030, 0.15).setOrigin(0);
   }
 
@@ -262,7 +263,7 @@ export class HomeHubScene extends Phaser.Scene {
         scale: baseScale,
         duration: 100,
         onComplete: () => {
-          this.cameras.main.fadeOut(220, 0x24, 0x1a, 0x3d);
+          this.cameras.main.fadeOut(220, ...APP_BG_COLOR_RGB);
           this.cameras.main.once('camerafadeoutcomplete', () => {
             this.scene.start('WorldSelectScene');
           });
