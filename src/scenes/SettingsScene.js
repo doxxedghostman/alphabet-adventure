@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
+import { APP_BG_COLOR } from '../config.js';
 import pkg from '../../package.json';
 import { resetProgress } from '../utils/progressStore.js';
 import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } from '../utils/settingsStore.js';
@@ -41,6 +41,30 @@ const SUPPORT_EMAIL = 'wordswoop@gmail.com';
 // which is fine for a settings screen.
 const sectionCollapsed = {};
 //
+// Panel art (per chat: match the game's wood/nature style instead of
+// flat colored boxes). Manual 3-slice (fixed left/right cap images +
+// a stretchable middle strip) rather than Phaser's built-in NineSlice
+// object - NineSlice is WebGL-only as of Phaser 3.60, which is a risk
+// on older Android WebViews that might fall back to Canvas. Plain
+// Image objects with setDisplaySize() work identically on both
+// renderers. Wood is used for section headers (structural chrome,
+// matches top-bar.png elsewhere); parchment is used for individual
+// rows (a lighter, readable content surface).
+const PANEL_TEXTURES = {
+  wood: { left: 'settingsWoodCapLeft', mid: 'settingsWoodMiddle', right: 'settingsWoodCapRight' },
+  parchment: { left: 'settingsParchmentCapLeft', mid: 'settingsParchmentMiddle', right: 'settingsParchmentCapRight' },
+};
+//
+// Text palette for the two panel surfaces - dark warm brown reads on
+// both the mid-tone wood and the light parchment, unlike the old
+// white-on-purple palette which doesn't work on a light background.
+const WOOD_TEXT = '#fff3d6';
+const WOOD_TEXT_STROKE = '#3a2411';
+const INK = '#3a2411';
+const INK_MUTED = '#8a6a4a';
+const INK_DISABLED = '#a89880';
+const LINK_ACCENT = '#a8460f';
+//
 // Audio toggles (per chat): Music/SFX/Vibration are real, persisted
 // switches now (see settingsStore.js) — but there is still no audio
 // system in the codebase (no this.sound usage anywhere) and no
@@ -70,6 +94,13 @@ export class SettingsScene extends Phaser.Scene {
     if (avatarUrl) {
       this.load.image('userAvatarSettings', avatarUrl);
     }
+
+    this.load.image('settingsWoodCapLeft', 'assets/wood-cap-left.png');
+    this.load.image('settingsWoodCapRight', 'assets/wood-cap-right.png');
+    this.load.image('settingsWoodMiddle', 'assets/wood-middle.png');
+    this.load.image('settingsParchmentCapLeft', 'assets/parchment-cap-left.png');
+    this.load.image('settingsParchmentCapRight', 'assets/parchment-cap-right.png');
+    this.load.image('settingsParchmentMiddle', 'assets/parchment-middle.png');
   }
 
   create() {
@@ -136,28 +167,69 @@ export class SettingsScene extends Phaser.Scene {
     this.createHud(width);
   }
 
+  // --- Panel art (manual 3-slice: fixed caps + stretchable middle) -----
+
+  // Builds a wood or parchment panel spanning (x, x+w) at vertical
+  // center y, height h. Returns an invisible interactive Rectangle
+  // (`hit`) sized to match - all row/header interaction (setInteractive,
+  // .on('pointerup', ...), wasDrag()) wires up against `hit` exactly
+  // like the old plain-Rectangle backgrounds did. `hit.setTintPanel()` /
+  // `clearTintPanel()` / `setPanelAlpha()` recolor or fade the visible
+  // art underneath for state (e.g. the green sign-in row, the muted
+  // "coming soon" rows) without needing a flat fill color.
+  createPanel(x, y, w, h, style) {
+    const tex = PANEL_TEXTURES[style];
+
+    const left = this.add.image(0, 0, tex.left);
+    const right = this.add.image(0, 0, tex.right);
+    const mid = this.add.image(0, 0, tex.mid);
+
+    const capScale = h / left.height;
+    left.setScale(capScale);
+    right.setScale(capScale);
+    const capW = left.displayWidth;
+
+    const midW = Math.max(1, w - capW - right.displayWidth);
+    mid.setDisplaySize(midW, h);
+
+    left.setOrigin(0, 0.5).setPosition(x, y);
+    mid.setOrigin(0, 0.5).setPosition(x + capW, y);
+    right.setOrigin(1, 0.5).setPosition(x + w, y);
+
+    const hit = this.add.rectangle(x, y, w, h, 0xffffff, 0);
+    hit.setOrigin(0, 0.5);
+
+    const images = [left, mid, right];
+    hit.setTintPanel = (color) => images.forEach((img) => img.setTint(color));
+    hit.clearTintPanel = () => images.forEach((img) => img.clearTint());
+    hit.setPanelAlpha = (alpha) => images.forEach((img) => img.setAlpha(alpha));
+
+    return hit;
+  }
+
   // --- Row builders ----------------------------------------------------
 
-  // Collapsible section header (per chat: bigger/bolder header text,
-  // sub-rows collapsed until tapped). `rowBuilder(y)` is only called
-  // when the section is expanded, so collapsed sections don't pay for
-  // rows they're not showing - it must return the y position after
-  // whatever it added, same contract as the individual row builders.
+  // Collapsible section header (per chat: bigger/bolder header text on
+  // a real wood-panel background, sub-rows collapsed until tapped).
+  // `rowBuilder(y)` is only called when the section is expanded, so
+  // collapsed sections don't pay for rows they're not showing - it
+  // must return the y position after whatever it added, same contract
+  // as the individual row builders.
   addCollapsibleSection(y, key, label, rowBuilder) {
     const { width } = this.scale;
     const collapsed = sectionCollapsed[key] ?? true;
     const headerHeight = 44;
 
-    const headerBg = this.add.rectangle(this.margin, y, width - this.margin * 2, headerHeight, 0x241a3d, 1);
-    headerBg.setOrigin(0, 0.5);
-    headerBg.setStrokeStyle(1, 0xffd93d, 0.4);
-    headerBg.setInteractive({ useHandCursor: true });
+    const bg = this.createPanel(this.margin, y, width - this.margin * 2, headerHeight, 'wood');
+    bg.setInteractive({ useHandCursor: true });
 
     const labelText = this.add.text(this.margin + 14, y, label.toUpperCase(), {
       fontFamily: 'Arial',
       fontSize: '19px',
       fontStyle: 'bold',
-      color: '#ffd93d',
+      color: WOOD_TEXT,
+      stroke: WOOD_TEXT_STROKE,
+      strokeThickness: 3,
     });
     labelText.setOrigin(0, 0.5);
 
@@ -165,11 +237,13 @@ export class SettingsScene extends Phaser.Scene {
       fontFamily: 'Arial',
       fontSize: '20px',
       fontStyle: 'bold',
-      color: '#ffd93d',
+      color: WOOD_TEXT,
+      stroke: WOOD_TEXT_STROKE,
+      strokeThickness: 3,
     });
     chevron.setOrigin(1, 0.5);
 
-    headerBg.on('pointerup', () => {
+    bg.on('pointerup', () => {
       if (this.wasDrag()) return;
       sectionCollapsed[key] = !collapsed;
       this.scene.restart();
@@ -186,10 +260,7 @@ export class SettingsScene extends Phaser.Scene {
 
   rowBackground(y) {
     const { width } = this.scale;
-    const bg = this.add.rectangle(this.margin, y, width - this.margin * 2, this.rowHeight - 6, 0x2f2350, 1);
-    bg.setOrigin(0, 0.5);
-    bg.setStrokeStyle(1, 0xffffff, 0.12);
-    return bg;
+    return this.createPanel(this.margin, y, width - this.margin * 2, this.rowHeight - 6, 'parchment');
   }
 
   // Renders either the signed-out state (Sign in with Google + a guest
@@ -211,14 +282,14 @@ export class SettingsScene extends Phaser.Scene {
 
   addSignInRow(y) {
     const bg = this.rowBackground(y);
-    bg.setFillStyle(0x3a6b3f, 1);
+    bg.setTintPanel(0x9adf8f);
     bg.setInteractive({ useHandCursor: true });
 
     const labelText = this.add.text(this.margin + 14, y, 'Sign in with Google', {
       fontFamily: 'Arial',
       fontSize: '15px',
       fontStyle: 'bold',
-      color: '#ffffff',
+      color: '#1f4a1f',
     });
     labelText.setOrigin(0, 0.5);
 
@@ -242,14 +313,14 @@ export class SettingsScene extends Phaser.Scene {
       const mask = this.add.circle(avatarX, y, 16, 0xffffff).setVisible(false);
       avatar.setMask(mask.createGeometryMask());
     } else {
-      this.add.circle(avatarX, y, 16, 0x8f5c3c, 1).setStrokeStyle(1, 0xffffff, 0.8);
+      this.add.circle(avatarX, y, 16, 0x8f5c3c, 1).setStrokeStyle(1, 0x3a2411, 0.8);
     }
 
     const labelText = this.add.text(this.margin + 48, y, displayName, {
       fontFamily: 'Arial',
       fontSize: '15px',
       fontStyle: 'bold',
-      color: '#ffffff',
+      color: INK,
     });
     labelText.setOrigin(0, 0.5);
 
@@ -258,12 +329,12 @@ export class SettingsScene extends Phaser.Scene {
 
   addPlaceholderRow(y, label, note) {
     const bg = this.rowBackground(y);
-    bg.setFillStyle(APP_BG_COLOR, 1);
+    bg.setPanelAlpha(0.5);
 
     const labelText = this.add.text(this.margin + 14, y, label, {
       fontFamily: 'Arial',
       fontSize: '15px',
-      color: '#9a90b8',
+      color: INK_DISABLED,
     });
     labelText.setOrigin(0, 0.5);
 
@@ -271,7 +342,7 @@ export class SettingsScene extends Phaser.Scene {
       fontFamily: 'Arial',
       fontSize: '13px',
       fontStyle: 'italic',
-      color: '#77709a',
+      color: INK_DISABLED,
     });
     noteText.setOrigin(1, 0.5);
 
@@ -279,19 +350,19 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   addStaticRow(y, label, value) {
-    const bg = this.rowBackground(y);
+    this.rowBackground(y);
 
     const labelText = this.add.text(this.margin + 14, y, label, {
       fontFamily: 'Arial',
       fontSize: '15px',
-      color: '#ffffff',
+      color: INK,
     });
     labelText.setOrigin(0, 0.5);
 
     const valueText = this.add.text(this.scale.width - this.margin - 14, y, value, {
       fontFamily: 'Arial',
       fontSize: '15px',
-      color: '#c9c0e6',
+      color: INK_MUTED,
     });
     valueText.setOrigin(1, 0.5);
 
@@ -305,7 +376,7 @@ export class SettingsScene extends Phaser.Scene {
     const labelText = this.add.text(this.margin + 14, y, label, {
       fontFamily: 'Arial',
       fontSize: '15px',
-      color: '#ffffff',
+      color: INK,
     });
     labelText.setOrigin(0, 0.5);
 
@@ -313,10 +384,10 @@ export class SettingsScene extends Phaser.Scene {
     const trackHeight = 24;
     const trackX = this.scale.width - this.margin - 14 - trackWidth / 2;
     const onColor = 0x4caf50;
-    const offColor = 0x5a5270;
+    const offColor = 0x8a7658;
 
     const track = this.add.rectangle(trackX, y, trackWidth, trackHeight, initialValue ? onColor : offColor, 1);
-    track.setStrokeStyle(1, 0xffffff, 0.4);
+    track.setStrokeStyle(1, 0x3a2411, 0.4);
 
     const knobOffset = trackWidth / 2 - trackHeight / 2;
     const knob = this.add.circle(trackX + (initialValue ? knobOffset : -knobOffset), y, trackHeight / 2 - 3, 0xffffff, 1);
@@ -345,14 +416,15 @@ export class SettingsScene extends Phaser.Scene {
     const labelText = this.add.text(this.margin + 14, y, label, {
       fontFamily: 'Arial',
       fontSize: '15px',
-      color: '#ffffff',
+      color: INK,
     });
     labelText.setOrigin(0, 0.5);
 
     const chevron = this.add.text(this.scale.width - this.margin - 14, y, '\u2192', {
       fontFamily: 'Arial',
       fontSize: '16px',
-      color: '#ffd93d',
+      fontStyle: 'bold',
+      color: LINK_ACCENT,
     });
     chevron.setOrigin(1, 0.5);
 
@@ -366,14 +438,14 @@ export class SettingsScene extends Phaser.Scene {
 
   addResetProgressRow(y) {
     const bg = this.rowBackground(y);
-    bg.setFillStyle(0x4a1f22, 1);
+    bg.setTintPanel(0xe6a89c);
     bg.setInteractive({ useHandCursor: true });
 
     const labelText = this.add.text(this.margin + 14, y, 'Reset Progress', {
       fontFamily: 'Arial',
       fontSize: '15px',
       fontStyle: 'bold',
-      color: '#ffffff',
+      color: '#5c1414',
     });
     labelText.setOrigin(0, 0.5);
 
@@ -400,26 +472,27 @@ export class SettingsScene extends Phaser.Scene {
   // that) - signing out is meaningless for a guest with no session.
   addSignOutRow(y) {
     const bg = this.rowBackground(y);
-    bg.setInteractive({ useHandCursor: true });
 
     const labelText = this.add.text(this.margin + 14, y, 'Sign Out', {
       fontFamily: 'Arial',
       fontSize: '15px',
-      color: isSignedIn() ? '#ffffff' : '#9a90b8',
+      color: isSignedIn() ? INK : INK_DISABLED,
     });
     labelText.setOrigin(0, 0.5);
 
     if (!isSignedIn()) {
+      bg.setPanelAlpha(0.5);
       const note = this.add.text(this.scale.width - this.margin - 14, y, 'Not signed in', {
         fontFamily: 'Arial',
         fontSize: '13px',
         fontStyle: 'italic',
-        color: '#77709a',
+        color: INK_DISABLED,
       });
       note.setOrigin(1, 0.5);
       return y + this.rowHeight;
     }
 
+    bg.setInteractive({ useHandCursor: true });
     bg.on('pointerup', () => {
       if (this.wasDrag()) return;
       signOut();
