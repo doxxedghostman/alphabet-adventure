@@ -16,6 +16,7 @@ import { WORD_SET } from '../data/wordlist.js';
 import { getLevel, getNextLevelId } from '../data/levels.js';
 import { generateGuaranteedBoard, SCRAMBLE_COUNT_BY_LENGTH } from '../utils/levelGenerator.js';
 import { completeLevel, levelIdFor, LEVELS_PER_WORLD } from '../utils/progressStore.js';
+import { syncLocalProgressToCloud } from '../utils/authStore.js';
 
 // Word-Swap mechanic:
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
@@ -720,6 +721,7 @@ export class BoardScene extends Phaser.Scene {
     this.levelOver = true;
     this.deselectTile();
     if (this.worldId) completeLevel(this.level.id);
+    syncLocalProgressToCloud();
 
     const isBoss = this.worldId && this.levelNum === LEVELS_PER_WORLD;
     const message = this.level.type === 'free' ? `You reached ${this.score} points!` : `You spelled ${this.targetWord}`;

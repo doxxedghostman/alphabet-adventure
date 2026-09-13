@@ -19,6 +19,7 @@ import { App } from '@capacitor/app';
 import { supabase } from './supabaseClient.js';
 import { getCompletedLevelIds, setCompletedLevelIds } from './progressStore.js';
 import { getSettings, setMusicOn, setSfxOn, setHapticsOn } from './settingsStore.js';
+import { getGems } from './currencyStore.js';
 
 // Google actively blocks its OAuth consent screen from loading inside an
 // embedded WebView (the exact environment this Capacitor app runs in) -
@@ -56,6 +57,25 @@ export function getCurrentUser() {
 
 export function isSignedIn() {
   return cachedUser !== null;
+}
+
+/** Pushes current local progress (completed levels + gems) up to this
+ * user's cloud profile - a no-op for guests. Called after anything
+ * that changes either (BoardScene on level win, CalendarScene on
+ * claim) so the Leaderboard (which reads wordswoop_profiles directly,
+ * not local storage) stays current for signed-in players. Fire-and-
+ * forget, same as initAuth() - a failed sync shouldn't interrupt
+ * gameplay, it just means the leaderboard lags until the next
+ * successful call. */
+export async function syncLocalProgressToCloud() {
+  if (!cachedUser) return;
+
+  const { error } = await supabase
+    .from('wordswoop_profiles')
+    .update({ completed_level_ids: getCompletedLevelIds(), gems: getGems() })
+    .eq('id', cachedUser.id);
+
+  if (error) console.warn('syncLocalProgressToCloud: failed to sync', error);
 }
 
 /** Google's profile picture URL, checking both key names Supabase might

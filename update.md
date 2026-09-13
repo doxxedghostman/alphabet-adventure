@@ -1467,5 +1467,66 @@ its 3 sibling icons — that toast path stays for Shop/Leaderboard/Video.
 **Home Hub's currency display** now reads `currencyStore.getGems()`
 instead of the hardcoded `'0'` it showed since it was first built.
 
+### Milestone 32 — Leaderboard is real; profile syncs on every win/claim, not just first sign-in
+
+Per chat, built directly (not batch by batch) right after Calendar.
+
+**Problem:** `wordswoop_profiles` RLS (Milestone 25) scopes select to
+`auth.uid() = id` - correct for account data, but it makes a
+leaderboard query impossible as written (nobody can read anyone else's
+row, including their own opponent's). Needed a way to expose a public,
+limited slice (name/avatar/gems/levels) without loosening the base
+table's RLS.
+
+**Required one-time SQL (not run by Claude - this project,
+`kaeiaiesavwsebyhkgig`, isn't one the connected Supabase tool has
+access to; hand this to the SQL editor directly):**
+
+```sql
+create or replace view public.wordswoop_leaderboard as
+select
+  id,
+  display_name,
+  avatar_url,
+  gems,
+  jsonb_array_length(coalesce(completed_level_ids, '[]'::jsonb)) as levels_completed
+from public.wordswoop_profiles;
+
+grant select on public.wordswoop_leaderboard to anon, authenticated;
+```
+
+A view is owned by whoever creates it (the SQL editor runs as a
+privileged role), so it can read every row of the RLS'd base table
+while only ever exposing these four columns - no email, no raw id
+beyond what's needed for the query, no way to touch the base table
+through it (it's not updatable). Standard Postgres/Supabase pattern
+for "public read of a slice of a privately-RLS'd table."
+
+**New `authStore.js` export: `syncLocalProgressToCloud()`** - pushes
+the signed-in user's current local `completed_level_ids` + `gems` up
+to their `wordswoop_profiles` row. A no-op for guests. Until now,
+`wordswoop_profiles` only ever got written once, at the moment of
+first sign-in (`mergeGuestProgressIntoCloud`) - every level won or
+gem earned afterward stayed local-only, so the leaderboard (or
+anything else reading the cloud row) would go stale the moment someone
+started playing post-sign-in. Wired into the two places that change
+either value: `BoardScene`'s level-win handler and `CalendarScene`'s
+claim handler. Fire-and-forget (not awaited at either call site), same
+philosophy as `initAuth()` - a failed sync shouldn't interrupt
+gameplay.
+
+**New `src/scenes/LeaderboardScene.js`** - queries the view above for
+the top 10 by gems, renders a plain ranked list (gold/silver/bronze
+rank color for the top 3, parchment-colored rows, gem-icon-emoji +
+count) rather than reusing Calendar's card grid, since a ranked list
+doesn't fit that shape. If the view doesn't exist yet (migration not
+yet run) or returns nothing, shows an empty state instead of erroring
+visibly. Not signed in → an additional "sign in to join" line, since
+guests have no cloud profile row to ever appear in this at all.
+
+Wired into `main.js`'s scene list and Home Hub's Leaderboard icon
+(previously a "coming soon" toast, matching Calendar's pattern from
+Milestone 31).
+
 
 

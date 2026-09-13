@@ -218,7 +218,7 @@ export class HomeHubScene extends Phaser.Scene {
     // were cut rather than kept as before.
     // Calendar is real now (CalendarScene) - the rest are still stubs.
     const icons = side === 'left'
-      ? [{ key: 'iconShop', label: 'Shop \u2013 coming soon' }, { key: 'iconLeaderboard', label: 'Leaderboard \u2013 coming soon' }]
+      ? [{ key: 'iconShop', label: 'Shop \u2013 coming soon' }, { key: 'iconLeaderboard', label: 'Leaderboard', action: () => this.scene.start('LeaderboardScene') }]
       : [{ key: 'iconCalendar', label: 'Daily Rewards', action: () => this.scene.start('CalendarScene') }, { key: 'iconVideo', label: 'Watch to Earn \u2013 coming soon' }];
 
     // Enlarged again per chat (74px -> 92px display) - gap grown by

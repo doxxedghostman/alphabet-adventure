@@ -281,12 +281,23 @@ Missing a day resets the streak to Day 1. The Home Hub currency
 display now reads this real gem balance (`currencyStore.js`) instead
 of the old hardcoded 0.
 
-**Not done:** Shop, Leaderboard, and Video icons are still stubs;
-account delete/data delete (needs a Supabase Edge Function, not a
-direct client call, to use the service-role key safely); display-name
-editing and a custom avatar picker (currently shows Google's own
-name/photo only); booster inventory has no way to be spent in a level
-yet.
+**Not done:** Shop and Video icons are still stubs; account delete/data
+delete (needs a Supabase Edge Function, not a direct client call, to
+use the service-role key safely); display-name editing and a custom
+avatar picker (currently shows Google's own name/photo only); booster
+inventory has no way to be spent in a level yet.
+
+**Leaderboard is real now** (`src/scenes/LeaderboardScene.js` — see
+update.md Milestone 32): top 10 players by gems, read from a new
+`wordswoop_leaderboard` Postgres view (public read of a limited slice
+of `wordswoop_profiles`, since that table's own RLS only allows
+reading your own row). Requires a one-time SQL migration on the
+Supabase project (handed over separately, not run by Claude — see
+Milestone 32) before it shows real data. `syncLocalProgressToCloud()`
+(new, `authStore.js`) now pushes gems + completed levels to the cloud
+on every level win and Calendar claim, not just once at first sign-in,
+so this stays current for signed-in players. Guests never appear here
+(no cloud profile row) — screen shows a "sign in to join" nudge.
 
 ## 9. World map
 

@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { APP_BG_COLOR, LETTERBOX_BG_COLOR } from '../config.js';
 import { getStatus, claimToday, REWARD_SCHEDULE } from '../utils/dailyRewardStore.js';
+import { syncLocalProgressToCloud } from '../utils/authStore.js';
 
 // Calendar / Daily Rewards — Home Hub's Calendar icon used to just
 // show a "coming soon" toast; this is the real screen. Per chat: a
@@ -233,7 +234,10 @@ export class CalendarScene extends Phaser.Scene {
         duration: 100,
         onComplete: () => {
           const result = claimToday();
-          if (result) this.scene.restart();
+          if (result) {
+            syncLocalProgressToCloud();
+            this.scene.restart();
+          }
         },
       });
     });
