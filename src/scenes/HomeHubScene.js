@@ -8,11 +8,27 @@ import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 // a logo + mini map preview in the center, and a big "Word Map" button
 // at the bottom that's the only way forward from here.
 //
-// Per chat: only the Word Map button and the Settings gear (which now
-// opens its own SettingsScene, see that file) are real. The remaining
-// icons (shop, gallery, trophy, leaderboard, coin shop, calendar,
-// video) are shown but inert - tap just does the press-down bounce,
-// no toast/popup, since none of those systems exist yet.
+// Per chat follow-up: stripped the two side columns down from 7 icons
+// to the 4 actually worth building right now - Shop, Leaderboard,
+// Calendar (daily rewards), and Video (rewarded ads). Gallery, Trophy,
+// and Coin Shop were cut rather than kept as inert decoration: they're
+// collection/achievement polish that only pays off once there's real
+// content depth (levels, cosmetics) to reward, which doesn't exist yet
+// at 5 demo levels. Coin Shop specifically folded into Shop rather
+// than staying separate - two currency stores is redundant for a
+// 4-icon set. Their load.image() calls were removed along with them,
+// following the same precedent as the earlier spin-wheel icon removal
+// (asset files left on disk, just unreferenced) rather than deleting
+// the now-unused PNGs.
+//
+// None of the remaining 4 have real functionality yet either - each
+// just shows a "coming soon" toast on tap for now (see
+// showComingSoonToast()) rather than doing nothing, so tapping still
+// gives feedback instead of feeling broken. Real screens for these
+// get built one at a time in later passes - per chat, Calendar and
+// Leaderboard are next in line (retention/social value, and Supabase
+// already covers the backend for both), Shop explicitly stays a
+// placeholder "until we think on what to add" to sell.
 //
 // Art: swapped from code-drawn placeholders to the real generated art
 // (forest bg, wood top bar, word-map banner, mini map parchment card,
@@ -27,11 +43,11 @@ import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 // producing a "white blink" artifact on-device - removed entirely.
 // Icons now sit directly on the forest background with no backing box
 // and no idle animation anywhere in this scene, only the existing
-// press-down/up tap bounce (no toast/popup on tap either). The
-// spin-wheel icon was dropped from the right column too (not needed)
-// rather than kept and fixed. "Guest_Player" placeholder text was also
-// dropped from the top bar - real profile/settings icons and account
-// data (Google sign-in + Supabase) are coming next.
+// press-down/up tap bounce. The spin-wheel icon was dropped from the
+// right column too (not needed) rather than kept and fixed.
+// "Guest_Player" placeholder text was also dropped from the top bar -
+// real profile/settings icons and account data (Google sign-in +
+// Supabase) are coming next.
 export class HomeHubScene extends Phaser.Scene {
   constructor() {
     super('HomeHubScene');
@@ -49,10 +65,7 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('hubLetterBlocks', 'assets/letter-blocks-strip.png');
 
     this.load.image('iconShop', 'assets/icon-shop.png');
-    this.load.image('iconGallery', 'assets/icon-gallery.png');
-    this.load.image('iconTrophy', 'assets/icon-trophy.png');
     this.load.image('iconLeaderboard', 'assets/icon-leaderboard.png');
-    this.load.image('iconCoinShop', 'assets/icon-coin-shop.png');
     this.load.image('iconCalendar', 'assets/icon-calendar.png');
     this.load.image('iconVideo', 'assets/icon-video.png');
     this.load.image('iconSettings', 'assets/icon-settings.png');
@@ -199,10 +212,12 @@ export class HomeHubScene extends Phaser.Scene {
   // --- Side icon columns ---------------------------------------------------
 
   createIconColumn(side, x) {
-    // Spin-wheel icon removed per chat - not needed.
+    // Stripped down to the 4 icons actually worth building next (per
+    // chat) - see the header comment for why Gallery/Trophy/Coin Shop
+    // were cut rather than kept as before.
     const icons = side === 'left'
-      ? ['iconShop', 'iconGallery', 'iconTrophy', 'iconLeaderboard']
-      : ['iconCoinShop', 'iconCalendar', 'iconVideo'];
+      ? [{ key: 'iconShop', label: 'Shop \u2013 coming soon' }, { key: 'iconLeaderboard', label: 'Leaderboard \u2013 coming soon' }]
+      : [{ key: 'iconCalendar', label: 'Daily Rewards \u2013 coming soon' }, { key: 'iconVideo', label: 'Watch to Earn \u2013 coming soon' }];
 
     // Enlarged again per chat (74px -> 92px display) - gap grown by
     // more than the size increase (108 -> 130) so the bigger icons still
@@ -210,17 +225,16 @@ export class HomeHubScene extends Phaser.Scene {
     // Nudged down (92 -> 130) to clear the now-taller top bar/logo.
     const top = 130;
     const gap = 130;
-    icons.forEach((key, i) => this.createColumnIcon(x, top + i * gap, key));
+    icons.forEach(({ key, label }, i) => this.createColumnIcon(x, top + i * gap, key, label));
   }
 
-  createColumnIcon(x, y, textureKey) {
+  createColumnIcon(x, y, textureKey, label) {
     const size = 100;
     const cx = x + size / 2;
     const cy = y + size / 2;
 
     // No backing card and no idle animation - icons sit directly on the
-    // forest background. Tap just does a press-down/up bounce; these
-    // systems don't exist yet so there's nothing further to trigger.
+    // forest background.
     const icon = this.add.image(cx, cy, textureKey);
     icon.setDisplaySize(92, 92);
     // setDisplaySize gives this image a non-1 base scale (native art is
@@ -233,7 +247,63 @@ export class HomeHubScene extends Phaser.Scene {
 
     const hit = this.add.rectangle(x, y, size, size, 0xffffff, 0).setOrigin(0).setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => this.tweens.add({ targets: icon, scale: baseScale * 0.88, duration: 70 }));
-    hit.on('pointerup', () => this.tweens.add({ targets: icon, scale: baseScale, duration: 100 }));
+    hit.on('pointerup', () => {
+      this.tweens.add({ targets: icon, scale: baseScale, duration: 100 });
+      this.showComingSoonToast(label);
+    });
+  }
+
+  // Real screens for these get built one at a time (per chat, Calendar
+  // and Leaderboard first) - until then, tapping gives feedback rather
+  // than feeling broken/dead. Destroys any toast already on screen
+  // first so rapid taps across different icons don't stack.
+  showComingSoonToast(text) {
+    if (this._toastObjects) {
+      this._toastObjects.forEach((obj) => obj.destroy());
+      this._toastObjects = null;
+    }
+
+    const { width, height } = this.scale;
+    const y = height * 0.46;
+
+    const label = this.add
+      .text(width / 2, y, text, {
+        fontFamily: 'Arial',
+        fontSize: '16px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5)
+      .setDepth(1)
+      .setAlpha(0);
+
+    const bg = this.add
+      .rectangle(width / 2, y, label.width + 36, label.height + 20, 0x1a1030, 0.92)
+      .setStrokeStyle(1, 0xffd93d, 0.6)
+      .setDepth(0)
+      .setAlpha(0);
+
+    this._toastObjects = [bg, label];
+
+    this.tweens.add({
+      targets: [bg, label],
+      alpha: 1,
+      duration: 120,
+      onComplete: () => {
+        this.time.delayedCall(1100, () => {
+          this.tweens.add({
+            targets: [bg, label],
+            alpha: 0,
+            duration: 200,
+            onComplete: () => {
+              bg.destroy();
+              label.destroy();
+              if (this._toastObjects && this._toastObjects[0] === bg) this._toastObjects = null;
+            },
+          });
+        });
+      },
+    });
   }
 
   // --- Bottom: the real navigation forward ----------------------------------
