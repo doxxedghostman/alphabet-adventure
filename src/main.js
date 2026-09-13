@@ -6,8 +6,10 @@ import { WorldSelectScene } from './scenes/WorldSelectScene.js';
 import { LevelPathScene } from './scenes/LevelPathScene.js';
 import { BoardScene } from './scenes/BoardScene.js';
 import { SettingsScene } from './scenes/SettingsScene.js';
-import { CANVAS_SIZE, APP_BG_COLOR_HEX } from './config.js';
+import { getCanvasSize, APP_BG_COLOR_HEX } from './config.js';
 import { initAuth } from './utils/authStore.js';
+
+const CANVAS_SIZE = getCanvasSize();
 
 const config = {
   type: Phaser.AUTO,

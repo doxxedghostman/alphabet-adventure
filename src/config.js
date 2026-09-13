@@ -1,5 +1,6 @@
 // Prototype config: 6x6 board, swap -> match 3-6 letter word -> clear -> fall -> score.
 // No target words, no special tiles, no obstacles yet (those are Phase 2/3).
+import Phaser from 'phaser';
 
 export const BOARD_SIZE = 6;
 export const MIN_WORD_LENGTH = 3;
@@ -29,14 +30,49 @@ export const BOARD_PIXEL_SIZE = {
 // dim overlay - that's fixed separately in BoardScene.js to use the
 // real canvas size instead.
 //
-// 516 wide (unchanged - it's a good tap-target width for a 6-col grid)
-// x a height matching a common modern phone aspect ratio (~19.5:9),
-// so FIT letterboxes only a sliver on outlier aspect ratios instead of
-// boxing everything into the middle of the screen.
-export const CANVAS_SIZE = {
-  width: BOARD_PIXEL_SIZE.width,
-  height: Math.round(BOARD_PIXEL_SIZE.width * (19.5 / 9)),
-};
+// getCanvasSize() (per chat) replaces what used to be a static
+// CANVAS_SIZE computed once from a hardcoded 19.5:9 guess. Phaser's
+// Scale.FIT preserves the canvas's exact aspect ratio and never crops
+// it, so any mismatch between that hardcoded guess and the device's
+// real screen ratio left a strip of the fallback background color
+// showing top/bottom (or left/right) - not a rendering bug, just FIT
+// doing exactly what it's told with the wrong target ratio. Real phone
+// ratios vary a lot (18:9 up to ~20.5:9 and beyond on some
+// foldables/tablets), so this now reads the actual window at boot and
+// matches it, clamped to a sane range:
+//   - floor of 1.7 (~17:10): comfortably above the 624px
+//     (BOARD_PIXEL_SIZE.height) the board actually needs at this
+//     516px width, so the board never gets starved for room even on
+//     an unusually short/wide window (e.g. a tablet or a resized
+//     desktop browser).
+//   - ceiling of 2.6 (~26:10): covers every mainstream phone (most
+//     land around 19.5:9-20.5:9 ≈ 2.17-2.28) with headroom for
+//     outlier tall-screen devices, without letting a genuinely
+//     extreme window (e.g. a very short landscape strip) stretch the
+//     canvas into something unreasonable.
+// 516 wide stays fixed either way (unchanged - it's a good tap-target
+// width for a 6-col grid); only the height adapts.
+const MIN_HEIGHT_RATIO = 1.7;
+const MAX_HEIGHT_RATIO = 2.6;
+
+export function getCanvasSize() {
+  const width = BOARD_PIXEL_SIZE.width;
+
+  // window.innerWidth/innerHeight reflect the real on-screen viewport
+  // (the Capacitor WebView is already fullscreen/immersive per
+  // MainActivity.java, so there's no browser chrome to account for
+  // here). Fall back to the old hardcoded 19.5:9 guess if either is
+  // unavailable for some reason (e.g. this ever runs somewhere
+  // without a window), rather than dividing by zero.
+  const hasWindow = typeof window !== 'undefined' && window.innerWidth > 0 && window.innerHeight > 0;
+  const deviceRatio = hasWindow ? window.innerHeight / window.innerWidth : 19.5 / 9;
+  const ratio = Phaser.Math.Clamp(deviceRatio, MIN_HEIGHT_RATIO, MAX_HEIGHT_RATIO);
+
+  return {
+    width,
+    height: Math.round(width * ratio),
+  };
+}
 
 // Single source of truth for the app's dark fallback/background color -
 // shows through wherever a scene's own art doesn't reach (letterbox
