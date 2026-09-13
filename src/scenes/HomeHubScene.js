@@ -41,13 +41,16 @@ import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 // map preview's star node, the letter blocks, and the Word Map button)
 // plus the semi-transparent white backing card behind every icon were
 // producing a "white blink" artifact on-device - removed entirely.
-// Icons now sit directly on the forest background with no backing box
-// and no idle animation anywhere in this scene, only the existing
-// press-down/up tap bounce. The spin-wheel icon was dropped from the
-// right column too (not needed) rather than kept and fixed.
-// "Guest_Player" placeholder text was also dropped from the top bar -
-// real profile/settings icons and account data (Google sign-in +
-// Supabase) are coming next.
+// Icons sit directly on the forest background with no backing box.
+// The spin-wheel icon was dropped from the right column too (not
+// needed) rather than kept and fixed. "Guest_Player" placeholder text
+// was also dropped from the top bar - real profile/settings icons and
+// account data (Google sign-in + Supabase) are coming next.
+//
+// Per later chat: a slow vertical float WAS added back to the 4 side
+// icons (see createColumnIcon()) - just a small y-position tween, no
+// alpha/tint/texture involved, which is a different mechanism from
+// the glow/shine pass above and shouldn't reproduce that same bug.
 export class HomeHubScene extends Phaser.Scene {
   constructor() {
     super('HomeHubScene');
@@ -58,7 +61,6 @@ export class HomeHubScene extends Phaser.Scene {
     // since this scene owns its own use of the logo.
     this.load.image('menuLogo', 'assets/menu-logo.png');
     this.load.image('hubTopBar', 'assets/top-bar.png');
-    this.load.image('hubWordMapBanner', 'assets/word-map-banner.png');
     this.load.image('hubWordMapButton', 'assets/word-map-button.png');
     this.load.image('hubMapPreviewCard', 'assets/map-preview-card.jpg');
     this.load.image('hubForestBg', 'assets/forest-background.jpg');
@@ -182,26 +184,23 @@ export class HomeHubScene extends Phaser.Scene {
   // --- Center: logo + decorative mini map preview -------------------------
 
   createLogoAndMapPreview(width) {
-    // Logo, banner, and letter-block strip all enlarged per chat, and
-    // pushed down slightly (98 vs 76) to sit below the now-taller top bar.
+    // Logo enlarged per chat, pushed down slightly (98 vs 76) to sit
+    // below the now-taller top bar.
     const logo = this.add.image(width / 2, 118, 'menuLogo').setOrigin(0.5, 0);
     logo.setScale(Math.min(1, (width * 0.56) / logo.width));
 
-    const ribbonY = logo.y + logo.displayHeight + 10;
-    const banner = this.add.image(width / 2, ribbonY, 'hubWordMapBanner').setOrigin(0.5, 0);
-    banner.setDisplaySize(266, 84);
-    this.add.text(width / 2, ribbonY + 42, 'Word Map', {
-      fontFamily: 'Arial',
-      fontSize: '19px',
-      fontStyle: 'bold',
-      color: '#4a2f10',
-    }).setOrigin(0.5);
-
+    // The decorative "Word Map" wood ribbon + text that used to sit
+    // here (hubWordMapBanner) is removed per chat - it duplicated the
+    // real "Word Map" button at the bottom of the screen (the actual
+    // navigation forward, see createWordMapButton()) with no
+    // functionality of its own, which read as two confusing "Word Map"
+    // labels on one screen. The letter-block strip now sits directly
+    // below the logo instead of below that banner.
+    //
     // Mini map preview removed per chat (parchment card, dashed path,
     // and lock/star nodes all taken out) - the letter-block strip below
-    // now sits under the "Word Map" ribbon/text instead of under the
-    // map card.
-    this.mapPreviewBottom = ribbonY + 42;
+    // now sits under the logo.
+    this.mapPreviewBottom = logo.y + logo.displayHeight + 24;
 
     // Decorative letter-block strip - purely for flavor, not
     // interactive, no idle animation.
@@ -233,8 +232,7 @@ export class HomeHubScene extends Phaser.Scene {
     const cx = x + size / 2;
     const cy = y + size / 2;
 
-    // No backing card and no idle animation - icons sit directly on the
-    // forest background.
+    // No backing card - icons sit directly on the forest background.
     const icon = this.add.image(cx, cy, textureKey);
     icon.setDisplaySize(92, 92);
     // setDisplaySize gives this image a non-1 base scale (native art is
@@ -250,6 +248,27 @@ export class HomeHubScene extends Phaser.Scene {
     hit.on('pointerup', () => {
       this.tweens.add({ targets: icon, scale: baseScale, duration: 100 });
       this.showComingSoonToast(label);
+    });
+
+    // Slow float (per chat): a small, gentle up/down drift so the icon
+    // reads as alive rather than static, but always returns to and
+    // settles at the same home position - not the earlier glow/shine
+    // idle effect that got pulled for a "white blink" artifact (see
+    // header comment). This only tweens the icon's own y position, no
+    // alpha/tint/texture changes at all, so it's a different kind of
+    // animation and shouldn't be able to trigger that same bug. The
+    // invisible hit rectangle deliberately does NOT move with it - the
+    // ~7px drift is small enough that the tap target stays comfortably
+    // under the icon at every point in the float. Duration and start
+    // delay are both jittered per icon so all 4 don't bob in unison.
+    this.tweens.add({
+      targets: icon,
+      y: cy - 7,
+      duration: 1700 + Phaser.Math.Between(-200, 200),
+      delay: Phaser.Math.Between(0, 600),
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
     });
   }
 
