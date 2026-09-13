@@ -84,9 +84,30 @@ export function getCanvasSize() {
 // forms since call sites need different shapes: Phaser fill colors and
 // main.js's config want a 0xRRGGBB number, CSS wants a #rrggbb string,
 // and Camera.fadeOut() wants separate r/g/b integers.
+//
+// Kept separate from LETTERBOX_BG_COLOR below - this one is still
+// used for the HUD bars in SettingsScene/WorldSelectScene/
+// LevelPathScene, which need something dark for their white/gold text
+// to read against. Recoloring it to something light (per chat, for
+// the letterbox below) would break that contrast everywhere else it's
+// used, so the letterbox got its own dedicated color instead of
+// reusing this one.
 export const APP_BG_COLOR = 0x17241b;
 export const APP_BG_COLOR_HEX = '#17241b';
 export const APP_BG_COLOR_RGB = [0x17, 0x24, 0x1b];
+
+// Fill for the outer letterbox strip that getCanvasSize()'s aspect-
+// ratio clamp can still leave on a genuinely extreme device (or while
+// running an old build that predates that fix) - this is the color of
+// the Phaser canvas's own backgroundColor (main.js) and the
+// surrounding HTML page (index.html's body/#game-frame), which sit
+// directly adjacent to each other and must always match exactly or
+// the seam between them would be visible. Per chat: a light creamy
+// brown/parchment tone reads as an intentional warm border around the
+// art instead of an obvious mismatched color peeking through, the way
+// the old purple and then dark green both did.
+export const LETTERBOX_BG_COLOR = 0xe8d3a8;
+export const LETTERBOX_BG_HEX = '#e8d3a8';
 
 export const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 

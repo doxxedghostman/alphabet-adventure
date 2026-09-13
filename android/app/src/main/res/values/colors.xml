@@ -1,15 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Matches src/config.js's APP_BG_COLOR_HEX (#17241b, dark forest
-         green) - used across every scene's background/HUD bars and
-         index.html's #game-frame. This file previously had the old
-         purple (#241a3d) from before that color was consolidated to
-         green; it was never updated to match at the time, so native
-         Android theme colors and the actual in-game background had
-         drifted apart. Keep these in sync by hand if it changes again -
-         same caveat as index.html's copy of this constant. -->
-    <color name="colorPrimary">#17241b</color>
-    <color name="colorPrimaryDark">#0d150f</color>
+    <!-- Matches src/config.js's LETTERBOX_BG_HEX (#e8d3a8, a light
+         creamy tan) - used for index.html's #game-frame/body and the
+         Phaser canvas's own backgroundColor. Deliberately NOT
+         APP_BG_COLOR (the dark forest green used for in-game HUD bars)
+         - this is specifically the color of the thin letterbox strip
+         outside the canvas, which sits directly against this native
+         window background during the brief gap before the WebView
+         loads, so the two must match or that handoff shows a visible
+         color flash. Keep in sync by hand if either changes - same
+         caveat as index.html's copy of this constant. -->
+    <color name="colorPrimary">#e8d3a8</color>
+    <color name="colorPrimaryDark">#8b7f65</color>
     <!-- Matches the gold "Play" button / letter-tile accent color. -->
     <color name="colorAccent">#f2b705</color>
 </resources>

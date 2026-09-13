@@ -5,13 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
     <title>WordSwoop — Phase 1 Prototype</title>
     <style>
-      /* #17241b must match src/config.js's APP_BG_COLOR_HEX - this is
+      /* #e8d3a8 must match src/config.js's LETTERBOX_BG_HEX - this is
          plain CSS in a static HTML file, so it can't import that JS
-         constant directly; keep the two in sync by hand if it changes. */
+         constant directly; keep the two in sync by hand if it changes.
+         This is deliberately NOT the same as the app's dark
+         APP_BG_COLOR (used for in-game HUD bars) - this page-level
+         background only shows in the thin letterbox strip outside the
+         canvas on an aspect ratio getCanvasSize()'s clamp doesn't
+         fully match, and per chat a light creamy tone reads as an
+         intentional border there instead of a mismatched color. */
       html, body {
         margin: 0;
         padding: 0;
-        background: #17241b;
+        background: #e8d3a8;
         overflow: hidden;
         height: 100%;
         font-family: system-ui, -apple-system, sans-serif;
@@ -46,7 +52,7 @@
         width: 100vw;
         height: 100vh;
         height: 100dvh;
-        background: #17241b;
+        background: #e8d3a8;
       }
       #game-container {
         width: 100%;

@@ -6,7 +6,7 @@ import { WorldSelectScene } from './scenes/WorldSelectScene.js';
 import { LevelPathScene } from './scenes/LevelPathScene.js';
 import { BoardScene } from './scenes/BoardScene.js';
 import { SettingsScene } from './scenes/SettingsScene.js';
-import { getCanvasSize, APP_BG_COLOR_HEX } from './config.js';
+import { getCanvasSize, LETTERBOX_BG_HEX } from './config.js';
 import { initAuth } from './utils/authStore.js';
 
 const CANVAS_SIZE = getCanvasSize();
@@ -16,7 +16,7 @@ const config = {
   parent: 'game-container',
   width: CANVAS_SIZE.width,
   height: CANVAS_SIZE.height,
-  backgroundColor: APP_BG_COLOR_HEX,
+  backgroundColor: LETTERBOX_BG_HEX,
   scene: [SplashScene, MainMenuScene, HomeHubScene, WorldSelectScene, LevelPathScene, BoardScene, SettingsScene],
   render: {
     antialias: true,
