@@ -1223,3 +1223,34 @@ blocked on the Google OAuth client ID/secret from KNA before the
 provider can be enabled in Supabase and any of this becomes testable
 end-to-end.
 
+### Milestone 27 — Found the real cause of the persistent purple strip: stale CSS, not a background-art or scale bug
+
+Per chat (screenshots showing a purple gap above the top bar on both
+the Home Hub and Main Menu, "it keep showing" despite Milestone
+whatever's edge-to-edge/immersive work) — this was never a background
+image sizing problem. `MainActivity.java`'s "fully immersive" change
+already made the native side hide the system bars entirely rather than
+just making them transparent (its own code comment already correctly
+diagnosed the mechanism: a transparent-but-present bar still reserves
+its height as a gap). But `index.html`'s `body` rule still had:
+
+```css
+padding: env(safe-area-inset-top) env(safe-area-inset-right)
+  env(safe-area-inset-bottom) env(safe-area-inset-left);
+```
+
+left over from before the app went immersive — originally meant to
+keep content clear of notches on an ordinary (non-immersive) mobile
+browser tab. With the system bars now fully hidden natively, this was
+reserving space for a status bar that no longer exists, which is
+exactly the fixed-height purple strip in the screenshots — present on
+every scene (Home Hub, Main Menu, "inside the word map" too) because
+it's a global `body` rule, not anything scene-specific. Removed the
+padding rule entirely (not zeroed - a rule left "just in case" is what
+caused this) and left a comment explaining why, and where a *real*
+notch/cutout fix should live instead if one's ever needed (a targeted
+HUD-layout adjustment in the specific scene, not global body padding).
+
+Verified in the built output (`dist/index.html`) that the padding rule
+itself is gone post-build, not just in source.
+

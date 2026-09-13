@@ -17,10 +17,22 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        /* Respect notches/home-indicators on full-screen mobile browsers */
-        padding: env(safe-area-inset-top) env(safe-area-inset-right)
-          env(safe-area-inset-bottom) env(safe-area-inset-left);
       }
+      /* This body previously had a
+         padding: env(safe-area-inset-top/right/bottom/left) rule here, to
+         keep content clear of notches/home-indicators on a normal
+         full-screen mobile browser tab. On Android that padding is what
+         was leaving a fixed-height purple gap above the wood top bar (and
+         every other scene) even after MainActivity.java went fully
+         immersive - the native side now hides the system bars entirely
+         instead of just making them transparent, so there's no OS status
+         bar height left to reserve room for; the CSS was reserving space
+         for a bar that no longer exists. Removed rather than zeroed out,
+         since a stale rule left in "just in case" is what caused this in
+         the first place. If a genuine notch/cutout needs clearing later
+         (a specific phone's camera punch-hole overlapping tappable UI),
+         that's a targeted fix in the scene's own HUD layout, not a global
+         body padding that reintroduces this same bug for every screen. */
       /* Full-viewport game root - no border/frame/box. The canvas keeps its
          fixed aspect ratio and scales via Phaser's FIT mode to the largest
          size that fits this box; any leftover space (aspect-ratio mismatch
