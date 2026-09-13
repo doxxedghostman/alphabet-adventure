@@ -203,6 +203,14 @@ export class SettingsScene extends Phaser.Scene {
     hit.setTintPanel = (color) => images.forEach((img) => img.setTint(color));
     hit.clearTintPanel = () => images.forEach((img) => img.clearTint());
     hit.setPanelAlpha = (alpha) => images.forEach((img) => img.setAlpha(alpha));
+    // Real cap width in px, so callers can inset text past the
+    // decorative wood-knot/scroll-curl art instead of using a flat
+    // margin that assumes a plain rectangle background. Also exposed
+    // as ready-to-use left/right text x-positions with a small gap
+    // past the cap, since every row/header needs exactly this.
+    hit.capWidth = capW;
+    hit.textLeft = x + capW + 8;
+    hit.textRight = x + w - capW - 8;
 
     return hit;
   }
@@ -223,7 +231,7 @@ export class SettingsScene extends Phaser.Scene {
     const bg = this.createPanel(this.margin, y, width - this.margin * 2, headerHeight, 'wood');
     bg.setInteractive({ useHandCursor: true });
 
-    const labelText = this.add.text(this.margin + 14, y, label.toUpperCase(), {
+    const labelText = this.add.text(bg.textLeft, y, label.toUpperCase(), {
       fontFamily: 'Arial',
       fontSize: '19px',
       fontStyle: 'bold',
@@ -233,7 +241,7 @@ export class SettingsScene extends Phaser.Scene {
     });
     labelText.setOrigin(0, 0.5);
 
-    const chevron = this.add.text(width - this.margin - 14, y, collapsed ? '\u25B8' : '\u25BE', {
+    const chevron = this.add.text(bg.textRight, y, collapsed ? '\u25B8' : '\u25BE', {
       fontFamily: 'Arial',
       fontSize: '20px',
       fontStyle: 'bold',
@@ -285,7 +293,7 @@ export class SettingsScene extends Phaser.Scene {
     bg.setTintPanel(0x9adf8f);
     bg.setInteractive({ useHandCursor: true });
 
-    const labelText = this.add.text(this.margin + 14, y, 'Sign in with Google', {
+    const labelText = this.add.text(bg.textLeft, y, 'Sign in with Google', {
       fontFamily: 'Arial',
       fontSize: '15px',
       fontStyle: 'bold',
@@ -306,7 +314,7 @@ export class SettingsScene extends Phaser.Scene {
     const bg = this.rowBackground(y);
     const displayName = getDisplayName() || 'Signed in';
 
-    const avatarX = this.margin + 26;
+    const avatarX = bg.textLeft + 16;
     if (this.textures.exists('userAvatarSettings')) {
       const avatar = this.add.image(avatarX, y, 'userAvatarSettings');
       avatar.setDisplaySize(32, 32);
@@ -316,7 +324,7 @@ export class SettingsScene extends Phaser.Scene {
       this.add.circle(avatarX, y, 16, 0x8f5c3c, 1).setStrokeStyle(1, 0x3a2411, 0.8);
     }
 
-    const labelText = this.add.text(this.margin + 48, y, displayName, {
+    const labelText = this.add.text(avatarX + 30, y, displayName, {
       fontFamily: 'Arial',
       fontSize: '15px',
       fontStyle: 'bold',
@@ -331,14 +339,14 @@ export class SettingsScene extends Phaser.Scene {
     const bg = this.rowBackground(y);
     bg.setPanelAlpha(0.5);
 
-    const labelText = this.add.text(this.margin + 14, y, label, {
+    const labelText = this.add.text(bg.textLeft, y, label, {
       fontFamily: 'Arial',
       fontSize: '15px',
       color: INK_DISABLED,
     });
     labelText.setOrigin(0, 0.5);
 
-    const noteText = this.add.text(this.scale.width - this.margin - 14, y, note, {
+    const noteText = this.add.text(bg.textRight, y, note, {
       fontFamily: 'Arial',
       fontSize: '13px',
       fontStyle: 'italic',
@@ -350,16 +358,16 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   addStaticRow(y, label, value) {
-    this.rowBackground(y);
+    const bg = this.rowBackground(y);
 
-    const labelText = this.add.text(this.margin + 14, y, label, {
+    const labelText = this.add.text(bg.textLeft, y, label, {
       fontFamily: 'Arial',
       fontSize: '15px',
       color: INK,
     });
     labelText.setOrigin(0, 0.5);
 
-    const valueText = this.add.text(this.scale.width - this.margin - 14, y, value, {
+    const valueText = this.add.text(bg.textRight, y, value, {
       fontFamily: 'Arial',
       fontSize: '15px',
       color: INK_MUTED,
@@ -373,7 +381,7 @@ export class SettingsScene extends Phaser.Scene {
     const bg = this.rowBackground(y);
     bg.setInteractive({ useHandCursor: true });
 
-    const labelText = this.add.text(this.margin + 14, y, label, {
+    const labelText = this.add.text(bg.textLeft, y, label, {
       fontFamily: 'Arial',
       fontSize: '15px',
       color: INK,
@@ -382,7 +390,7 @@ export class SettingsScene extends Phaser.Scene {
 
     const trackWidth = 44;
     const trackHeight = 24;
-    const trackX = this.scale.width - this.margin - 14 - trackWidth / 2;
+    const trackX = bg.textRight - trackWidth / 2;
     const onColor = 0x4caf50;
     const offColor = 0x8a7658;
 
@@ -413,14 +421,14 @@ export class SettingsScene extends Phaser.Scene {
     const bg = this.rowBackground(y);
     bg.setInteractive({ useHandCursor: true });
 
-    const labelText = this.add.text(this.margin + 14, y, label, {
+    const labelText = this.add.text(bg.textLeft, y, label, {
       fontFamily: 'Arial',
       fontSize: '15px',
       color: INK,
     });
     labelText.setOrigin(0, 0.5);
 
-    const chevron = this.add.text(this.scale.width - this.margin - 14, y, '\u2192', {
+    const chevron = this.add.text(bg.textRight, y, '\u2192', {
       fontFamily: 'Arial',
       fontSize: '16px',
       fontStyle: 'bold',
@@ -441,7 +449,7 @@ export class SettingsScene extends Phaser.Scene {
     bg.setTintPanel(0xe6a89c);
     bg.setInteractive({ useHandCursor: true });
 
-    const labelText = this.add.text(this.margin + 14, y, 'Reset Progress', {
+    const labelText = this.add.text(bg.textLeft, y, 'Reset Progress', {
       fontFamily: 'Arial',
       fontSize: '15px',
       fontStyle: 'bold',
@@ -473,7 +481,7 @@ export class SettingsScene extends Phaser.Scene {
   addSignOutRow(y) {
     const bg = this.rowBackground(y);
 
-    const labelText = this.add.text(this.margin + 14, y, 'Sign Out', {
+    const labelText = this.add.text(bg.textLeft, y, 'Sign Out', {
       fontFamily: 'Arial',
       fontSize: '15px',
       color: isSignedIn() ? INK : INK_DISABLED,
@@ -482,7 +490,7 @@ export class SettingsScene extends Phaser.Scene {
 
     if (!isSignedIn()) {
       bg.setPanelAlpha(0.5);
-      const note = this.add.text(this.scale.width - this.margin - 14, y, 'Not signed in', {
+      const note = this.add.text(bg.textRight, y, 'Not signed in', {
         fontFamily: 'Arial',
         fontSize: '13px',
         fontStyle: 'italic',
