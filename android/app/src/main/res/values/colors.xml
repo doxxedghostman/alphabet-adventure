@@ -1,10 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Matches the game's canvas/background purple (#241a3d) used across
-         SplashScene, MainMenuScene, SettingsScene, and the index.html
-         #game-frame background. -->
-    <color name="colorPrimary">#241a3d</color>
-    <color name="colorPrimaryDark">#1a1030</color>
+    <!-- Matches src/config.js's APP_BG_COLOR_HEX (#17241b, dark forest
+         green) - used across every scene's background/HUD bars and
+         index.html's #game-frame. This file previously had the old
+         purple (#241a3d) from before that color was consolidated to
+         green; it was never updated to match at the time, so native
+         Android theme colors and the actual in-game background had
+         drifted apart. Keep these in sync by hand if it changes again -
+         same caveat as index.html's copy of this constant. -->
+    <color name="colorPrimary">#17241b</color>
+    <color name="colorPrimaryDark">#0d150f</color>
     <!-- Matches the gold "Play" button / letter-tile accent color. -->
     <color name="colorAccent">#f2b705</color>
 </resources>
