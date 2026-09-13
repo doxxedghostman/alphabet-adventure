@@ -38,7 +38,7 @@ export const WORDS_3 = [
 ];
 
 export const WORDS_4 = [
-  'ABLE', 'ACES', 'ACID'  'ACNE', 'ACRE', 'ACTS', 'AERO', 'AGED',
+  'ABLE', 'ACES', 'ACID', 'ACNE', 'ACRE', 'ACTS', 'AERO', 'AGED',
   'AGES', 'AIDE', 'AIDS', 'AIMS', 'AKIN', 'ALAS', 'ALLY', 'ALOE', 'ALPS', 'ALSO',
   'ALTO', 'AMEN', 'AMID', 'AMMO', 'AMPS', 'ANON', 'ANTE', 'ANTI', 'ANTS', 'APEX', 'AQUA', 'ARCH',
   'AREA', 'ARES', 'ARIA', 'ARID', 'ARMS', 'ARMY', 'ARTS', 'ASKS', 'ATOM', 'AUNT', 'AURA', 'AUTO',
