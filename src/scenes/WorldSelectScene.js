@@ -1,106 +1,99 @@
 import Phaser from 'phaser';
-import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
+import { APP_BG_COLOR_RGB } from '../config.js';
 import { WORLDS } from '../data/worlds.js';
 import { isWorldUnlocked } from '../utils/progressStore.js';
 
-// World Map entry screen (PLAN.md §8.5): a 2-column grid of all 10
-// world tiles, scrollable vertically since 5 rows don't fit the fixed
-// canvas at once. Locked worlds show greyed-out with a padlock
-// overlay (code-drawn, like LevelPathScene's lock icon) - only World 1
-// is unlocked until its boss level is completed.
+// World Map entry screen (PLAN.md §8.5). Per chat: rather than
+// code-drawing each tile (frame/label/lock) piece by piece, the whole
+// screen is one baked illustration (world-map-bg.jpg, includes the
+// title banner, all 10 card frames + nameplates + gems, and a back
+// arrow already painted in) with invisible tap zones laid over the
+// card positions. Card positions are read off a uniform 2-column,
+// 5-row grid measured as fractions of the source art's 1024x1536
+// canvas (BG_W/BG_H below) - same "derive on-screen position from
+// native art coordinates x runtime scale" approach worlds.js/
+// HomeHubScene already use, rather than hardcoding screen-space
+// numbers that would drift if the art or bar width changed.
+//
+// The back button is the one interactive piece NOT left baked into
+// the art: it's the existing icon-back texture (already used by
+// CalendarScene, same round gem-ringed arrow design as the one
+// painted into the composite) laid on top with scrollFactor(0), so it
+// stays tappable and visible even if a screen is short enough to need
+// scrolling. Everything else scrolls together as part of the single
+// background image.
+//
+// Locked-world dimming/padlock was dropped along with the old
+// code-drawn tiles: isWorldUnlocked() currently always returns true
+// (see progressStore.js), so there's nothing to dim right now. If
+// that lock logic is ever re-enabled, this screen will need its own
+// pass again (the baked art has no "locked" state to fall back to).
+
+const BG_W = 1024;
+const BG_H = 1536;
+
+// Card grid, measured as fractions of BG_W/BG_H from the source art.
+// Close estimates from the mockup, not pixel-perfect - nudge these if
+// tap zones feel off once you see it live.
+const ROW_TOP_FRAC = [0.105, 0.255, 0.405, 0.555, 0.705];
+const ROW_HEIGHT_FRAC = 0.135;
+const COL_LEFT_FRAC = [0.03, 0.525];
+const COL_WIDTH_FRAC = 0.445;
+
+// Back arrow as painted into the composite - the interactive icon-back
+// sprite is laid directly on top of this spot.
+const BACK_CENTER_X_FRAC = 0.063;
+const BACK_CENTER_Y_FRAC = 0.048;
+const BACK_DIAMETER_FRAC = 0.095;
+
 export class WorldSelectScene extends Phaser.Scene {
   constructor() {
     super('WorldSelectScene');
   }
 
   preload() {
-    WORLDS.forEach((w) => this.load.image(w.thumbKey, w.thumbPath));
+    this.load.image('world-map-bg', 'assets/world-map-bg.jpg');
+    this.load.image('icon-back', 'assets/icon-back.png');
   }
 
   create() {
     const { width, height } = this.scale;
-    this.hudHeight = 56;
+    this.scale_ = width / BG_W;
+    this.bgDisplayHeight = BG_H * this.scale_;
 
-    this.layoutGrid(width);
-    this.drawTiles();
+    this.add.image(0, 0, 'world-map-bg').setOrigin(0).setDisplaySize(width, this.bgDisplayHeight);
+
+    this.contentHeight = this.bgDisplayHeight;
     this.setupDragScroll(height);
-    this.createHud(width);
+    this.drawTapZones();
+    this.createBackButton();
   }
 
-  layoutGrid(width) {
-    const margin = 16;
-    const gap = 12;
-    const columns = 2;
-    this.tileWidth = (width - margin * 2 - gap * (columns - 1)) / columns;
-    this.tileHeight = this.tileWidth * (360 / 480); // matches thumb aspect
-    this.labelHeight = 28;
-    this.rowHeight = this.tileHeight + this.labelHeight + gap;
-    this.margin = margin;
-    this.gap = gap;
-    this.contentTop = this.hudHeight + margin;
-
-    const rows = Math.ceil(WORLDS.length / columns);
-    this.contentHeight = this.contentTop + rows * this.rowHeight + margin;
-  }
-
-  drawTiles() {
+  drawTapZones() {
     const columns = 2;
     WORLDS.forEach((world, i) => {
       const col = i % columns;
       const row = Math.floor(i / columns);
-      const x = this.margin + col * (this.tileWidth + this.gap);
-      const y = this.contentTop + row * this.rowHeight;
-      this.drawTile(world, x, y);
+      const x = COL_LEFT_FRAC[col] * BG_W * this.scale_;
+      const y = ROW_TOP_FRAC[row] * BG_H * this.scale_;
+      const w = COL_WIDTH_FRAC * BG_W * this.scale_;
+      const h = ROW_HEIGHT_FRAC * BG_H * this.scale_;
+      this.drawTapZone(world, x, y, w, h);
     });
   }
 
-  drawTile(world, x, y) {
+  drawTapZone(world, x, y, w, h) {
     const unlocked = isWorldUnlocked(world.id);
-
-    const thumb = this.add.image(x, y, world.thumbKey).setOrigin(0);
-    thumb.setDisplaySize(this.tileWidth, this.tileHeight);
-
-    const frame = this.add.graphics();
-    frame.lineStyle(3, 0xffffff, 0.9);
-    frame.strokeRoundedRect(x, y, this.tileWidth, this.tileHeight, 10);
-
-    const label = this.add.text(x + this.tileWidth / 2, y + this.tileHeight + this.labelHeight / 2, world.name, {
-      fontFamily: 'Arial',
-      fontSize: '14px',
-      fontStyle: 'bold',
-      color: unlocked ? '#ffffff' : '#8f8f9c',
-      align: 'center',
-      wordWrap: { width: this.tileWidth },
-    });
-    label.setOrigin(0.5);
-
-    if (!unlocked) {
-      thumb.setTint(0x555555);
-      const overlay = this.add.graphics();
-      overlay.fillStyle(0x000000, 0.35);
-      overlay.fillRoundedRect(x, y, this.tileWidth, this.tileHeight, 10);
-      this.drawLockIcon(x + this.tileWidth / 2, y + this.tileHeight / 2);
-      return;
-    }
+    if (!unlocked) return; // no baked "locked" art to fall back to right now
 
     const hitArea = this.add
-      .rectangle(x, y, this.tileWidth, this.tileHeight, 0xffffff, 0)
+      .rectangle(x, y, w, h, 0xffffff, 0)
       .setOrigin(0)
       .setInteractive({ useHandCursor: true });
     hitArea.on('pointerup', () => {
       if (this.wasDrag()) return;
       this.selectWorld(world.id);
     });
-  }
-
-  drawLockIcon(x, y) {
-    const g = this.add.graphics();
-    g.fillStyle(0xffffff, 0.95);
-    g.fillRoundedRect(x - 13, y - 3, 26, 20, 4);
-    g.lineStyle(4, 0xffffff, 0.95);
-    g.beginPath();
-    g.arc(x, y - 5, 10, Math.PI, 0, false);
-    g.strokePath();
   }
 
   // --- Drag-to-scroll (same pattern as LevelPathScene) --------------------
@@ -145,31 +138,15 @@ export class WorldSelectScene extends Phaser.Scene {
     return this.dragDistance > 12;
   }
 
-  // --- HUD + navigation -----------------------------------------------------
+  // --- Back button -----------------------------------------------------
 
-  createHud(width) {
-    const bar = this.add.rectangle(0, 0, width, this.hudHeight, APP_BG_COLOR, 0.85).setOrigin(0);
-    bar.setScrollFactor(0);
+  createBackButton() {
+    const x = BACK_CENTER_X_FRAC * BG_W * this.scale_;
+    const y = BACK_CENTER_Y_FRAC * BG_H * this.scale_;
+    const diameter = BACK_DIAMETER_FRAC * BG_W * this.scale_;
 
-    const title = this.add.text(width / 2, this.hudHeight / 2, 'World Map', {
-      fontFamily: 'Arial',
-      fontSize: '22px',
-      fontStyle: 'bold',
-      color: '#ffffff',
-    });
-    title.setOrigin(0.5);
-    title.setScrollFactor(0);
-
-    const backButton = this.add
-      .text(16, this.hudHeight / 2, '\u2190 Back', {
-        fontFamily: 'Arial',
-        fontSize: '18px',
-        fontStyle: 'bold',
-        color: '#ffd93d',
-      })
-      .setOrigin(0, 0.5)
-      .setScrollFactor(0)
-      .setInteractive({ useHandCursor: true });
+    const backButton = this.add.image(x, y, 'icon-back').setScrollFactor(0).setInteractive({ useHandCursor: true });
+    backButton.setDisplaySize(diameter, diameter);
 
     backButton.on('pointerup', () => {
       if (this.wasDrag()) return;
