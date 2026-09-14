@@ -31,7 +31,7 @@
 // once playtesting finds the per-length sweet spot isn't right for a
 // specific word.
 //
-// Levels 1-180 are authored so far (Candy Garden and beyond — see worlds.js/progressStore.js's LEVELS_PER_WORLD): every 5th level is type:'target', the rest are type:'free' with ramping score targets. Real content authoring for the remaining 20 of the planned 200-level list is still open (see PLAN.md §16 Phase 6).
+// All 200 levels authored (PLAN.md §16 Phase 6 content pass complete).
 export const LEVELS = [
   { id: 1, type: 'free', scoreTarget: 200, maxSwaps: 12 },
   { id: 2, type: 'free', scoreTarget: 300, maxSwaps: 14 },
@@ -213,6 +213,26 @@ export const LEVELS = [
   { id: 178, type: 'free', scoreTarget: 14400, maxSwaps: 45 },
   { id: 179, type: 'free', scoreTarget: 14500, maxSwaps: 45 },
   { id: 180, type: 'target', targetWord: 'ISLAND', maxSwaps: 26 },
+  { id: 181, type: 'free', scoreTarget: 14600, maxSwaps: 45 },
+  { id: 182, type: 'free', scoreTarget: 14700, maxSwaps: 45 },
+  { id: 183, type: 'free', scoreTarget: 14800, maxSwaps: 45 },
+  { id: 184, type: 'free', scoreTarget: 14900, maxSwaps: 45 },
+  { id: 185, type: 'target', targetWord: 'CASTLE', maxSwaps: 26 },
+  { id: 186, type: 'free', scoreTarget: 15000, maxSwaps: 45 },
+  { id: 187, type: 'free', scoreTarget: 15100, maxSwaps: 45 },
+  { id: 188, type: 'free', scoreTarget: 15200, maxSwaps: 45 },
+  { id: 189, type: 'free', scoreTarget: 15300, maxSwaps: 45 },
+  { id: 190, type: 'target', targetWord: 'FOREST', maxSwaps: 26 },
+  { id: 191, type: 'free', scoreTarget: 15400, maxSwaps: 45 },
+  { id: 192, type: 'free', scoreTarget: 15500, maxSwaps: 45 },
+  { id: 193, type: 'free', scoreTarget: 15600, maxSwaps: 45 },
+  { id: 194, type: 'free', scoreTarget: 15700, maxSwaps: 45 },
+  { id: 195, type: 'target', targetWord: 'CIRCUS', maxSwaps: 26 },
+  { id: 196, type: 'free', scoreTarget: 15800, maxSwaps: 45 },
+  { id: 197, type: 'free', scoreTarget: 15900, maxSwaps: 45 },
+  { id: 198, type: 'free', scoreTarget: 16000, maxSwaps: 45 },
+  { id: 199, type: 'free', scoreTarget: 16100, maxSwaps: 45 },
+  { id: 200, type: 'target', targetWord: 'MUSEUM', maxSwaps: 26 },
 ];
 
 export function getLevel(id) {
