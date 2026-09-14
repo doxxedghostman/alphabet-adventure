@@ -85,8 +85,7 @@ export class HomeHubScene extends Phaser.Scene {
     this.createBackground(width, height);
     this.createTopBar(width);
     this.createLogoAndMapPreview(width);
-    this.createIconColumn('left', 14);
-    this.createIconColumn('right', width - 14 - 100);
+    this.createIconGrid(width);
     this.createWordMapButton(width, height);
 
     // Set when returning from a successful Watch to Earn (see
@@ -228,48 +227,66 @@ export class HomeHubScene extends Phaser.Scene {
     // interactive, no idle animation.
     const blocks = this.add.image(width / 2, this.mapPreviewBottom + 64, 'hubLetterBlocks');
     blocks.setDisplaySize(width * 0.64, (width * 0.64) * (300 / 900));
+
+    // Top of the icon grid (see createIconGrid) - just below the
+    // letter blocks' bottom edge, with a little breathing room.
+    this.iconGridTop = blocks.y + blocks.displayHeight / 2 + 30;
   }
 
-  // --- Side icon columns ---------------------------------------------------
+  // --- Icon grid (moved here from side columns per chat - the empty
+  // stretch of background between the letter blocks and the Word Map
+  // button had nothing in it, while the icons were cramped into two
+  // thin side columns) -------------------------------------------------
 
-  createIconColumn(side, x) {
-    // Stripped down to the 4 icons actually worth building next (per
-    // chat) - see the header comment for why Gallery/Trophy/Coin Shop
-    // were cut rather than kept as before.
-    // Calendar is real now (CalendarScene) - the rest are still stubs.
-    const icons = side === 'left'
-      ? [{ key: 'iconShop', label: 'Shop \u2013 coming soon' }, { key: 'iconLeaderboard', label: 'Leaderboard', action: () => this.scene.start('LeaderboardScene') }]
-      : [{ key: 'iconCalendar', label: 'Daily Rewards', action: () => this.scene.start('CalendarScene') }, { key: 'iconVideo', label: 'Watch to Earn', action: () => this.handleWatchToEarn() }];
+  createIconGrid(width) {
+    // Shop/Leaderboard were the left column, Calendar/Video were the
+    // right column - kept as the same left/right pairing here (now
+    // top-row/bottom-row within each column) so the relocation doesn't
+    // scramble which icon someone expects to find near which other one.
+    const icons = [
+      { key: 'iconShop', label: 'Shop \u2013 coming soon' },
+      { key: 'iconCalendar', label: 'Daily Rewards', action: () => this.scene.start('CalendarScene') },
+      { key: 'iconLeaderboard', label: 'Leaderboard', action: () => this.scene.start('LeaderboardScene') },
+      { key: 'iconVideo', label: 'Watch to Earn', action: () => this.handleWatchToEarn() },
+    ];
 
-    // Enlarged again per chat (74px -> 92px display) - gap grown by
-    // more than the size increase (108 -> 130) so the bigger icons still
-    // clear each other with room to spare, not just touching edge-to-edge.
-    // Nudged down (92 -> 130) to clear the now-taller top bar/logo.
-    const top = 130;
-    const gap = 130;
-    icons.forEach(({ key, label, action }, i) => this.createColumnIcon(x, top + i * gap, key, label, action));
+    // 2x2 grid centered in the gap between the letter blocks
+    // (this.mapPreviewBottom + ~119 tall) and the Word Map button
+    // (top edge ~910 on the 516x1118 canvas) - see the layout comment
+    // on CANVAS_SIZE in config.js for where those numbers come from.
+    const colX = [width * 0.28, width * 0.72];
+    const rowY = [this.iconGridTop + 70, this.iconGridTop + 240];
+    const positions = [
+      [colX[0], rowY[0]], [colX[1], rowY[0]],
+      [colX[0], rowY[1]], [colX[1], rowY[1]],
+    ];
+
+    icons.forEach(({ key, label, action }, i) => {
+      const [cx, cy] = positions[i];
+      this.createGridIcon(cx, cy, key, label, action);
+    });
   }
 
   // `action`, when given, replaces the default "coming soon" toast -
-  // used by Calendar now that it's a real screen. Icons without one
-  // still just toast, same as before.
-  createColumnIcon(x, y, textureKey, label, action) {
+  // used by Calendar/Leaderboard/Video now that they're real screens.
+  // Icons without one still just toast, same as before. Takes CENTER
+  // coordinates directly (unlike the old side-column version this
+  // replaces, which took a top-left corner) since a symmetric grid is
+  // simpler to lay out from centers.
+  createGridIcon(cx, cy, textureKey, label, action) {
     const size = 100;
-    const cx = x + size / 2;
-    const cy = y + size / 2;
+    const displaySize = 140; // enlarged per chat now that they have room to breathe
 
     // No backing card - icons sit directly on the forest background.
     const icon = this.add.image(cx, cy, textureKey);
-    icon.setDisplaySize(92, 92);
-    // setDisplaySize gives this image a non-1 base scale (native art is
-    // 280x280, shown at 42x42, so baseScale ~= 0.15). The tap-bounce
+    icon.setDisplaySize(displaySize, displaySize);
+    // setDisplaySize gives this image a non-1 base scale. The tap-bounce
     // tween below must scale *relative to that*, not set scale to a
-    // literal 0.88 - doing that was the bug that made icons balloon up
-    // to ~6x size on every tap (0.88 absolute vs ~0.15 base), which is
-    // the "icon pops out" the person flagged.
+    // literal value - see the same note on the old createColumnIcon
+    // this replaces for the "icon pops out" bug that caused.
     const baseScale = icon.scale;
 
-    const hit = this.add.rectangle(x, y, size, size, 0xffffff, 0).setOrigin(0).setInteractive({ useHandCursor: true });
+    const hit = this.add.rectangle(cx, cy, size, size, 0xffffff, 0).setInteractive({ useHandCursor: true });
     hit.on('pointerdown', () => this.tweens.add({ targets: icon, scale: baseScale * 0.88, duration: 70 }));
     hit.on('pointerup', () => {
       this.tweens.add({ targets: icon, scale: baseScale, duration: 100 });
@@ -278,19 +295,13 @@ export class HomeHubScene extends Phaser.Scene {
     });
 
     // Slow float (per chat): a small, gentle up/down drift so the icon
-    // reads as alive rather than static, but always returns to and
-    // settles at the same home position - not the earlier glow/shine
-    // idle effect that got pulled for a "white blink" artifact (see
-    // header comment). This only tweens the icon's own y position, no
-    // alpha/tint/texture changes at all, so it's a different kind of
-    // animation and shouldn't be able to trigger that same bug. The
-    // invisible hit rectangle deliberately does NOT move with it - the
-    // ~7px drift is small enough that the tap target stays comfortably
-    // under the icon at every point in the float. Duration and start
-    // delay are both jittered per icon so all 4 don't bob in unison.
+    // reads as alive rather than static - see createIconGrid's sibling
+    // note above for why the hit rectangle deliberately doesn't move
+    // with it. Duration/delay jittered per icon so all 4 don't bob in
+    // unison.
     this.tweens.add({
       targets: icon,
-      y: cy - 7,
+      y: cy - 8,
       duration: 1700 + Phaser.Math.Between(-200, 200),
       delay: Phaser.Math.Between(0, 600),
       yoyo: true,
