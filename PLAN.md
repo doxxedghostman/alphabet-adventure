@@ -141,9 +141,11 @@ originals down to the 49-72KB/146-220KB range via resize-to-actual-
 display-size + JPEG (no transparency needed for either, so JPEG over
 PNG for the size win).
 
-- Two new scenes: `WorldSelectScene` (2x2 scrollable grid of world
+- Two new scenes: `WorldSelectScene` (2-column scrollable grid of world
   tiles, locked worlds shown greyed out with a padlock icon per the
-  mockup) and `LevelPathScene` (per-world winding path of 20 numbered
+  mockup — currently moot, see the lock-logic note above; the padlock
+  code path is still there, just unreachable while everything shows
+  unlocked) and `LevelPathScene` (per-world winding path of 20 numbered
   nodes over that world's background art, Start signpost at node 1,
   bigger gold-ringed node for the boss level at 20, Back button to
   return to World Select).
@@ -160,6 +162,12 @@ PNG for the size win).
 - Lock logic: a level is locked unless the previous level in its world
   is completed (world's own level 1 unlocks with the world); a world is
   locked unless the previous world's level 20 (boss) is completed.
+  **Currently disabled per chat** — `isWorldUnlocked()`/
+  `isLevelUnlocked()` in `progressStore.js` both hard-return `true`, so
+  every world/level shows unlocked for everyone regardless of
+  progress. The original gating logic is still in the file
+  (unreachable, not deleted) so it's a one-line revert if the lock
+  chain is wanted back — see update.md Milestone 40.
 - Node color in the mockup is decorative only (not tied to level type
   or difficulty) - deliberate choice, not an oversight.
 - Path reads bottom-to-top (node 1 at the bottom near Start, node 20 at
@@ -178,21 +186,41 @@ PNG for the size win).
   than per level, and avoids nodes overlapping background art badly.
 
 **Built:** progress store (`src/utils/progressStore.js`), `worlds.js`
-(all 10 worlds), `LevelPathScene` (hand-placed nodes for Candy Garden;
+(all 10 worlds, each now with a `gemColor` used by `WorldSelectScene`'s
+tile gems), `LevelPathScene` (hand-placed nodes for Candy Garden;
 the other 9 worlds use a generic serpentine fallback until their real
-paths get hand-tuned - they're locked/unreachable until then anyway),
-`WorldSelectScene` (2-column scrollable grid, lock overlay), and the
-full navigation chain: Main Menu Play -> World Select -> Level Path ->
-Board -> back, with `BoardScene` now calling `completeLevel()` on a
-win and routing "Next Level"/"World Map" based on whether the level
-just beaten was a world's boss (level 20).
+paths get hand-tuned - they're unreachable-by-design until then
+anyway, though currently reachable in practice since locks are
+disabled - see the lock-logic note above), `WorldSelectScene` (2-column
+scrollable grid, lock overlay), and the full navigation chain: Main
+Menu Play -> World Select -> Level Path -> Board -> back, with
+`BoardScene` now calling `completeLevel()` on a win and routing "Next
+Level"/"World Map" based on whether the level just beaten was a
+world's boss (level 20).
+
+`WorldSelectScene` went through a restyle per chat (see update.md
+Milestones 41-42): first tried as one baked composite illustration
+(title + all 10 card frames/nameplates/gems + back arrow in a single
+image) with invisible tap zones over the card positions. Reverted -
+the composite's fixed aspect ratio couldn't adapt to the game's fixed
+canvas (fit-to-width left a large empty gap on taller screens; scaling
+further to close the gap would've cropped real card content, not just
+decorative margin). Landed on a responsive procedural grid instead
+(tile size computed from device width, same as before), with each
+tile's frame/nameplate/gem drawn in code rather than baked into one
+image - keeps the ornate-ish look while staying responsive to any
+screen size, same as `HomeHubScene`'s icon grid.
 
 **Not done:** hand-placed node paths for worlds 2-10 (deferred until
-each is reachable/authored); the full 200-level content list is still
-only 5 demo levels (see levels.js's own note) so most level nodes past
-Candy Garden's first few currently load placeholder content via
-`getLevel()`'s fallback rather than unique target words/score
-targets - a content-authoring gap, not a World Map code gap.
+each is reachable/authored); the full 200-level content list is now 20
+of 200 (see levels.js's own note and update.md Milestone 39) so most
+level nodes past Candy Garden's first 20 currently load placeholder
+content via `getLevel()`'s fallback rather than unique target
+words/score targets - a content-authoring gap, not a World Map code
+gap. Also open: a pixel-accurate (transparent-background, not cropped)
+ornate frame/nameplate asset, if the code-drawn version's look isn't
+close enough to the mockup - see update.md Milestone 42 for how it'd
+slot in.
 
 ## 8.6 Home Hub — implementation notes
 
@@ -455,11 +483,12 @@ either directly from the player's swap or via a chained cascade —
 either way wins the level, even mid-chain, taking priority over running
 out of moves. Win and lose each end in a card popup (title, message,
 score, two buttons): win -> Next Level / Replay, lose -> Try Again /
-Main Menu. 5 levels exist: 4 `type: 'free'` (score-target demo levels
-- see §16 Phase 6 for why score target was chosen as the free-play
-objective) and 1 `type: 'target'` (BAG, level 5, built via the
-guaranteed-board generator - matches the "every 5th level" rule below;
-see update.md Milestone 38 for why this wasn't true until recently).
+Main Menu. 20 levels exist: 16 `type: 'free'` (score-target demo
+levels - see §16 Phase 6 for why score target was chosen as the
+free-play objective) and 4 `type: 'target'` (BAG/CAT/DOG/SUN at levels
+5/10/15/20, built via the guaranteed-board generator - matches the
+"every 5th level" rule below; see update.md Milestones 38-39 for the
+level-count history).
 Not yet built: World Map / Daily Challenge /
 Achievements / Settings on the main menu (still Play-only), obstacles,
 and special tiles — those stay Phase 3/4 as originally planned.
@@ -485,10 +514,10 @@ total) is a `type: 'target'` level (specific word, board generated via
 within `maxSwaps` swaps, any words count. Chosen over "find N words" or
 a bare move-limit objective since it reuses the existing scoring math
 directly and doubles as the star threshold for the planned §14 3-star
-meter. Both types are implemented in `BoardScene.js`/`levels.js`; only
-5 demo levels exist so far (3 target, 2 free) — authoring the full
-200-level list (words per world, score targets per difficulty tier) is
-still open. Build a level-data format
+meter. Both types are implemented in `BoardScene.js`/`levels.js`; 20 of the
+planned 200 levels exist so far (4 target, 16 free — all still within
+Candy Garden, world 1) — authoring the remaining 180 (words per world,
+score targets per difficulty tier) is still open. Build a level-data format
 so levels are defined as data, not hand-coded, e.g.:
 
 ```
