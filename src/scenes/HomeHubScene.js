@@ -137,11 +137,10 @@ export class HomeHubScene extends Phaser.Scene {
   // --- Top bar: avatar, name, currency, add-currency, settings -----------
 
   createTopBar(width) {
-    // Enlarged per chat (74 -> 96) along with everything else on this
-    // screen now that the canvas is a proper phone-height, not the old
-    // stubby 624-tall one - there's real room to make the header read as
-    // substantial instead of thin.
-    const barHeight = 96;
+    // Enlarged again per chat (96 -> 118) - the bar read as thin/short
+    // relative to the icons sitting on it, especially once those icons
+    // themselves got bigger below.
+    const barHeight = 118;
     const barY = 8;
 
     const bar = this.add.image(width / 2, barY, 'hubTopBar').setOrigin(0.5, 0);
@@ -151,18 +150,31 @@ export class HomeHubScene extends Phaser.Scene {
 
     // Avatar (placeholder - no account system yet; real profile icon +
     // account data coming with the Google sign-in / Supabase work).
-    this.add.circle(52, cy, 26, 0x8f5c3c, 1).setStrokeStyle(2, 0xffffff, 0.9);
-    this.add.text(52, cy, '\u{1F9D2}', { fontSize: '28px' }).setOrigin(0.5);
+    // Enlarged per chat (26 -> 30 radius) along with everything else here.
+    this.add.circle(52, cy, 30, 0x8f5c3c, 1).setStrokeStyle(2, 0xffffff, 0.9);
+    this.add.text(52, cy, '\u{1F9D2}', { fontSize: '32px' }).setOrigin(0.5);
 
-    // Lives (livesStore.js) - real icon art now (icon-life.png).
-    const livesX = width - 218;
-    const lifeIcon = this.add.image(livesX, cy, 'iconLife');
-    lifeIcon.setDisplaySize(32, 32);
-    this.add.text(livesX + 22, cy, `${getLivesStatus().lives}/${MAX_LIVES}`, {
+    // Bold/embossed "3D" number style (per chat) - a dark stroke plus a
+    // soft drop shadow reads as chunky/carved rather than flat, matching
+    // the logo's own chunky lettering. Shared by the lives and gem
+    // counts below rather than duplicated inline.
+    const numberStyle = {
       fontFamily: 'Arial',
-      fontSize: '18px',
       fontStyle: 'bold',
       color: '#8a5a1c',
+      stroke: '#4a2f10',
+      strokeThickness: 4,
+      shadow: { offsetX: 0, offsetY: 2, color: '#000000', blur: 2, fill: true },
+    };
+
+    // Lives (livesStore.js) - real icon art now (icon-life.png).
+    // Enlarged per chat (32 -> 38 icon, 18 -> 22 text).
+    const livesX = width - 222;
+    const lifeIcon = this.add.image(livesX, cy, 'iconLife');
+    lifeIcon.setDisplaySize(38, 38);
+    this.add.text(livesX + 24, cy, `${getLivesStatus().lives}/${MAX_LIVES}`, {
+      ...numberStyle,
+      fontSize: '22px',
     }).setOrigin(0, 0.5);
 
     // Currency: now reads a real balance (currencyStore.js), first
@@ -170,17 +182,17 @@ export class HomeHubScene extends Phaser.Scene {
     // hardcoded to 0 since nothing granted gems yet. The "+"
     // add-currency button stays removed (still no way to buy gems,
     // just earn them) rather than left as a dead tap target.
-    const currencyX = width - 128;
+    // Enlarged per chat (38 -> 44 icon, 20 -> 24 text).
+    const currencyX = width - 126;
     const gem = this.add.image(currencyX, cy, 'iconGem');
-    gem.setDisplaySize(38, 38);
-    this.add.text(currencyX + 26, cy, `${getGems()}`, {
-      fontFamily: 'Arial',
-      fontSize: '20px',
-      fontStyle: 'bold',
-      color: '#8a5a1c',
+    gem.setDisplaySize(44, 44);
+    this.add.text(currencyX + 28, cy, `${getGems()}`, {
+      ...numberStyle,
+      fontSize: '24px',
     }).setOrigin(0, 0.5);
 
-    this.createImageIconButton(width - 48, cy, 'iconSettings', () => this.scene.start('SettingsScene'), 58);
+    // Enlarged per chat (58 -> 64).
+    this.createImageIconButton(width - 50, cy, 'iconSettings', () => this.scene.start('SettingsScene'), 64);
   }
 
   // Real icon image (wooden settings tile, gem, etc.) with a tap
