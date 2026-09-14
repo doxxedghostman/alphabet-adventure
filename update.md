@@ -1685,3 +1685,42 @@ badge's measured center, matched empirically against the render, not
 computed from the art file). Re-verified against the same Playwright
 render after the fix - numbers now sit centered beside their badge,
 legible, sized to match the badges rather than dwarfed by them.
+### Milestone 37 — Calendar screen: professional pass (2-column grid, real back/claim art)
+
+Person marked up a screenshot of the Calendar (Daily Rewards) screen
+asking for a "more professional" look, plus two specific asset swaps.
+Landed as 3 pieces:
+
+1. **Day grid relayout.** Old grid was a lopsided 4-across-then-
+   3-across arrangement that didn't use the screen width well. Now 2
+   cards per row filling the width (Days 1-2, 3-4, 5-6), with Day 7
+   alone on its own row underneath, centered - it's the surprise-
+   booster day so it reads as a standout rather than just another grid
+   cell. Card width/height are computed from the available screen
+   width/height (not hardcoded), so this holds up across the device
+   aspect-ratio range `getCanvasSize()` supports. Card border switched
+   from a sharp-corner `Rectangle` stroke to a `Graphics`
+   `strokeRoundedRect()`, and each card got a small static drop shadow
+   for depth - both purely visual, no new animation (the only existing
+   animation, today's card gently pulsing, was kept - it's a
+   functional "this one's actionable" cue, not decoration).
+2. **Back button** - real gem-ringed back-arrow art
+   (`icon-back.png`, person-supplied, already background-removed)
+   replacing the plain "\u2190 Back" text link. Same baseScale-relative
+   tap-bounce pattern used everywhere else in this codebase.
+3. **Claim button** - real "CLAIM" medallion art (`icon-claim-
+   button.png`, person-supplied) replacing the old plain green
+   rectangle, with today's reward value ("+3 Gems", or "Mystery
+   Booster" on Day 7) shown as text underneath it, since the reward
+   amount isn't baked into the art. Sized by **height**, not width -
+   the source art is a squarish medallion (gem crown + ribbon), not a
+   wide bar, so the first pass sizing it like a typical full-width
+   button blew it up far too large; caught and fixed by actually
+   rendering it (see below) rather than shipping on the first attempt.
+   The "already claimed today" state is unchanged (plain gray
+   rectangle, no art needed since there's nothing to tap).
+
+Verified all three with the same real-render approach as Milestone 36
+(Playwright against a local vite preview, `window.game.scene.start(
+'CalendarScene')`) rather than shipping from source alone - caught the
+claim-button oversizing this way before it ever reached the person.
