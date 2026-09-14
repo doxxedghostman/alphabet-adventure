@@ -3,7 +3,7 @@ import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 import { getGems } from '../utils/currencyStore.js';
 import { getLivesStatus, MAX_LIVES } from '../utils/livesStore.js';
 import { showRewardedAd } from '../utils/adsStore.js';
-import { syncLocalProgressToCloud } from '../utils/authStore.js';
+import { syncLocalProgressToCloud, getAvatarUrl, isSignedIn } from '../utils/authStore.js';
 
 // Home Hub (per chat): sits between the splash/logo Main Menu and the
 // World Map. Modeled on the reference mockup image the user provided -
@@ -64,7 +64,14 @@ export class HomeHubScene extends Phaser.Scene {
     // Loaded here directly (not inherited from MainMenuScene's load order)
     // since this scene owns its own use of the logo.
     this.load.image('menuLogo', 'assets/menu-logo.png');
-    this.load.image('hubTopBar', 'assets/top-bar.png');
+    // Replaces the old plain wood bar + separately-drawn avatar circle/
+    // heart/gem/settings icons (per chat) - avatar, heart, gem, and
+    // settings art are now baked directly into one image. See
+    // createTopBar() for how the real profile photo and the lives/gem
+    // numbers get overlaid on top of the baked badges, and how the
+    // settings tap target lines up with the baked gear with no visible
+    // icon of its own to draw.
+    this.load.image('hubTopBarIcons', 'assets/top-bar-icons.png');
     this.load.image('hubWordMapButton', 'assets/word-map-button.png');
     this.load.image('hubMapPreviewCard', 'assets/map-preview-card.jpg');
     this.load.image('hubForestBg', 'assets/forest-background.jpg');
@@ -74,9 +81,15 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('iconLeaderboard', 'assets/icon-leaderboard.png');
     this.load.image('iconCalendar', 'assets/icon-calendar.png');
     this.load.image('iconVideo', 'assets/icon-video.png');
-    this.load.image('iconSettings', 'assets/icon-settings.png');
-    this.load.image('iconGem', 'assets/icon-gem.png');
-    this.load.image('iconLife', 'assets/icon-life.png');
+
+    // Real profile photo (Google avatar) to overlay on the baked-in
+    // avatar badge when signed in - same pattern as Settings' signed-in
+    // row. Falls back to the baked default face art when there's no
+    // photo (guest, or signed in but the provider gave no picture).
+    const avatarUrl = getAvatarUrl();
+    if (avatarUrl) {
+      this.load.image('userAvatarHub', avatarUrl);
+    }
   }
 
   create(sceneData) {
@@ -134,84 +147,95 @@ export class HomeHubScene extends Phaser.Scene {
     this.add.rectangle(0, 0, width, height, 0x1a1030, 0.15).setOrigin(0);
   }
 
-  // --- Top bar: avatar, name, currency, add-currency, settings -----------
+  // --- Top bar: avatar, hearts, gem, settings - all baked into one image --
 
   createTopBar(width) {
-    // Enlarged again per chat (96 -> 118) - the bar read as thin/short
-    // relative to the icons sitting on it, especially once those icons
-    // themselves got bigger below.
-    const barHeight = 118;
+    // New art (per chat) bakes the avatar/heart/gem/settings badges
+    // directly into the bar image itself, rather than a plain wood
+    // strip with those drawn separately on top. Native art is
+    // 805x310 - scaled to fit the bar width while keeping its own
+    // aspect ratio (unlike the old plain strip, forcing a mismatched
+    // height here would visibly squash the round badges into ovals).
+    // The 4 badge centers below were measured directly off that art
+    // (see the coordinate-grid overlay used to find them) - they're
+    // fixed to this specific image, not derived from anything dynamic.
+    const NATIVE_W = 805;
+    const NATIVE_H = 310;
+    const BADGE = {
+      avatar: { x: 78, y: 150, d: 124 },
+      heart: { x: 285, y: 142, d: 100 },
+      gem: { x: 505, y: 142, d: 105 },
+      gear: { x: 720, y: 150, d: 110 },
+    };
+
+    const displayW = width - 8;
+    const scale = displayW / NATIVE_W;
+    const displayH = NATIVE_H * scale;
+
+    // Positioned so the bar's actual painted content (which has some
+    // transparent margin above/below in the source art) starts at the
+    // same barY the old plain-strip bar used, not the image's own
+    // (0,0) corner.
     const barY = 8;
+    const CONTENT_TOP_NATIVE = 76; // where the wood shape actually starts in the source art
+    const imgTop = barY - CONTENT_TOP_NATIVE * scale;
+    const imgLeft = width / 2 - displayW / 2;
 
-    const bar = this.add.image(width / 2, barY, 'hubTopBar').setOrigin(0.5, 0);
-    bar.setDisplaySize(width - 8, barHeight);
+    this.add.image(width / 2, imgTop, 'hubTopBarIcons').setOrigin(0.5, 0).setDisplaySize(displayW, displayH);
 
-    const cy = barY + barHeight / 2;
+    // Maps a badge's native art coordinates to this bar's actual
+    // on-screen position at whatever scale it ended up at.
+    const toScreen = (b) => ({ x: imgLeft + b.x * scale, y: imgTop + b.y * scale, d: b.d * scale });
 
-    // Avatar (placeholder - no account system yet; real profile icon +
-    // account data coming with the Google sign-in / Supabase work).
-    // Enlarged per chat (26 -> 30 radius) along with everything else here.
-    this.add.circle(52, cy, 30, 0x8f5c3c, 1).setStrokeStyle(2, 0xffffff, 0.9);
-    this.add.text(52, cy, '\u{1F9D2}', { fontSize: '32px' }).setOrigin(0.5);
+    // --- Avatar: overlay the real Google profile photo when signed in
+    // (masked circular, sized to sit just inside the baked gold ring),
+    // otherwise leave the baked default face art showing as-is.
+    const avatarPos = toScreen(BADGE.avatar);
+    if (isSignedIn() && this.textures.exists('userAvatarHub')) {
+      const photoD = avatarPos.d * 0.82; // inset from the badge's outer gold ring
+      const avatar = this.add.image(avatarPos.x, avatarPos.y, 'userAvatarHub');
+      avatar.setDisplaySize(photoD, photoD);
+      const mask = this.add.circle(avatarPos.x, avatarPos.y, photoD / 2, 0xffffff).setVisible(false);
+      avatar.setMask(mask.createGeometryMask());
+    }
 
     // Bold/embossed "3D" number style (per chat) - a dark stroke plus a
     // soft drop shadow reads as chunky/carved rather than flat, matching
-    // the logo's own chunky lettering. Shared by the lives and gem
-    // counts below rather than duplicated inline.
+    // the logo's own chunky lettering. Sized down from the old
+    // full-width-bar version (22-24px) since these now have to fit in
+    // the much tighter gap between one baked badge and the next.
     const numberStyle = {
       fontFamily: 'Arial',
       fontStyle: 'bold',
       color: '#8a5a1c',
       stroke: '#4a2f10',
-      strokeThickness: 4,
-      shadow: { offsetX: 0, offsetY: 2, color: '#000000', blur: 2, fill: true },
+      strokeThickness: 3,
+      shadow: { offsetX: 0, offsetY: 1.5, color: '#000000', blur: 2, fill: true },
     };
 
-    // Lives (livesStore.js) - real icon art now (icon-life.png).
-    // Enlarged per chat (32 -> 38 icon, 18 -> 22 text).
-    const livesX = width - 222;
-    const lifeIcon = this.add.image(livesX, cy, 'iconLife');
-    lifeIcon.setDisplaySize(38, 38);
-    this.add.text(livesX + 24, cy, `${getLivesStatus().lives}/${MAX_LIVES}`, {
+    // --- Lives count, in the gap between the heart and gem badges.
+    const heartPos = toScreen(BADGE.heart);
+    this.add.text(heartPos.x + heartPos.d / 2 + 6, heartPos.y, `${getLivesStatus().lives}/${MAX_LIVES}`, {
       ...numberStyle,
-      fontSize: '22px',
+      fontSize: '16px',
     }).setOrigin(0, 0.5);
 
-    // Currency: now reads a real balance (currencyStore.js), first
-    // populated by the Calendar's gem rewards — per chat, previously
-    // hardcoded to 0 since nothing granted gems yet. The "+"
-    // add-currency button stays removed (still no way to buy gems,
-    // just earn them) rather than left as a dead tap target.
-    // Enlarged per chat (38 -> 44 icon, 20 -> 24 text).
-    const currencyX = width - 126;
-    const gem = this.add.image(currencyX, cy, 'iconGem');
-    gem.setDisplaySize(44, 44);
-    this.add.text(currencyX + 28, cy, `${getGems()}`, {
+    // --- Gem count, in the gap between the gem and gear badges.
+    const gemPos = toScreen(BADGE.gem);
+    this.add.text(gemPos.x + gemPos.d / 2 + 6, gemPos.y, `${getGems()}`, {
       ...numberStyle,
-      fontSize: '24px',
+      fontSize: '16px',
     }).setOrigin(0, 0.5);
 
-    // Enlarged per chat (58 -> 64).
-    this.createImageIconButton(width - 50, cy, 'iconSettings', () => this.scene.start('SettingsScene'), 64);
-  }
-
-  // Real icon image (wooden settings tile, gem, etc.) with a tap
-  // bounce. Uses the baseScale-relative tween pattern - see the icon
-  // pop-out fix in createColumnIcon() for why that matters (tweening
-  // to a literal scale value instead of baseScale * factor is what
-  // caused icons to balloon up on tap).
-  createImageIconButton(x, y, textureKey, onTap, size = 34) {
-    const icon = this.add.image(x, y, textureKey);
-    icon.setDisplaySize(size, size);
-    const baseScale = icon.scale;
-
-    const hit = this.add.circle(x, y, size / 2, 0xffffff, 0).setInteractive({ useHandCursor: true });
-    hit.on('pointerdown', () => this.tweens.add({ targets: icon, scale: baseScale * 0.85, duration: 70 }));
-    hit.on('pointerup', () => {
-      this.tweens.add({ targets: icon, scale: baseScale, duration: 100 });
-      onTap();
-    });
-    return icon;
+    // --- Settings: no icon to draw (it's baked in) - just an invisible
+    // hit zone sized to the gear badge so tapping it still navigates.
+    // No press-bounce here (unlike the old separately-drawn gear icon)
+    // since there's no isolated sprite for just that badge to animate -
+    // it's one flat image with everything painted into it.
+    const gearPos = toScreen(BADGE.gear);
+    this.add.circle(gearPos.x, gearPos.y, gearPos.d / 2, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true })
+      .on('pointerup', () => this.scene.start('SettingsScene'));
   }
 
   // --- Center: logo + decorative mini map preview -------------------------
