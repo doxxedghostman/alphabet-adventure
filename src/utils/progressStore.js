@@ -85,13 +85,20 @@ export function completeLevel(levelId) {
   }
 }
 
+// Per chat: all worlds/levels unlocked by default for everyone — the
+// previous-boss/previous-level gating below is disabled rather than
+// removed, so it's a one-line revert if the lock chain is wanted back.
 export function isWorldUnlocked(worldId) {
+  return true;
+  // eslint-disable-next-line no-unreachable
   if (worldId <= 1) return true;
   const previousBossId = levelIdFor(worldId - 1, LEVELS_PER_WORLD);
   return isLevelComplete(previousBossId);
 }
 
 export function isLevelUnlocked(worldId, levelNum) {
+  return true;
+  // eslint-disable-next-line no-unreachable
   if (!isWorldUnlocked(worldId)) return false;
   if (levelNum <= 1) return true;
   return isLevelComplete(levelIdFor(worldId, levelNum - 1));
