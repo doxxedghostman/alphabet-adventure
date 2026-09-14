@@ -1724,3 +1724,27 @@ Verified all three with the same real-render approach as Milestone 36
 (Playwright against a local vite preview, `window.game.scene.start(
 'CalendarScene')`) rather than shipping from source alone - caught the
 claim-button oversizing this way before it ever reached the person.
+### Milestone 38 — Fixed levels 1-3 wrongly being target-word (should only be level 5)
+
+Person noticed target words were showing up on levels 1-3, not just
+level 5 as the "every 5th level is target-word" rule requires. Root
+cause was already flagged in `levels.js`'s own comments but never
+fixed: levels 1-3 (BAG, CAT, GARDEN) were the original solvability
+test levels, built before the every-5th-level rule was decided; levels
+4-5 were added afterward as free-play demos without anyone going back
+to fix 1-3.
+
+Fixed: levels 1-4 are now all `type: 'free'` (score targets ramping
+200 -> 500 across 12-18 max swaps), level 5 is the one target-word
+level, now BAG instead of GARDEN - PLAN.md §3 calls for short, common
+target words on early levels ("CAT, BAG" are its own examples);
+GARDEN (6 letters, the board's max length) reads as later-world
+difficulty, not a level-5 one. Verified with real renders of both
+level 1 (now shows "Reach 200 points") and level 5 (now shows "Find:
+BAG") via the same Playwright/vite-preview approach as Milestones
+36-37, rather than trusting the data change alone.
+
+Still true, unchanged by this fix: only 5 demo levels exist out of the
+planned 200 - this was a correctness fix for what those 5 demo levels
+are, not the start of the real 200-level content authoring pass
+(PLAN.md §16 Phase 6, still the biggest open gap in the project).

@@ -31,17 +31,25 @@
 // once playtesting finds the per-length sweet spot isn't right for a
 // specific word.
 //
-// NOTE: ids below don't yet follow the final "every 5th level is
-// type:'target'" numbering (1-3 are target-word test levels from before
-// that decision, 4/5 are free-play demo levels added to prove the type
-// works) — renumbering/authoring the full 200-level list in the
-// 5th-level pattern is separate future content work, not done here.
+// Levels 1-4 are free-play, level 5 is the one target-word level —
+// matches the "every 5th level is type:'target'" rule. Previously
+// levels 1-3 were ALSO target-word (BAG, CAT, GARDEN) — leftover
+// solvability test levels from before that rule was decided, never
+// fixed once the rule landed. Per chat, folded 1-3 back into free-play
+// (score targets ramping 200 -> 500) and moved the one remaining
+// target-word level to id 5, using BAG rather than GARDEN — PLAN.md §3
+// says early levels should use short, common target words, and BAG/CAT
+// were the "early" examples given there; GARDEN (6 letters, the
+// board's max) reads as a later-world difficulty, not a level-5 one.
+// Real content authoring for the full 200-level list is still open
+// (see PLAN.md §16 Phase 6) — this is just fixing what the 5 demo
+// levels are, not that authoring pass.
 export const LEVELS = [
-  { id: 1, type: 'target', targetWord: 'BAG', maxSwaps: 15 },
-  { id: 2, type: 'target', targetWord: 'CAT', maxSwaps: 15 },
-  { id: 3, type: 'target', targetWord: 'GARDEN', maxSwaps: 25 },
-  { id: 4, type: 'free', scoreTarget: 300, maxSwaps: 15 },
-  { id: 5, type: 'free', scoreTarget: 600, maxSwaps: 18 },
+  { id: 1, type: 'free', scoreTarget: 200, maxSwaps: 12 },
+  { id: 2, type: 'free', scoreTarget: 300, maxSwaps: 14 },
+  { id: 3, type: 'free', scoreTarget: 400, maxSwaps: 16 },
+  { id: 4, type: 'free', scoreTarget: 500, maxSwaps: 18 },
+  { id: 5, type: 'target', targetWord: 'BAG', maxSwaps: 15 },
 ];
 
 export function getLevel(id) {

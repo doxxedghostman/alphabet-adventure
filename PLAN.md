@@ -455,10 +455,12 @@ either directly from the player's swap or via a chained cascade —
 either way wins the level, even mid-chain, taking priority over running
 out of moves. Win and lose each end in a card popup (title, message,
 score, two buttons): win -> Next Level / Replay, lose -> Try Again /
-Main Menu. 5 levels exist: 3 `type: 'target'` (BAG, CAT, GARDEN, built
-via the guaranteed-board generator) and 2 `type: 'free'` (score-target
-demo levels — see §16 Phase 6 for why score target was chosen as the
-free-play objective). Not yet built: World Map / Daily Challenge /
+Main Menu. 5 levels exist: 4 `type: 'free'` (score-target demo levels
+- see §16 Phase 6 for why score target was chosen as the free-play
+objective) and 1 `type: 'target'` (BAG, level 5, built via the
+guaranteed-board generator - matches the "every 5th level" rule below;
+see update.md Milestone 38 for why this wasn't true until recently).
+Not yet built: World Map / Daily Challenge /
 Achievements / Settings on the main menu (still Play-only), obstacles,
 and special tiles — those stay Phase 3/4 as originally planned.
 
