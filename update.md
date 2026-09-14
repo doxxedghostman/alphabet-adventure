@@ -1660,3 +1660,28 @@ earlier in this project. Landed at `public/assets/icon-life.png`,
 
 
 
+### Milestone 36 — Top bar lives/gem numbers: bigger, gold, embossed, actually legible
+
+Person flagged (with a marked-up screenshot) that the lives/gem
+numbers baked into the new top-bar art (`hubTopBarIcons`, added
+Milestone 30ish alongside the avatar/heart/gem/gear badges) were
+unreadable - tiny (16px), dark bronze (`#8a5a1c`) on top of a brown
+wood-grain background, and sitting visibly above vertical-center on
+the badge rather than centered on it. Verified this directly rather
+than guessing: built the app, ran a real headless-browser render via
+Playwright (`window.game.scene.start('HomeHubScene')` to jump straight
+past Splash/MainMenu, screenshot the canvas), and confirmed the exact
+"5/4" text and its position before touching anything.
+
+Fixed in `HomeHubScene.createTopBar()` with a `renderMetalNumber()`
+helper: draws two overlapping copies of the text - a dark bronze
+`#3d2408` copy offset +2/+2px behind, and a bright gold `#ffdf70` copy
+with a bronze stroke + drop shadow on top - which reads as embossed
+metal rather than flat text. Font size bumped 16px -> 26px (auto-
+shrinking in 2px steps if it would overflow the gap to the next badge,
+so a future 2-digit lives max like "10/10" can't spill onto the gem
+badge), and re-centered vertically on the badge (`+2` nudge from the
+badge's measured center, matched empirically against the render, not
+computed from the art file). Re-verified against the same Playwright
+render after the fix - numbers now sit centered beside their badge,
+legible, sized to match the badges rather than dwarfed by them.

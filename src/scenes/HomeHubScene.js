@@ -199,40 +199,59 @@ export class HomeHubScene extends Phaser.Scene {
       avatar.setMask(mask.createGeometryMask());
     }
 
-    // Bold/embossed "3D" number style (per chat) - a dark stroke plus a
-    // soft drop shadow reads as chunky/carved rather than flat, matching
-    // the logo's own chunky lettering. Sized down from the old
-    // full-width-bar version (22-24px) since these now have to fit in
-    // the much tighter gap between one baked badge and the next.
-    const numberStyle = {
-      fontFamily: 'Arial',
-      fontStyle: 'bold',
-      color: '#8a5a1c',
-      stroke: '#4a2f10',
-      strokeThickness: 3,
-      shadow: { offsetX: 0, offsetY: 1.5, color: '#000000', blur: 2, fill: true },
+    // --- Lives/gem counts: rendered as "big metal 3D gold" numbers (per
+    // chat) - a dark bronze back-copy offset down-right, plus a bright
+    // gold front copy with a bronze stroke and drop shadow on top, which
+    // reads as embossed metal rather than flat text. Previous style
+    // (small, dark #8a5a1c) blended straight into the wood grain and sat
+    // too high above the badge - both fixed here: bigger font, better
+    // contrast, vertically re-centered on the badge, and auto-shrunk if
+    // it would ever overflow the gap between this badge and the next one
+    // (e.g. lives ever going to a 2-digit max).
+    const renderMetalNumber = (x, y, text, maxWidth) => {
+      let fontSize = 26;
+      const style = (offset) => ({
+        fontFamily: 'Arial Black, Arial',
+        fontStyle: 'bold',
+        fontSize: `${fontSize}px`,
+        color: offset ? '#3d2408' : '#ffdf70',
+        stroke: offset ? '#000000' : '#7a4a12',
+        strokeThickness: fontSize * (offset ? 0.16 : 0.14),
+        shadow: offset ? undefined : { offsetX: 0, offsetY: 2, color: '#000000', blur: 2, fill: true },
+      });
+
+      // Shrink to fit before drawing anything, rather than drawing then
+      // measuring - avoids a visible resize flash and extra objects.
+      const probe = this.add.text(0, 0, text, style(false)).setVisible(false);
+      while (probe.width > maxWidth && fontSize > 14) {
+        fontSize -= 2;
+        probe.setStyle(style(false));
+      }
+      probe.destroy();
+
+      const back = this.add.text(x + 2, y + 2, text, style(true)).setOrigin(0, 0.5);
+      const front = this.add.text(x, y, text, style(false)).setOrigin(0, 0.5);
+      return [back, front];
     };
 
     // --- Lives count, in the gap between the heart and gem badges.
     const heartPos = toScreen(BADGE.heart);
-    this.add.text(heartPos.x + heartPos.d / 2 + 6, heartPos.y, `${getLivesStatus().lives}/${MAX_LIVES}`, {
-      ...numberStyle,
-      fontSize: '16px',
-    }).setOrigin(0, 0.5);
+    const gemPos = toScreen(BADGE.gem);
+    const gearPos = toScreen(BADGE.gear);
+    const heartGapStart = heartPos.x + heartPos.d / 2 + 6;
+    const heartGapEnd = gemPos.x - gemPos.d / 2 - 4;
+    renderMetalNumber(heartGapStart, heartPos.y + 2, `${getLivesStatus().lives}/${MAX_LIVES}`, heartGapEnd - heartGapStart);
 
     // --- Gem count, in the gap between the gem and gear badges.
-    const gemPos = toScreen(BADGE.gem);
-    this.add.text(gemPos.x + gemPos.d / 2 + 6, gemPos.y, `${getGems()}`, {
-      ...numberStyle,
-      fontSize: '16px',
-    }).setOrigin(0, 0.5);
+    const gemGapStart = gemPos.x + gemPos.d / 2 + 6;
+    const gemGapEnd = gearPos.x - gearPos.d / 2 - 4;
+    renderMetalNumber(gemGapStart, gemPos.y + 2, `${getGems()}`, gemGapEnd - gemGapStart);
 
     // --- Settings: no icon to draw (it's baked in) - just an invisible
     // hit zone sized to the gear badge so tapping it still navigates.
     // No press-bounce here (unlike the old separately-drawn gear icon)
     // since there's no isolated sprite for just that badge to animate -
     // it's one flat image with everything painted into it.
-    const gearPos = toScreen(BADGE.gear);
     this.add.circle(gearPos.x, gearPos.y, gearPos.d / 2, 0xffffff, 0)
       .setInteractive({ useHandCursor: true })
       .on('pointerup', () => this.scene.start('SettingsScene'));
