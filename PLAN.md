@@ -385,17 +385,19 @@ Milestone 34) — the rest below is still planned, not built.
   every 30 min (`src/utils/livesStore.js`), refillable via a
   guaranteed-reward rewarded ad on the "Out of Lives" wall
   (`BoardScene.showOutOfLivesWall`). Home Hub's top bar shows the
-  current count.
+  current count with real art (`icon-life.png`, Milestone 35).
 - **Bomb** — built: starts at 2, resets the current level for a fresh
   attempt (simplest reliable implementation: restarts the scene),
-  needs a tap-then-confirm ("Reset board?") before it fires. Passive
+  needs a tap-then-confirm ("Confirm?") before it fires. Real icon art
+  on the board's Bomb button (`icon-bomb.png`, Milestone 35). Passive
   regen over time is not built — right now the only ways to gain more
   are Calendar's Day 7 reward and Watch to Earn's reward pool.
 - **Shuffle economy** — built: starts at 5, the existing manual
-  Shuffle button now spends one and shows the remaining count; the
-  automatic `ensureSolvable()` safety-shuffle stays free (it's a
-  fairness mechanic, not a player action, so it doesn't touch this
-  supply). Same "no passive regen yet" gap as Bomb above.
+  Shuffle button now spends one and shows the remaining count with
+  real icon art (`icon-shuffle.png`, Milestone 35); the automatic
+  `ensureSolvable()` safety-shuffle stays free (it's a fairness
+  mechanic, not a player action, so it doesn't touch this supply).
+  Same "no passive regen yet" gap as Bomb above.
 - **Combo / streak multiplier** — still planned. Reward consecutive
   words found without a "dead" swap in between (×1 for one word, ×2
   for two in a row, etc., topping out at a "Super Swoop" label for

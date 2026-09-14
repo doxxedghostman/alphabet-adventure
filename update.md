@@ -1639,5 +1639,24 @@ instead of a generic message - passed through `scene.restart()`'s
 data rather than shown before the restart, since restarting tears
 down whatever was on screen.
 
+### Milestone 35 — Real icon art for Lives/Bomb/Shuffle (Ayobami-supplied), replacing the emoji placeholders
+
+Three images supplied (heart, shuffle arrows, bomb), all 500x500 with
+background already removed. Resized to 128x128 (their real in-game
+display size is 20-32px - full res was 700KB+ combined for something
+shown that small) and stripped of metadata before committing - same
+"compress to actual display size" approach used for the World Map art
+earlier in this project. Landed at `public/assets/icon-life.png`,
+`icon-shuffle.png`, `icon-bomb.png`.
+
+- Home Hub's lives readout: heart emoji -> `icon-life.png`.
+- `BoardScene`'s Shuffle button: `⟳` glyph -> `icon-shuffle.png`,
+  loaded via a new `preload()` on `BoardScene` (didn't have one before
+  - the board itself is entirely code-drawn, no other image assets).
+- `BoardScene`'s Bomb button: `💣` glyph -> `icon-bomb.png`. Its
+  confirm-armed label shortened from "Reset board?" to "Confirm?" at
+  the same time, since the button's text area is narrower now that an
+  icon sits to its left.
+
 
 

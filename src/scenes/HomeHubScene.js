@@ -76,6 +76,7 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('iconVideo', 'assets/icon-video.png');
     this.load.image('iconSettings', 'assets/icon-settings.png');
     this.load.image('iconGem', 'assets/icon-gem.png');
+    this.load.image('iconLife', 'assets/icon-life.png');
   }
 
   create(sceneData) {
@@ -154,10 +155,10 @@ export class HomeHubScene extends Phaser.Scene {
     this.add.circle(52, cy, 26, 0x8f5c3c, 1).setStrokeStyle(2, 0xffffff, 0.9);
     this.add.text(52, cy, '\u{1F9D2}', { fontSize: '28px' }).setOrigin(0.5);
 
-    // Lives (livesStore.js) - a heart emoji rather than new art per
-    // the same "own icon later" note on Bomb/Shuffle above.
+    // Lives (livesStore.js) - real icon art now (icon-life.png).
     const livesX = width - 218;
-    this.add.text(livesX, cy, '\u2764\uFE0F', { fontSize: '26px' }).setOrigin(0.5);
+    const lifeIcon = this.add.image(livesX, cy, 'iconLife');
+    lifeIcon.setDisplaySize(32, 32);
     this.add.text(livesX + 22, cy, `${getLivesStatus().lives}/${MAX_LIVES}`, {
       fontFamily: 'Arial',
       fontSize: '18px',

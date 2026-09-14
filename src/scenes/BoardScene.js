@@ -42,6 +42,11 @@ export class BoardScene extends Phaser.Scene {
     super('BoardScene');
   }
 
+  preload() {
+    this.load.image('boardIconShuffle', 'assets/icon-shuffle.png');
+    this.load.image('boardIconBomb', 'assets/icon-bomb.png');
+  }
+
   // Full-screen wall shown instead of the board when out of lives.
   // Auto-recovers (restarts straight into the level) the moment a life
   // regenerates while this is on screen, so the player never has to
@@ -239,9 +244,12 @@ export class BoardScene extends Phaser.Scene {
       .setOrigin(1, 0)
       .setStrokeStyle(1.5, 0xffffff, 0.4);
 
+    const icon = this.add.image(BOARD_PIXEL_SIZE.width - 20 - 92, 54 + 13, 'boardIconShuffle');
+    icon.setDisplaySize(20, 20);
+
     const label = this.add
-      .text(BOARD_PIXEL_SIZE.width - 20 - 50, 54 + 13, '', {
-        fontSize: '11px',
+      .text(BOARD_PIXEL_SIZE.width - 20 - 48, 54 + 13, '', {
+        fontSize: '12px',
         fontStyle: 'bold',
         color: '#ffffff',
         fontFamily: 'system-ui, sans-serif',
@@ -264,7 +272,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   updateShuffleLabel() {
-    this.shuffleButtonLabel.setText(`\u27F3 Shuffle (${getBoosters().shuffle})`);
+    this.shuffleButtonLabel.setText(`Shuffle (${getBoosters().shuffle})`);
   }
 
   // Bomb: "clears/resets the current board for another attempt"
@@ -280,9 +288,12 @@ export class BoardScene extends Phaser.Scene {
       .setOrigin(1, 0)
       .setStrokeStyle(1.5, 0xffffff, 0.4);
 
+    const icon = this.add.image(BOARD_PIXEL_SIZE.width - 20 - 92, 84 + 13, 'boardIconBomb');
+    icon.setDisplaySize(20, 20);
+
     const label = this.add
-      .text(BOARD_PIXEL_SIZE.width - 20 - 50, 84 + 13, '', {
-        fontSize: '11px',
+      .text(BOARD_PIXEL_SIZE.width - 20 - 48, 84 + 13, '', {
+        fontSize: '12px',
         fontStyle: 'bold',
         color: '#ffffff',
         fontFamily: 'system-ui, sans-serif',
@@ -302,7 +313,7 @@ export class BoardScene extends Phaser.Scene {
       }
       if (!this.bombConfirmArmed) {
         this.bombConfirmArmed = true;
-        this.bombButtonLabel.setText('Reset board?');
+        this.bombButtonLabel.setText('Confirm?');
         this.time.delayedCall(2500, () => {
           if (this.bombConfirmArmed) {
             this.bombConfirmArmed = false;
@@ -318,7 +329,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   updateBombLabel() {
-    this.bombButtonLabel.setText(`\u{1F4A3} Bomb (${getBoosters().bomb})`);
+    this.bombButtonLabel.setText(`Bomb (${getBoosters().bomb})`);
   }
 
   // Silent safety net: called after the board first appears and after every
