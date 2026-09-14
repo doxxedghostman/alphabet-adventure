@@ -20,8 +20,22 @@
 
 import { LEVELS_PER_WORLD, levelIdFor } from '../utils/progressStore.js';
 
+// `pathSpace` is the natural pixel size of that world's LevelPathScene
+// background art (bgPath above), i.e. the coordinate space the hand-
+// placed node points in levelPaths.js are expressed in. Defaults to
+// the original 600x900 art size; overridden per-world as each world's
+// background gets replaced with new full-bleed "baked-in nodes" art
+// (see LevelPathScene.js's header comment) at a different resolution.
+const DEFAULT_PATH_SPACE = { width: 600, height: 900 };
+
 export const WORLDS = [
-  { id: 1, name: 'Candy Garden', slug: 'candy-garden', gemColor: 0xff6fae },
+  {
+    id: 1,
+    name: 'Candy Garden',
+    slug: 'candy-garden',
+    gemColor: 0xff6fae,
+    pathSpace: { width: 1024, height: 1536 },
+  },
   { id: 2, name: 'Jungle Jumble', slug: 'jungle-jumble', gemColor: 0x4caf50 },
   { id: 3, name: 'Ocean Words', slug: 'ocean-words', gemColor: 0x29b6f6 },
   { id: 4, name: 'Dino Valley', slug: 'dino-valley', gemColor: 0xffa726 },
@@ -32,6 +46,7 @@ export const WORLDS = [
   { id: 9, name: 'Ancient Valley', slug: 'ancient-valley', gemColor: 0xffb300 },
   { id: 10, name: 'WordSwoop Kingdom', slug: 'wordswoop-kingdom', gemColor: 0xba68c8 },
 ].map((w) => ({
+  pathSpace: DEFAULT_PATH_SPACE,
   ...w,
   thumbKey: `${w.slug}-thumb`,
   bgKey: `${w.slug}-bg`,

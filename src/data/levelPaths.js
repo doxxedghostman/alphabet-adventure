@@ -1,44 +1,41 @@
-// Node coordinates for LevelPathScene's winding path, in the
-// background image's own pixel space (600x900 — see worlds.js's
-// bgPath) so they scale automatically with however the scene displays
-// that image. 20 nodes per world, node 1 at the bottom (Start), node
-// 20 at the top (boss) — path reads bottom-to-top per PLAN.md §8.5.
+// Node coordinates for LevelPathScene, in the background image's own
+// pixel space (see each world's `pathSpace` in worlds.js) so they
+// scale automatically with however the scene displays that image.
+// 20 nodes per world, node 1 at the bottom (Start), node 20 at the
+// top (boss) — path reads bottom-to-top per PLAN.md §8.5.
 //
-// Candy Garden's points below are hand-placed by eye against the
-// actual background art (public/assets/candy-garden-bg.jpg) to
-// roughly track its painted path. This is a first pass, not a pixel-
-// perfect trace — the art's curves are organic and hand-tuning exact
-// node-to-path alignment is a polish pass worth doing visually in the
-// game itself, not blind from here.
-//
-// Other worlds don't have hand-placed points yet (their LevelPathScene
-// isn't reachable yet anyway — only World 1 is unlocked at the start)
-// so CANDY_GARDEN_PATH is the only real entry; everything else falls
-// back to a generic serpentine via generateSerpentinePath(). Repeat
-// the hand-placement process per world as each one's content gets
-// built (see PLAN.md §8.5's build order).
-
+// Candy Garden's points below are the pixel centers of the medal
+// badges already baked into public/assets/candy-garden-bg.jpg
+// (1024x1536 — per chat, this replaced the old code-drawn-path art)
+// found by color-thresholding the art for the badges' pink/gold fill
+// and taking each blob's centroid, then ordered bottom-to-top by that
+// position — NOT by the number printed on each medal. The art's own
+// printed numbers actually skip 6 and 14 and repeat 13 and 18 (an art
+// generation slip), so they can't be trusted for ordering; position
+// order is what actually drives level unlock/select here, same as
+// before. Worth a fixed re-gen of the art if the mislabeled medals
+// bother us visually, but it's cosmetic only — doesn't affect play.
 const CANDY_GARDEN_PATH = [
-  { x: 300, y: 855 }, // 1: Start signpost, bottom of the path
-  { x: 200, y: 815 },
-  { x: 160, y: 745 },
-  { x: 215, y: 685 },
-  { x: 300, y: 660 },
-  { x: 375, y: 615 },
-  { x: 340, y: 555 },
-  { x: 255, y: 535 },
-  { x: 195, y: 490 },
-  { x: 245, y: 440 },
-  { x: 330, y: 425 },
-  { x: 390, y: 385 },
-  { x: 355, y: 335 },
-  { x: 270, y: 315 },
-  { x: 225, y: 265 },
-  { x: 280, y: 225 },
-  { x: 355, y: 210 },
-  { x: 385, y: 175 },
-  { x: 350, y: 150 },
-  { x: 385, y: 130 }, // 20: boss node, at the castle gate
+  { x: 329, y: 1340 }, // 1: Start, bottom of the path
+  { x: 721, y: 1171 },
+  { x: 436, y: 1166 },
+  { x: 436, y: 1032 },
+  { x: 699, y: 1022 },
+  { x: 689, y: 889 },
+  { x: 349, y: 854 },
+  { x: 590, y: 771 },
+  { x: 319, y: 752 },
+  { x: 447, y: 652 },
+  { x: 681, y: 599 },
+  { x: 736, y: 502 },
+  { x: 495, y: 475 },
+  { x: 660, y: 399 },
+  { x: 423, y: 390 },
+  { x: 748, y: 317 },
+  { x: 536, y: 311 },
+  { x: 450, y: 250 },
+  { x: 654, y: 240 },
+  { x: 555, y: 175 }, // 20: boss node, gold medal at the castle gate
 ];
 
 // Fallback for worlds without hand-placed points yet: an evenly-spaced
