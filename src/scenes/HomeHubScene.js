@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 import { getGems } from '../utils/currencyStore.js';
+import { getLivesStatus, MAX_LIVES } from '../utils/livesStore.js';
 import { showRewardedAd } from '../utils/adsStore.js';
 import { syncLocalProgressToCloud } from '../utils/authStore.js';
 
@@ -77,7 +78,7 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('iconGem', 'assets/icon-gem.png');
   }
 
-  create() {
+  create(sceneData) {
     const { width, height } = this.scale;
 
     this.createBackground(width, height);
@@ -86,6 +87,11 @@ export class HomeHubScene extends Phaser.Scene {
     this.createIconColumn('left', 14);
     this.createIconColumn('right', width - 14 - 100);
     this.createWordMapButton(width, height);
+
+    // Set when returning from a successful Watch to Earn (see
+    // handleWatchToEarn) - shown after restart rather than before it,
+    // since restart() tears down whatever toast was already on screen.
+    if (sceneData?.toastMessage) this.showComingSoonToast(sceneData.toastMessage);
   }
 
   // --- Background -----------------------------------------------------------
@@ -147,6 +153,17 @@ export class HomeHubScene extends Phaser.Scene {
     // account data coming with the Google sign-in / Supabase work).
     this.add.circle(52, cy, 26, 0x8f5c3c, 1).setStrokeStyle(2, 0xffffff, 0.9);
     this.add.text(52, cy, '\u{1F9D2}', { fontSize: '28px' }).setOrigin(0.5);
+
+    // Lives (livesStore.js) - a heart emoji rather than new art per
+    // the same "own icon later" note on Bomb/Shuffle above.
+    const livesX = width - 218;
+    this.add.text(livesX, cy, '\u2764\uFE0F', { fontSize: '26px' }).setOrigin(0.5);
+    this.add.text(livesX + 22, cy, `${getLivesStatus().lives}/${MAX_LIVES}`, {
+      fontFamily: 'Arial',
+      fontSize: '18px',
+      fontStyle: 'bold',
+      color: '#8a5a1c',
+    }).setOrigin(0, 0.5);
 
     // Currency: now reads a real balance (currencyStore.js), first
     // populated by the Calendar's gem rewards — per chat, previously
@@ -296,8 +313,14 @@ export class HomeHubScene extends Phaser.Scene {
     const result = await showRewardedAd();
 
     if (result.granted) {
+      const rewardLabel = {
+        gems: `+${result.amount} Gems!`,
+        bomb: 'You won a Bomb!',
+        shuffle: 'You won a Shuffle!',
+        life: '+1 Life!',
+      }[result.type] || 'Reward earned!';
       syncLocalProgressToCloud();
-      this.scene.restart();
+      this.scene.restart({ toastMessage: rewardLabel });
       return;
     }
 

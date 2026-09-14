@@ -376,45 +376,43 @@ use 10 Shuffles, use 10 Bombs, complete 50 levels, complete all 200
 levels. Lives entirely in a profile/achievements screen — doesn't
 touch board logic.
 
-## 14. Meta / main-menu systems (planned, not built)
+## 14. Meta / main-menu systems
 
-Everything below is a decision to add to the plan, not a build — these
-are meta-progression/economy features that should live in the main
-menu, profile, and level-complete screens rather than being new board
-mechanics. The board's job stays "swap letters, spell words"; these
-systems sit around it.
+Lives, Bomb, and the Shuffle economy are built now (see update.md
+Milestone 34) — the rest below is still planned, not built.
 
-- **Lives** — start at 5 (max 5), lose 1 on a failed level, regenerate
-  automatically (e.g. +1 every 30 min), optionally refillable via a
-  rewarded ad. Classic Candy-Crush-style return loop.
-- **Bombs** — a stronger booster than Shuffle: clears/resets the
-  current board for another attempt. Start with 2, regenerate slower
-  than Shuffle (e.g. +1 per 24h), harder to earn via ads (e.g. 3 ads
-  per +1) since it's more powerful. Needs a confirm dialog before use
-  ("Use Bomb? This will clear the current board.") to avoid accidental
-  taps.
-- **Shuffle economy** — Shuffle already exists as a board mechanic
-  (manual + auto via `ensureSolvable()`), but doesn't currently have a
-  supply limit. Adding one (e.g. start with 5, +1/hour, or watch an ad
-  for +1) is a main-menu/economy layer on top of the existing button,
-  not a change to the shuffle logic itself.
-- **Combo / streak multiplier** — reward consecutive words found
-  without a "dead" swap in between (×1 for one word, ×2 for two in a
-  row, etc., topping out at a "Super Swoop" label for 4+). This one
-  does touch board scoring (it's a multiplier on points earned), but
-  the reward/effect of it (score, animations) can surface via a HUD
-  element rather than any new board rule.
-- **Boss / Champion levels** — every 20th level (so, the last level of
-  each 10-world's block) becomes a milestone: unique board/background,
-  a harder target word, a bigger coin reward, a unique
-  completion animation. This is a content/presentation change on
-  existing target-word levels, not a new mechanic.
-- **3-star scoring** — each level gets 3 score thresholds shown as a
-  fillable meter under the level header; completing a level shows a
-  1/2/3-star result and saves the player's best score/stars/moves for
-  that level so they can replay to improve it. Mostly a level-complete-
-  screen and profile feature; the underlying score number already
-  exists.
+- **Lives** — built: 5 max, lose 1 on a failed level, regenerate +1
+  every 30 min (`src/utils/livesStore.js`), refillable via a
+  guaranteed-reward rewarded ad on the "Out of Lives" wall
+  (`BoardScene.showOutOfLivesWall`). Home Hub's top bar shows the
+  current count.
+- **Bomb** — built: starts at 2, resets the current level for a fresh
+  attempt (simplest reliable implementation: restarts the scene),
+  needs a tap-then-confirm ("Reset board?") before it fires. Passive
+  regen over time is not built — right now the only ways to gain more
+  are Calendar's Day 7 reward and Watch to Earn's reward pool.
+- **Shuffle economy** — built: starts at 5, the existing manual
+  Shuffle button now spends one and shows the remaining count; the
+  automatic `ensureSolvable()` safety-shuffle stays free (it's a
+  fairness mechanic, not a player action, so it doesn't touch this
+  supply). Same "no passive regen yet" gap as Bomb above.
+- **Combo / streak multiplier** — still planned. Reward consecutive
+  words found without a "dead" swap in between (×1 for one word, ×2
+  for two in a row, etc., topping out at a "Super Swoop" label for
+  4+). This one does touch board scoring (it's a multiplier on points
+  earned), but the reward/effect of it (score, animations) can surface
+  via a HUD element rather than any new board rule.
+- **Boss / Champion levels** — still planned. Every 20th level (so,
+  the last level of each 10-world's block) becomes a milestone: unique
+  board/background, a harder target word, a bigger coin reward, a
+  unique completion animation. This is a content/presentation change
+  on existing target-word levels, not a new mechanic.
+- **3-star scoring** — still planned. Each level gets 3 score
+  thresholds shown as a fillable meter under the level header;
+  completing a level shows a 1/2/3-star result and saves the player's
+  best score/stars/moves for that level so they can replay to improve
+  it. Mostly a level-complete-screen and profile feature; the
+  underlying score number already exists.
 
 ## 15. Monetization
 

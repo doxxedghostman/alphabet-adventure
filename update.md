@@ -1582,5 +1582,62 @@ this chat session; Ayobami still needs to run
 `npm run build && npx cap sync android` then open/run it in Android
 Studio to confirm a real ad actually loads and pays out on a phone.
 
+### Milestone 34 — Lives, Bomb, and the Shuffle economy are all real; Watch to Earn's reward is now a weighted pool instead of always gems
+
+Per chat, built directly (not batch by batch).
+
+**New `src/utils/livesStore.js`** — 5 max, lose 1 on a failed level,
+regenerate +1 every 30 min. Regen is computed lazily from an elapsed-
+time calculation on read, not a running timer, so it's correct even
+after the app was closed the whole wait. `BoardScene.create()` checks
+this before building anything else — at 0 lives, `showOutOfLivesWall()`
+covers the screen instead: a live countdown to the next free life, a
+"Watch Ad for a Life" button (calls the new `showRewardedAdForLife()`,
+which always grants exactly 1 life rather than the random pool below —
+a guaranteed refill is the whole point of this wall), and a Back
+button. The wall auto-recovers (restarts straight into the level) the
+moment a life regenerates while it's on screen. Home Hub's top bar now
+shows the current lives count (heart emoji, no dedicated art yet)
+next to the gem count.
+
+**`boosterStore.js` updated:** starting supply is now 2 Bomb / 5
+Shuffle (matching PLAN.md §14's numbers) instead of 0/0 — safe to
+change since these are only defaults for an install that's never
+touched the store, not a reset of anyone's existing count. Added
+`spendBooster(type)` (decrements by 1, returns false if already 0).
+
+**Bomb is spendable** (`BoardScene.createBombButton()`): resets the
+current level for a fresh attempt. Implemented as a plain
+`scene.restart()` with the same data the level was already launched
+with — far simpler and more reliable than hand-resetting moves/board/
+score mid-scene, and reuses the exact same tested init path a normal
+level start goes through. Needs a tap-then-confirm ("Reset board?",
+armed for 2.5s) before it fires, reusing the same tap-to-confirm
+pattern `SettingsScene`'s Reset Progress uses, rather than a separate
+modal dialog. No passive regen yet - Calendar's Day 7 reward and
+Watch to Earn (below) are the only ways to gain more right now.
+
+**Shuffle now has a supply** (`BoardScene.createShuffleButton()`): the
+existing manual Shuffle button spends 1 per use and shows the
+remaining count; blocks with an "Out of Shuffles!" toast at 0. The
+automatic `ensureSolvable()` safety-net shuffle (fires when no legal
+swap exists on the board) intentionally does **not** spend from this
+supply — it's a fairness mechanic that runs regardless of the player,
+not something they chose to do.
+
+**Watch to Earn's reward is now a weighted pool, not always 10
+gems** (`adsStore.js`): 70% gems (10), 10% Bomb, 10% Shuffle, 10%
+Life - deliberately weighted so Bomb/Shuffle/Life are a rare bonus
+("hard to earn" per chat) rather than an even split, with gems as the
+safe default most of the time. `showRewardedAd()`'s ad-loading logic
+was split out into a shared `playRewardedAdToCompletion()` helper so
+`showRewardedAdForLife()` (used by the Out of Lives wall above) can
+reuse the same load/show/error handling while guaranteeing a
+different, fixed reward. Home Hub's "Loading ad…" toast now shows the
+specific reward earned ("+10 Gems!", "You won a Bomb!", "+1 Life!")
+instead of a generic message - passed through `scene.restart()`'s
+data rather than shown before the restart, since restarting tears
+down whatever was on screen.
+
 
 

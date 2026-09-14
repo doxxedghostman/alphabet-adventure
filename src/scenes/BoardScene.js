@@ -17,6 +17,9 @@ import { getLevel, getNextLevelId } from '../data/levels.js';
 import { generateGuaranteedBoard, SCRAMBLE_COUNT_BY_LENGTH } from '../utils/levelGenerator.js';
 import { completeLevel, levelIdFor, LEVELS_PER_WORLD } from '../utils/progressStore.js';
 import { syncLocalProgressToCloud } from '../utils/authStore.js';
+import { getLivesStatus, loseLife, MAX_LIVES } from '../utils/livesStore.js';
+import { showRewardedAdForLife } from '../utils/adsStore.js';
+import { getBoosters, spendBooster } from '../utils/boosterStore.js';
 
 // Word-Swap mechanic:
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
@@ -39,10 +42,97 @@ export class BoardScene extends Phaser.Scene {
     super('BoardScene');
   }
 
+  // Full-screen wall shown instead of the board when out of lives.
+  // Auto-recovers (restarts straight into the level) the moment a life
+  // regenerates while this is on screen, so the player never has to
+  // manually retry once the timer runs out.
+  showOutOfLivesWall(sceneData) {
+    const { width, height } = this.scale;
+    this.add.rectangle(0, 0, width, height, APP_BG_COLOR, 1).setOrigin(0);
+
+    this.add
+      .text(width / 2, height * 0.35, '\u{1F494} Out of Lives', {
+        fontFamily: 'Arial',
+        fontSize: '26px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5);
+
+    this.livesWallCountdown = this.add
+      .text(width / 2, height * 0.35 + 40, '', {
+        fontFamily: 'Arial',
+        fontSize: '16px',
+        color: '#a79ccf',
+      })
+      .setOrigin(0.5);
+
+    const adBtnBg = this.add
+      .rectangle(width / 2, height * 0.35 + 100, width * 0.7, 54, 0x2e7d32, 1)
+      .setStrokeStyle(3, 0x1b4d1e, 1)
+      .setInteractive({ useHandCursor: true });
+    const adBtnLabel = this.add
+      .text(width / 2, height * 0.35 + 100, 'Watch Ad for a Life', {
+        fontFamily: 'Arial',
+        fontSize: '17px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5);
+
+    adBtnBg.on('pointerup', async () => {
+      adBtnLabel.setText('Loading ad\u2026');
+      const result = await showRewardedAdForLife();
+      if (result.granted) {
+        this.scene.restart(sceneData);
+      } else {
+        adBtnLabel.setText('Watch Ad for a Life');
+      }
+    });
+
+    this.worldId = sceneData?.worldId ?? null;
+
+    const backLabel = this.add
+      .text(width / 2, height * 0.35 + 160, '\u2190 Back', {
+        fontFamily: 'Arial',
+        fontSize: '16px',
+        fontStyle: 'bold',
+        color: '#ffd93d',
+      })
+      .setOrigin(0.5)
+      .setInteractive({ useHandCursor: true });
+    backLabel.on('pointerup', () => {
+      this.worldId
+        ? this.scene.start('LevelPathScene', { worldId: this.worldId })
+        : this.scene.start('MainMenuScene');
+    });
+
+    const tick = () => {
+      const status = getLivesStatus();
+      if (status.lives > 0) {
+        this.scene.restart(sceneData);
+        return;
+      }
+      const mins = Math.floor(status.msUntilNextLife / 60000);
+      const secs = Math.floor((status.msUntilNextLife % 60000) / 1000);
+      this.livesWallCountdown.setText(`Next life in ${mins}m ${String(secs).padStart(2, '0')}s`);
+    };
+    tick();
+    this.time.addEvent({ delay: 1000, loop: true, callback: tick });
+  }
+
   create(sceneData) {
     this.isBusy = false;
     this.score = 0;
     this.grid = [];
+
+    // Lives gate - per PLAN.md §14, now enforced for real. Checked
+    // before anything else builds so an out-of-lives player never
+    // even sees the board flash before the wall covers it.
+    if (getLivesStatus().lives <= 0) {
+      this.showOutOfLivesWall(sceneData);
+      return;
+    }
 
     this.level = getLevel(sceneData?.levelId ?? 1);
     this.nextLevelId = getNextLevelId(this.level.id);
@@ -65,6 +155,7 @@ export class BoardScene extends Phaser.Scene {
 
     this.createHeader();
     this.createShuffleButton();
+    this.createBombButton();
 
     this.createInitialBoard();
     this.setupInput();
@@ -144,13 +235,13 @@ export class BoardScene extends Phaser.Scene {
 
   createShuffleButton() {
     const bg = this.add
-      .rectangle(BOARD_PIXEL_SIZE.width - 20, 54, 84, 26, 0xffffff, 0.12)
+      .rectangle(BOARD_PIXEL_SIZE.width - 20, 54, 100, 26, 0xffffff, 0.12)
       .setOrigin(1, 0)
       .setStrokeStyle(1.5, 0xffffff, 0.4);
 
     const label = this.add
-      .text(BOARD_PIXEL_SIZE.width - 20 - 42, 54 + 13, '⟳ Shuffle', {
-        fontSize: '12px',
+      .text(BOARD_PIXEL_SIZE.width - 20 - 50, 54 + 13, '', {
+        fontSize: '11px',
         fontStyle: 'bold',
         color: '#ffffff',
         fontFamily: 'system-ui, sans-serif',
@@ -159,11 +250,75 @@ export class BoardScene extends Phaser.Scene {
 
     bg.setInteractive({ useHandCursor: true }).on('pointerup', () => {
       if (this.isBusy || this.levelOver) return;
+      if (!spendBooster('shuffle')) {
+        this.showWordToast('Out of Shuffles!', '#ff6b6b');
+        return;
+      }
+      this.updateShuffleLabel();
       this.shuffleBoard(false);
     });
 
     this.shuffleButtonBg = bg;
     this.shuffleButtonLabel = label;
+    this.updateShuffleLabel();
+  }
+
+  updateShuffleLabel() {
+    this.shuffleButtonLabel.setText(`\u27F3 Shuffle (${getBoosters().shuffle})`);
+  }
+
+  // Bomb: "clears/resets the current board for another attempt"
+  // (PLAN.md §14) - the simplest reliable way to do that is restarting
+  // the scene fresh (same init path as a normal level start), rather
+  // than trying to hand-reset moves/board/score mid-scene. Needs a
+  // confirm tap first (per §14's "avoid accidental taps" note) - same
+  // tap-once-then-confirm pattern SettingsScene uses for Reset
+  // Progress, rather than a separate modal dialog.
+  createBombButton() {
+    const bg = this.add
+      .rectangle(BOARD_PIXEL_SIZE.width - 20, 84, 100, 26, 0xffffff, 0.12)
+      .setOrigin(1, 0)
+      .setStrokeStyle(1.5, 0xffffff, 0.4);
+
+    const label = this.add
+      .text(BOARD_PIXEL_SIZE.width - 20 - 50, 84 + 13, '', {
+        fontSize: '11px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+        fontFamily: 'system-ui, sans-serif',
+      })
+      .setOrigin(0.5);
+
+    this.bombButtonBg = bg;
+    this.bombButtonLabel = label;
+    this.bombConfirmArmed = false;
+    this.updateBombLabel();
+
+    bg.setInteractive({ useHandCursor: true }).on('pointerup', () => {
+      if (this.isBusy || this.levelOver) return;
+      if (getBoosters().bomb <= 0) {
+        this.showWordToast('Out of Bombs!', '#ff6b6b');
+        return;
+      }
+      if (!this.bombConfirmArmed) {
+        this.bombConfirmArmed = true;
+        this.bombButtonLabel.setText('Reset board?');
+        this.time.delayedCall(2500, () => {
+          if (this.bombConfirmArmed) {
+            this.bombConfirmArmed = false;
+            this.updateBombLabel();
+          }
+        });
+        return;
+      }
+      this.bombConfirmArmed = false;
+      spendBooster('bomb');
+      this.restartLevel();
+    });
+  }
+
+  updateBombLabel() {
+    this.bombButtonLabel.setText(`\u{1F4A3} Bomb (${getBoosters().bomb})`);
   }
 
   // Silent safety net: called after the board first appears and after every
@@ -740,6 +895,7 @@ export class BoardScene extends Phaser.Scene {
   onLevelLost() {
     this.levelOver = true;
     this.deselectTile();
+    loseLife();
     const message = this.level.type === 'free'
       ? `Needed: ${this.scoreTarget} points (got ${this.score})`
       : `Needed: ${this.targetWord}`;
