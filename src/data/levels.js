@@ -31,11 +31,7 @@
 // once playtesting finds the per-length sweet spot isn't right for a
 // specific word.
 //
-// Levels 1-20 are authored so far (Candy Garden, world 1 — see
-// worlds.js/progressStore.js's LEVELS_PER_WORLD): every 5th level is
-// type:'target', the rest are type:'free' with ramping score targets.
-// Real content authoring for the remaining 180 of the planned 200-level
-// list is still open (see PLAN.md §16 Phase 6).
+// Levels 1-40 are authored so far (Candy Garden and beyond — see worlds.js/progressStore.js's LEVELS_PER_WORLD): every 5th level is type:'target', the rest are type:'free' with ramping score targets. Real content authoring for the remaining 160 of the planned 200-level list is still open (see PLAN.md §16 Phase 6).
 export const LEVELS = [
   { id: 1, type: 'free', scoreTarget: 200, maxSwaps: 12 },
   { id: 2, type: 'free', scoreTarget: 300, maxSwaps: 14 },
@@ -57,6 +53,26 @@ export const LEVELS = [
   { id: 18, type: 'free', scoreTarget: 1600, maxSwaps: 23 },
   { id: 19, type: 'free', scoreTarget: 1700, maxSwaps: 23 },
   { id: 20, type: 'target', targetWord: 'SUN', maxSwaps: 15 },
+  { id: 21, type: 'free', scoreTarget: 1800, maxSwaps: 24 },
+  { id: 22, type: 'free', scoreTarget: 1900, maxSwaps: 24 },
+  { id: 23, type: 'free', scoreTarget: 2000, maxSwaps: 25 },
+  { id: 24, type: 'free', scoreTarget: 2100, maxSwaps: 25 },
+  { id: 25, type: 'target', targetWord: 'HAT', maxSwaps: 15 },
+  { id: 26, type: 'free', scoreTarget: 2200, maxSwaps: 26 },
+  { id: 27, type: 'free', scoreTarget: 2300, maxSwaps: 26 },
+  { id: 28, type: 'free', scoreTarget: 2400, maxSwaps: 27 },
+  { id: 29, type: 'free', scoreTarget: 2500, maxSwaps: 27 },
+  { id: 30, type: 'target', targetWord: 'PIG', maxSwaps: 15 },
+  { id: 31, type: 'free', scoreTarget: 2600, maxSwaps: 28 },
+  { id: 32, type: 'free', scoreTarget: 2700, maxSwaps: 28 },
+  { id: 33, type: 'free', scoreTarget: 2800, maxSwaps: 29 },
+  { id: 34, type: 'free', scoreTarget: 2900, maxSwaps: 29 },
+  { id: 35, type: 'target', targetWord: 'COW', maxSwaps: 15 },
+  { id: 36, type: 'free', scoreTarget: 3000, maxSwaps: 30 },
+  { id: 37, type: 'free', scoreTarget: 3100, maxSwaps: 30 },
+  { id: 38, type: 'free', scoreTarget: 3200, maxSwaps: 31 },
+  { id: 39, type: 'free', scoreTarget: 3300, maxSwaps: 31 },
+  { id: 40, type: 'target', targetWord: 'BEE', maxSwaps: 15 },
 ];
 
 export function getLevel(id) {
