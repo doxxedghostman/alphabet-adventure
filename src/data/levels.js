@@ -31,7 +31,7 @@
 // once playtesting finds the per-length sweet spot isn't right for a
 // specific word.
 //
-// Levels 1-60 are authored so far (Candy Garden and beyond — see worlds.js/progressStore.js's LEVELS_PER_WORLD): every 5th level is type:'target', the rest are type:'free' with ramping score targets. Real content authoring for the remaining 140 of the planned 200-level list is still open (see PLAN.md §16 Phase 6).
+// Levels 1-80 are authored so far (Candy Garden and beyond — see worlds.js/progressStore.js's LEVELS_PER_WORLD): every 5th level is type:'target', the rest are type:'free' with ramping score targets. Real content authoring for the remaining 120 of the planned 200-level list is still open (see PLAN.md §16 Phase 6).
 export const LEVELS = [
   { id: 1, type: 'free', scoreTarget: 200, maxSwaps: 12 },
   { id: 2, type: 'free', scoreTarget: 300, maxSwaps: 14 },
@@ -93,6 +93,26 @@ export const LEVELS = [
   { id: 58, type: 'free', scoreTarget: 4800, maxSwaps: 39 },
   { id: 59, type: 'free', scoreTarget: 4900, maxSwaps: 39 },
   { id: 60, type: 'target', targetWord: 'RAT', maxSwaps: 15 },
+  { id: 61, type: 'free', scoreTarget: 5000, maxSwaps: 40 },
+  { id: 62, type: 'free', scoreTarget: 5100, maxSwaps: 40 },
+  { id: 63, type: 'free', scoreTarget: 5200, maxSwaps: 41 },
+  { id: 64, type: 'free', scoreTarget: 5300, maxSwaps: 41 },
+  { id: 65, type: 'target', targetWord: 'CUP', maxSwaps: 15 },
+  { id: 66, type: 'free', scoreTarget: 5400, maxSwaps: 42 },
+  { id: 67, type: 'free', scoreTarget: 5500, maxSwaps: 42 },
+  { id: 68, type: 'free', scoreTarget: 5600, maxSwaps: 43 },
+  { id: 69, type: 'free', scoreTarget: 5700, maxSwaps: 43 },
+  { id: 70, type: 'target', targetWord: 'FROG', maxSwaps: 18 },
+  { id: 71, type: 'free', scoreTarget: 5800, maxSwaps: 44 },
+  { id: 72, type: 'free', scoreTarget: 5900, maxSwaps: 44 },
+  { id: 73, type: 'free', scoreTarget: 6000, maxSwaps: 45 },
+  { id: 74, type: 'free', scoreTarget: 6100, maxSwaps: 45 },
+  { id: 75, type: 'target', targetWord: 'BIRD', maxSwaps: 18 },
+  { id: 76, type: 'free', scoreTarget: 6200, maxSwaps: 45 },
+  { id: 77, type: 'free', scoreTarget: 6300, maxSwaps: 45 },
+  { id: 78, type: 'free', scoreTarget: 6400, maxSwaps: 45 },
+  { id: 79, type: 'free', scoreTarget: 6500, maxSwaps: 45 },
+  { id: 80, type: 'target', targetWord: 'FISH', maxSwaps: 18 },
 ];
 
 export function getLevel(id) {
