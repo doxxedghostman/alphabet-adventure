@@ -281,10 +281,10 @@ Missing a day resets the streak to Day 1. The Home Hub currency
 display now reads this real gem balance (`currencyStore.js`) instead
 of the old hardcoded 0.
 
-**Not done:** Shop and Video icons are still stubs; account delete/data
-delete (needs a Supabase Edge Function, not a direct client call, to
-use the service-role key safely); display-name editing and a custom
-avatar picker (currently shows Google's own name/photo only); booster
+**Not done:** Shop icon is still a stub; account delete/data delete
+(needs a Supabase Edge Function, not a direct client call, to use the
+service-role key safely); display-name editing and a custom avatar
+picker (currently shows Google's own name/photo only); booster
 inventory has no way to be spent in a level yet.
 
 **Leaderboard is real now** (`src/scenes/LeaderboardScene.js` — see

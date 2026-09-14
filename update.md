@@ -1022,7 +1022,19 @@ vertical position, so there's no overlap in either axis. Top-bar
 elements (avatar/gem+label/settings) checked the same way - closest
 gap is ~30px between the gem's currency label and the settings icon.
 
-### Milestone 25 — Supabase schema live: `wordswoop_profiles` table, RLS, auto-provisioning trigger
+### Milestone 25 — Supabase schema *designed* (see correction below — it was never actually applied)
+
+**Correction, added later:** despite this milestone's title and the
+several later references to this schema as "live," the SQL below was
+never actually run against the real Supabase project. This surfaced
+when the Leaderboard's migration (Milestone 32) failed with `relation
+"public.wordswoop_profiles" does not exist`. Google sign-in itself
+worked fine (that's Supabase Auth, a separate system from this
+table), which is presumably why the gap went unnoticed for 7
+milestones. The full schema (table + both triggers + RLS + the
+leaderboard view) was finally applied together as part of Milestone
+32's fix. Anyone who signed in before that had no profile row
+created — see Milestone 32 for why they need to sign out/in once more.
 
 Per chat, decided: guest play stays fully unblocked (Home Hub, World
 Map, levels — everything) with no forced sign-in wall; sign-in is only
@@ -1527,6 +1539,48 @@ guests have no cloud profile row to ever appear in this at all.
 Wired into `main.js`'s scene list and Home Hub's Leaderboard icon
 (previously a "coming soon" toast, matching Calendar's pattern from
 Milestone 31).
+
+### Milestone 33 — Video (Watch to Earn) is real: rewarded AdMob ads
+
+Real AdMob account/ad unit, created by Ayobami in this session (not a
+placeholder or test ID):
+
+- App ID: `ca-app-pub-2830006716687955~2244040404`
+- Rewarded ad unit ID: `ca-app-pub-2830006716687955/8286704574`
+- Ad format is plain **Rewarded**, not "Rewarded interstitial" - the
+  latter auto-triggers at breaks like level completion, which doesn't
+  match an icon the player has to tap.
+- Reward configured in AdMob's own dashboard as "10 Gems" purely so
+  its reporting matches reality - the actual grant amount lives in
+  `adsStore.js`, not read from AdMob's config at runtime.
+
+**Added `@capacitor-community/admob@8.1.0`.** App ID placed in
+`android/app/src/main/AndroidManifest.xml` as the
+`com.google.android.gms.ads.APPLICATION_ID` meta-data (this ID is
+meant to be public - it identifies the app to the SDK, not a secret);
+also added the `ACCESS_NETWORK_STATE` permission AdMob expects.
+`npx cap sync android` run to register the plugin.
+
+**New `src/utils/adsStore.js`** — `initAds()` (called once at boot,
+`main.js`, no-op on web) and `showRewardedAd()`, which loads and shows
+the ad and resolves with `{ granted, amount }` or `{ granted: false,
+reason }`. Gems are only granted if the resolved reward amount is
+`> 0` — the plugin's web/browser stub always resolves with `amount: 0`
+(same as a native ad genuinely dismissed before completion), so both
+"running in a dev preview" and "closed the ad early" fall through the
+same no-grant path without needing separate platform-check logic.
+
+**Wired into Home Hub's Video icon**
+(`HomeHubScene.handleWatchToEarn()`), previously a "coming soon"
+toast: shows a "Loading ad…" toast, then either grants gems + syncs
+to cloud (signed-in players) + refreshes the currency display, or
+shows a toast explaining why not (not on native, closed early, or no
+ad available).
+
+**Not yet tested on-device** — this was built and build-verified in
+this chat session; Ayobami still needs to run
+`npm run build && npx cap sync android` then open/run it in Android
+Studio to confirm a real ad actually loads and pays out on a phone.
 
 
 

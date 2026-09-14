@@ -10,6 +10,7 @@ import { CalendarScene } from './scenes/CalendarScene.js';
 import { LeaderboardScene } from './scenes/LeaderboardScene.js';
 import { getCanvasSize, LETTERBOX_BG_HEX } from './config.js';
 import { initAuth } from './utils/authStore.js';
+import { initAds } from './utils/adsStore.js';
 
 const CANVAS_SIZE = getCanvasSize();
 
@@ -49,3 +50,8 @@ window.game = new Phaser.Game(config);
 // immediately with SplashScene regardless, since guest play never
 // waits on auth (see authStore.js's header comment).
 initAuth();
+
+// Fire-and-forget, same reasoning as initAuth() - AdMob's own init is
+// a no-op on web (see adsStore.js), so this is safe to call
+// unconditionally rather than checking platform here too.
+initAds();

@@ -1,6 +1,8 @@
 import Phaser from 'phaser';
 import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 import { getGems } from '../utils/currencyStore.js';
+import { showRewardedAd } from '../utils/adsStore.js';
+import { syncLocalProgressToCloud } from '../utils/authStore.js';
 
 // Home Hub (per chat): sits between the splash/logo Main Menu and the
 // World Map. Modeled on the reference mockup image the user provided -
@@ -219,7 +221,7 @@ export class HomeHubScene extends Phaser.Scene {
     // Calendar is real now (CalendarScene) - the rest are still stubs.
     const icons = side === 'left'
       ? [{ key: 'iconShop', label: 'Shop \u2013 coming soon' }, { key: 'iconLeaderboard', label: 'Leaderboard', action: () => this.scene.start('LeaderboardScene') }]
-      : [{ key: 'iconCalendar', label: 'Daily Rewards', action: () => this.scene.start('CalendarScene') }, { key: 'iconVideo', label: 'Watch to Earn \u2013 coming soon' }];
+      : [{ key: 'iconCalendar', label: 'Daily Rewards', action: () => this.scene.start('CalendarScene') }, { key: 'iconVideo', label: 'Watch to Earn', action: () => this.handleWatchToEarn() }];
 
     // Enlarged again per chat (74px -> 92px display) - gap grown by
     // more than the size increase (108 -> 130) so the bigger icons still
@@ -283,6 +285,31 @@ export class HomeHubScene extends Phaser.Scene {
   // and Leaderboard first) - until then, tapping gives feedback rather
   // than feeling broken/dead. Destroys any toast already on screen
   // first so rapid taps across different icons don't stack.
+  // Video icon ("Watch to Earn") - the 4th Home Hub icon, real now
+  // (see update.md Milestone 33). Shows a rewarded ad via adsStore.js
+  // and grants gems only if the player actually watched it through;
+  // every other outcome (no ad available, closed early, running in a
+  // browser preview) falls back to the same toast the stub icons use,
+  // just with a message specific to what happened.
+  async handleWatchToEarn() {
+    this.showComingSoonToast('Loading ad\u2026');
+    const result = await showRewardedAd();
+
+    if (result.granted) {
+      syncLocalProgressToCloud();
+      this.scene.restart();
+      return;
+    }
+
+    const message = {
+      'not-native': 'Ads only work in the installed app, not this preview.',
+      dismissed: 'Ad closed early \u2013 watch the whole thing to earn gems!',
+      error: 'No ad available right now \u2013 try again soon.',
+    }[result.reason] || 'No ad available right now \u2013 try again soon.';
+
+    this.showComingSoonToast(message);
+  }
+
   showComingSoonToast(text) {
     if (this._toastObjects) {
       this._toastObjects.forEach((obj) => obj.destroy());
