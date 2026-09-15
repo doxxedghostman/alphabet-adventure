@@ -1748,3 +1748,103 @@ Still true, unchanged by this fix: only 5 demo levels exist out of the
 planned 200 - this was a correctness fix for what those 5 demo levels
 are, not the start of the real 200-level content authoring pass
 (PLAN.md §16 Phase 6, still the biggest open gap in the project).
+
+### Milestone 39 — Levels 6-20 added (and a syntax bug that shipped with them, fixed)
+
+Person shared a read-only repo token to check the latest commit -
+found an automated "codex" commit had added levels 6-20 to
+`levels.js` (16 more `type: 'free'` score-target levels at 6-9/11-14/
+16-19, plus 3 more `type: 'target'` levels - CAT at 10, DOG at 15, SUN
+at 20 - continuing the "every 5th level" rule from Milestone 38),
+bringing the total from 5 to 20 of the planned 200.
+
+That commit also shipped a real syntax error: the file's leading
+comment block, the `export const LEVELS = [` opener, and levels 1-5
+had all lost their newlines and collapsed onto a single line. Since
+that line starts with `//`, the parser read the *entire* thing -
+comments and the array opener included - as one JS comment; levels
+6-20 then sat outside any array/export context, which is what broke
+`npm run build` (`Expected ';', '}' or <eof>` right at the first
+post-comment entry). Fixed by restoring the file's original line
+breaks (recovered from the previous commit's known-good version) and
+re-adding levels 6-20 with proper formatting - confirmed with `node
+--check` before pushing, rather than trusting the diff alone.
+
+### Milestone 40 — All worlds/levels unlocked by default
+
+Per chat: `isWorldUnlocked()` and `isLevelUnlocked()` in
+`progressStore.js` now hard-return `true` regardless of completion
+state, so every world and every level on the World Map shows unlocked
+for everyone. The original previous-boss/previous-level gating logic
+was left in place under an early `return true` (unreachable, not
+deleted) - a one-line revert if the lock chain is wanted back later.
+Completion tracking itself (`completedLevelIds`, stars, "resume where
+you left off") is untouched; only the lock *check* was bypassed.
+
+Flagged at the time: this ships to real players, not just for local
+testing - since only Candy Garden (world 1) has real level content,
+players can now reach worlds 2-10 and land on `getLevel()`'s
+placeholder fallback rather than unique content.
+
+### Milestone 41 — World Map restyle, attempt 1: single baked composite (reverted)
+
+Person's art (ChatGPT-generated) redesigned the World Map as one
+illustrated composite: wood "World Map" title plaque, all 10 world
+cards in ornate gold frames with wood nameplates and a colored gem
+each, jungle-vine border, gold round back-arrow - all painted into a
+single image. Per chat, rather than decomposing that into reusable
+frame/nameplate/gem assets, shipped it as one background image
+(`public/assets/world-map-bg.jpg`, compressed 3.5MB PNG -> 564KB JPEG)
+with 10 invisible tap zones laid over the card positions (grid
+measured as fractions of the source art's 1024x1536 canvas, scaled to
+device width at runtime) plus the existing `icon-back` sprite
+overlaid on the composite's baked-in back arrow for a crisp,
+independently-tappable back button.
+
+Reverted after the person's own screenshot showed the problem: fit to
+device width, the composite's fixed 2:3 aspect left a large empty gap
+below the content on the actual (taller) game canvas. Scaling up to
+close that gap would crop real card content off the left/right edges
+(not just decorative margin - the cards fill nearly the full width of
+the art), which isn't acceptable. Root cause: unlike `HomeHubScene`'s
+forest background (pure decoration, safe to crop/cover-scale), this
+composite baked actual interactive content into the same fixed-aspect
+image as the decoration, so it couldn't adapt to arbitrary screen
+sizes the way a code-driven layout can. `world-map-bg.jpg` is still in
+the repo but no longer referenced by any scene.
+
+### Milestone 42 — World Map restyle, attempt 2: responsive procedural grid (kept)
+
+Replaced attempt 1 with a code-driven 2-column grid again (same shape
+as the pre-restyle version, and the same philosophy as `HomeHubScene`'s
+icon grid): tile size computed from device width, so it fills whatever
+height the screen has and scrolls for the rest, rather than being
+locked to one baked image's aspect ratio.
+
+- Each tile reuses the original per-world thumbnail art (still in the
+  repo, briefly unused during attempt 1) and adds, drawn in code: a
+  gold double-stroke frame (thick gold outer + thinner bronze inner,
+  in place of the old single plain white stroke), a wood-brown
+  nameplate pill with the world name (gold text, bronze stroke -
+  same embossed-text spirit as Milestone 36's top-bar numbers), and a
+  small tinted diamond gem below it.
+- New `gemColor` field per world in `worlds.js`, eyeballed from the
+  mockup's own gem colors (pink/green/cyan/amber/purple/teal/purple/
+  blue/gold/magenta) - one shared gem shape tinted per-world rather
+  than needing 10 separate gem art assets.
+- Background is `HomeHubScene`'s existing forest art
+  (`forest-background.jpg`), cover-scaled and centered the same way -
+  reused rather than re-extracted from the mockup, and safe to crop
+  since it's pure decoration behind the (interactive) grid.
+- Back button/title bar unchanged in approach from before the
+  restyle - `icon-back` sprite + code-drawn title text, both
+  `scrollFactor(0)`.
+
+Won't be pixel-identical to the mockup (no carved-wood texture on the
+frame, no painted nameplate grain) since the frame/nameplate are
+`Graphics`-drawn rather than art. If a genuinely transparent-
+background frame/nameplate asset gets generated later (not cropped
+from a busy composite - color-based extraction against that art was
+judged too fragile to attempt), it can drop into `WorldSelectScene
+.drawTile()` in place of the `Graphics` calls without touching the
+grid/scroll logic.
