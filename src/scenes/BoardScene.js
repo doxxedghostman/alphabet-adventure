@@ -20,6 +20,7 @@ import { syncLocalProgressToCloud } from '../utils/authStore.js';
 import { getLivesStatus, loseLife, MAX_LIVES } from '../utils/livesStore.js';
 import { showRewardedAdForLife } from '../utils/adsStore.js';
 import { getBoosters, spendBooster } from '../utils/boosterStore.js';
+import { WORLD_FRAMES, getWorldFrame } from '../data/worldFrames.js';
 
 // Word-Swap mechanic:
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
@@ -45,10 +46,13 @@ export class BoardScene extends Phaser.Scene {
   preload() {
     this.load.image('boardIconShuffle', 'assets/icon-shuffle.png');
     this.load.image('boardIconBomb', 'assets/icon-bomb.png');
-    // Trial per chat: ornate board frame, Candy Garden (world 1) only for
-    // now - see createBoardFrame(). Loaded unconditionally since preload()
-    // doesn't know worldId yet, but it's one small image either way.
-    this.load.image('frame-candy-garden', 'assets/frame-candy-garden.png');
+    // Per-world board frame art (see worldFrames.js) - loaded
+    // unconditionally since preload() doesn't know worldId yet, but
+    // they're small (~400-550KB each) so loading all of them every
+    // time is cheap relative to a per-world conditional load.
+    Object.values(WORLD_FRAMES).forEach(({ frameKey, framePath }) => {
+      this.load.image(frameKey, framePath);
+    });
   }
 
   // Full-screen wall shown instead of the board when out of lives.
@@ -175,25 +179,23 @@ export class BoardScene extends Phaser.Scene {
 
   // ---------- board geometry (per-world tile size + centering) ----------
 
-  // Trial per chat: Candy Garden's frame needs a smaller grid to fit
-  // inside its border without covering the corners (see
-  // createBoardFrame()'s note), so tile size/gap are now per-instance
-  // rather than always the config.js constants - other worlds still get
-  // TILE_SIZE/TILE_GAP unchanged. This also computes how far to shift
-  // the grid+frame so they sit centered in the actual play area below
-  // the header, not pinned to its top-left corner - the real device
-  // canvas (getCanvasSize()) is often taller than the header+grid
-  // actually need, which is why the grid was landing high with empty
-  // space below it rather than centered.
+  // Per-world frame art (worldFrames.js) each needs its own tile
+  // size/gap to fit inside that frame's own safe zone without covering
+  // its corners (see createBoardFrame()) - so tile size/gap are looked
+  // up per-instance from the data table rather than always the
+  // config.js constants; worlds with no table entry still get the
+  // plain TILE_SIZE/TILE_GAP/no-frame look. This also computes how far
+  // to shift the grid+frame so they sit centered in the actual play
+  // area below the header, not pinned to its top-left corner - the
+  // real device canvas (getCanvasSize()) is often taller than the
+  // header+grid actually need, which is why the grid was landing high
+  // with empty space below it rather than centered.
   computeBoardGeometry() {
-    const isCandyGarden = this.worldId === 1;
-    // Pushed as large as the frame's safe zone allows (per chat: "make
-    // it large") - 342px grid vs the ~354px displayed safe height from
-    // the note below, leaving only ~6px buffer each side rather than
-    // the more conservative 15px used before.
-    this.tileSize = isCandyGarden ? 52 : TILE_SIZE;
-    this.tileGap = isCandyGarden ? 5 : TILE_GAP;
-    this.tileFontSize = isCandyGarden ? 22 : 30;
+    const worldFrame = getWorldFrame(this.worldId);
+    this.worldFrame = worldFrame;
+    this.tileSize = worldFrame ? worldFrame.tileSize : TILE_SIZE;
+    this.tileGap = worldFrame ? worldFrame.tileGap : TILE_GAP;
+    this.tileFontSize = worldFrame ? worldFrame.tileFontSize : 30;
     this.gridPixelSize = BOARD_SIZE * (this.tileSize + this.tileGap);
 
     // Horizontal: centers the grid in the canvas width. For the
@@ -212,35 +214,22 @@ export class BoardScene extends Phaser.Scene {
     this.gridTopY = BOARD_TOP_MARGIN + verticalSlack;
   }
 
-  // ---------- board frame (per-world art, trial) ----------
+  // ---------- board frame (per-world art) ----------
 
-  // Trial per chat: an ornate picture-frame behind the grid, for Candy
-  // Garden (world 1) only right now - other worlds still render plain
-  // until this look is confirmed.
-  //
-  // Sizing note: re-measured directly off frame-candy-garden.png's
-  // pixels (previous 58.5% figure here was wrong - not an actual
-  // measurement of the art, just a guess that badly undersized the
-  // grid, leaving a big ring of dead wood around it). The PNG is
-  // 700x660 (not square); its open "safe" area (clear of the corner
-  // lollipop flowers and edge icing) is a contiguous wood-colored
-  // block ~515x463px, i.e. ~73.6% of the art's width and ~70.2% of
-  // its height. setDisplaySize below stretches that 700x660 art into
-  // a 505x505 square, which scales the two axes slightly differently
-  // (505/700 horizontally, 505/660 vertically) - working through both
-  // gives a displayed safe area of ~371px wide x ~354px tall, so the
-  // *height* is the tighter constraint. Tiles are sized to a 324px
-  // grid (50px tiles + 4px gaps), which is ~92% of that 354px safe
-  // height - big enough to actually fill the frame, with a small
-  // buffer (~15px each side) so it doesn't touch the corner flowers.
+  // Generic per-world frame render, driven entirely by worldFrames.js -
+  // see that file's header comment for how each world's
+  // frameDisplaySize/tileSize/tileGap were derived (measured off the
+  // actual PNG pixels, not guessed). Worlds with no table entry get no
+  // frame at all and just render the plain tile grid, same as before
+  // any of this existed.
   createBoardFrame() {
-    if (this.worldId !== 1) return;
+    if (!this.worldFrame) return;
 
     const gridCenterX = this.boardOffsetX + this.gridPixelSize / 2;
     const gridCenterY = this.gridTopY + this.gridPixelSize / 2;
-    const frameSize = 505;
+    const { frameKey, frameDisplaySize } = this.worldFrame;
 
-    this.add.image(gridCenterX, gridCenterY, 'frame-candy-garden').setDisplaySize(frameSize, frameSize);
+    this.add.image(gridCenterX, gridCenterY, frameKey).setDisplaySize(frameDisplaySize, frameDisplaySize);
   }
 
   // ---------- header (level / moves / goal / score) ----------
