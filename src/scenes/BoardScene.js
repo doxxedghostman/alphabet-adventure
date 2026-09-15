@@ -187,9 +187,13 @@ export class BoardScene extends Phaser.Scene {
   // space below it rather than centered.
   computeBoardGeometry() {
     const isCandyGarden = this.worldId === 1;
-    this.tileSize = isCandyGarden ? 50 : TILE_SIZE;
-    this.tileGap = isCandyGarden ? 4 : TILE_GAP;
-    this.tileFontSize = isCandyGarden ? 21 : 30;
+    // Pushed as large as the frame's safe zone allows (per chat: "make
+    // it large") - 342px grid vs the ~354px displayed safe height from
+    // the note below, leaving only ~6px buffer each side rather than
+    // the more conservative 15px used before.
+    this.tileSize = isCandyGarden ? 52 : TILE_SIZE;
+    this.tileGap = isCandyGarden ? 5 : TILE_GAP;
+    this.tileFontSize = isCandyGarden ? 22 : 30;
     this.gridPixelSize = BOARD_SIZE * (this.tileSize + this.tileGap);
 
     // Horizontal: centers the grid in the canvas width. For the
@@ -713,10 +717,87 @@ export class BoardScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     container.add([bg, text]);
+
+    // Candy Garden glass-tile look, per chat: a translucent overlay
+    // sitting on top of the plain color rect (bg) rather than
+    // replacing it, since bg still needs its fill/stroke swapped
+    // around by setFillStyle/setTileHighlight elsewhere (solvability
+    // re-rolls, tap-to-select) - it's a static decoration, not
+    // per-letter state, so it never needs to be touched again after
+    // creation. Diagonal white-to-transparent sheen (top-left corner
+    // brightest) plus a faint dark wash in the bottom-right corner
+    // approximates a beveled glass surface; a soft white rim stroke on
+    // top of that sells the edge highlight.
+    if (this.worldId === 1) {
+      const half = this.tileSize / 2;
+      const glass = this.add.graphics();
+      glass.fillGradientStyle(0xffffff, 0xffffff, 0x000000, 0x000000, 0.55, 0.12, 0.1, 0.3);
+      glass.fillRoundedRect(-half, -half, this.tileSize, this.tileSize, 8);
+      glass.lineStyle(1.5, 0xffffff, 0.65);
+      glass.strokeRoundedRect(-half, -half, this.tileSize, this.tileSize, 8);
+      container.add(glass);
+      container.moveTo(glass, 1); // above bg, below text
+      container.bringToTop(text);
+    }
+
     container.setSize(this.tileSize, this.tileSize);
 
     const tile = { row, col, letter, container, bg, text };
     return tile;
+  }
+
+  // ---------- Candy Garden glass-shatter clear effect ----------
+
+  // Per chat: match-clears on Candy Garden's glass tiles shatter
+  // instead of just scaling/fading out. Cheap approximation - no
+  // texture slicing, just a handful of small colored shard rectangles
+  // spawned at the tile's position, flung outward with random angle/
+  // rotation, and faded over the same rough duration as the old tween
+  // so cascades don't feel slower. Shards are added directly to the
+  // scene (not the tile's container) so they can fly free of it while
+  // the container itself is destroyed immediately.
+  shatterTile(tile) {
+    const { x, y } = tile.container;
+    const color = tile.bg.fillColor;
+    const shardCount = 6;
+    const promises = [];
+
+    // Quick white flash to sell the "crack" moment before the shards
+    // fly, per chat's "shatter" pick over a plain crush/pop.
+    const flash = this.add.rectangle(x, y, this.tileSize, this.tileSize, 0xffffff, 0.85);
+    flash.setDepth(5);
+    promises.push(
+      this.tweenPromise({ targets: flash, alpha: 0, duration: 90, ease: 'Sine.easeIn' }).then(() =>
+        flash.destroy()
+      )
+    );
+
+    for (let i = 0; i < shardCount; i++) {
+      const shardSize = this.tileSize * Phaser.Math.FloatBetween(0.22, 0.4);
+      const shard = this.add.rectangle(x, y, shardSize, shardSize * 0.7, color);
+      shard.setAngle(Phaser.Math.Between(0, 360));
+      shard.setDepth(4);
+
+      const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
+      const distance = Phaser.Math.FloatBetween(this.tileSize * 0.6, this.tileSize * 1.1);
+      const targetX = x + Math.cos(angle) * distance;
+      const targetY = y + Math.sin(angle) * distance;
+
+      promises.push(
+        this.tweenPromise({
+          targets: shard,
+          x: targetX,
+          y: targetY,
+          angle: shard.angle + Phaser.Math.Between(-180, 180),
+          scale: 0,
+          alpha: 0,
+          duration: 220,
+          ease: 'Cubic.easeOut',
+        }).then(() => shard.destroy())
+      );
+    }
+
+    return Promise.all(promises);
   }
 
   // ---------- input (tap-tap or swipe to swap) ----------
@@ -1356,6 +1437,24 @@ export class BoardScene extends Phaser.Scene {
         tiles.push(tile);
         this.grid[row][col] = null;
       }
+    }
+
+    if (this.worldId === 1) {
+      // Candy Garden: glass-shatter per chat, instead of the plain
+      // scale/fade below. Container destroyed immediately since the
+      // shards (spawned at its position) fly independently of it.
+      await Promise.all(
+        tiles.map((tile) => {
+          // shatterTile reads container.x/y and bg.fillColor
+          // synchronously before it awaits anything, so it's safe to
+          // destroy the (now-visually-replaced) container right after
+          // calling it rather than waiting on it.
+          const promise = this.shatterTile(tile);
+          tile.container.destroy();
+          return promise;
+        })
+      );
+      return;
     }
 
     await Promise.all(
