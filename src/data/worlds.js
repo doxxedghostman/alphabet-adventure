@@ -34,7 +34,10 @@ export const WORLDS = [
     name: 'Candy Garden',
     slug: 'candy-garden',
     gemColor: 0xff6fae,
-    pathSpace: { width: 1024, height: 1536 },
+    // Vertically-extended version of the original art (see
+    // levelPaths.js's header comment) so width-only scaling always
+    // covers the tallest supported device viewport with no gap.
+    pathSpace: { width: 600, height: 1700 },
   },
   { id: 2, name: 'Jungle Jumble', slug: 'jungle-jumble', gemColor: 0x4caf50 },
   { id: 3, name: 'Ocean Words', slug: 'ocean-words', gemColor: 0x29b6f6 },

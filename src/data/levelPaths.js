@@ -4,38 +4,54 @@
 // 20 nodes per world, node 1 at the bottom (Start), node 20 at the
 // top (boss) — path reads bottom-to-top per PLAN.md §8.5.
 //
-// Candy Garden's points below are the pixel centers of the medal
-// badges already baked into public/assets/candy-garden-bg.jpg
-// (1024x1536 — per chat, this replaced the old code-drawn-path art)
-// found by color-thresholding the art for the badges' pink/gold fill
-// and taking each blob's centroid, then ordered bottom-to-top by that
-// position — NOT by the number printed on each medal. The art's own
-// printed numbers actually skip 6 and 14 and repeat 13 and 18 (an art
-// generation slip), so they can't be trusted for ordering; position
-// order is what actually drives level unlock/select here, same as
-// before. Worth a fixed re-gen of the art if the mislabeled medals
-// bother us visually, but it's cosmetic only — doesn't affect play.
+// Per chat: Candy Garden went through a "baked-in numbered medals"
+// art experiment and back - see git history around
+// c0ea4c4/3418edc if that's ever worth resurrecting. We're back to
+// the original plain scenery art (public/assets/candy-garden-bg.jpg)
+// with these nodes as code-drawn circles/lock icons (see
+// LevelPathScene.js's createCodeDrawnPath), which is what lets the
+// scene show the FULL image edge-to-edge with no side cropping - it
+// scales to the canvas width only and scrolls vertically, rather than
+// "cover" scaling (which crops left/right) like the medal-art
+// approach used.
+//
+// The original 600x900 art was too short for that width-only scaling
+// on tall phones though - once scaled to the 516-wide canvas it
+// mapped to well under the ~1342px a maxed-out-tall device's viewport
+// needs, leaving a flat-color gap below it (the "half the screen is
+// empty tan" bug from the first screenshot in this thread). Fixed by
+// vertically extending that same art (mirror-tiling its lower,
+// castle-free scenery band down to 600x1700 - comfortably taller than
+// any supported device viewport) rather than cropping or stretching
+// anything - see the extension script in chat history if regenerating.
+//
+// These 20 points are an evenly-spaced sine-wave serpentine over that
+// new 600x1700 canvas (not hand-placed) specifically so the nodes
+// have generous, consistent spacing top-to-bottom - per chat, the old
+// hand-placed points felt cramped. Retune amplitude/bends here if the
+// zigzag needs to hug the art's actual dirt path more closely once
+// real icon-button art replaces the plain circles.
 const CANDY_GARDEN_PATH = [
-  { x: 329, y: 1340 }, // 1: Start, bottom of the path
-  { x: 721, y: 1171 },
-  { x: 436, y: 1166 },
-  { x: 436, y: 1032 },
-  { x: 699, y: 1022 },
-  { x: 689, y: 889 },
-  { x: 349, y: 854 },
-  { x: 590, y: 771 },
-  { x: 319, y: 752 },
-  { x: 447, y: 652 },
-  { x: 681, y: 599 },
-  { x: 736, y: 502 },
-  { x: 495, y: 475 },
-  { x: 660, y: 399 },
-  { x: 423, y: 390 },
-  { x: 748, y: 317 },
-  { x: 536, y: 311 },
-  { x: 450, y: 250 },
-  { x: 654, y: 240 },
-  { x: 555, y: 175 }, // 20: boss node, gold medal at the castle gate
+  { x: 300, y: 1650 }, // 1: Start, bottom of the path
+  { x: 396, y: 1571 },
+  { x: 405, y: 1492 },
+  { x: 319, y: 1413 },
+  { x: 215, y: 1334 },
+  { x: 189, y: 1255 },
+  { x: 263, y: 1176 },
+  { x: 371, y: 1097 },
+  { x: 415, y: 1018 },
+  { x: 355, y: 939 },
+  { x: 245, y: 861 },
+  { x: 185, y: 782 },
+  { x: 229, y: 703 },
+  { x: 337, y: 624 },
+  { x: 411, y: 545 },
+  { x: 385, y: 466 },
+  { x: 281, y: 387 },
+  { x: 195, y: 308 },
+  { x: 204, y: 229 },
+  { x: 300, y: 150 }, // 20: boss node, on the castle courtyard steps
 ];
 
 // Fallback for worlds without hand-placed points yet: an evenly-spaced

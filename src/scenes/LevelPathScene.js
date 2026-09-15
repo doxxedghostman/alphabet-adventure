@@ -4,32 +4,27 @@ import { getWorld } from '../data/worlds.js';
 import { getPathNodes } from '../data/levelPaths.js';
 import { levelIdFor, isLevelUnlocked, isLevelComplete, LEVELS_PER_WORLD } from '../utils/progressStore.js';
 
-// Per-world node path (PLAN.md §8.5), shown as invisible tap targets
-// laid over that world's full-bleed background art - node 1 (Start)
-// at the bottom, node 20 (boss) at the top, path reads bottom-to-top.
+// Per-world node path (PLAN.md §8.5): a scrollable background with 20
+// code-drawn nodes (lock icon / number / star depending on progress),
+// node 1 (Start) at the bottom, node 20 (boss) at the top - path
+// reads bottom-to-top.
 //
-// Per chat: this used to be a shorter background scaled to the
-// canvas WIDTH only (letterboxing a flat-color gap below it on taller
-// phones - see the old screenshot that flagged this) with the path
-// line/circles/lock icons/numbers all code-drawn on top. Candy
-// Garden's art is now one full illustration with the path, medal
-// badges, numbers and stars already painted in, so this scene now
-// follows MainMenuScene's approach instead: "cover" scale (fills the
-// canvas completely, cropping minimal left/right overflow rather than
-// leaving a gap) with real interactive hit circles positioned over
-// each baked-in medal via the same poster-space -> screen-space
-// mapping MainMenuScene uses for its Play button. No more code-drawn
-// path line, node circles, or numbers for this world - only a thin
-// lock/complete overlay per node (see drawNodeOverlay) since the art
-// itself doesn't encode unlock/completion state.
+// Per chat: we tried baking numbered medals + the path directly into
+// the art (see git history around c0ea4c4/3418edc), but landed back
+// here - the plain art scales to the canvas WIDTH only and scrolls
+// vertically, so nothing is ever cropped left/right (unlike a "cover"
+// scale, which was cropping the sides of that medal art). The
+// original 600x900 art wasn't tall enough for that width-only scale
+// on very tall phones though, leaving a flat-color gap below it once
+// scrolled to the top - that's the "half the screen is empty tan" bug
+// from the first screenshot in this thread. Fixed by vertically
+// extending that same art to 600x1700 (comfortably taller than any
+// supported device viewport - see config.js's height range) rather
+// than cropping or stretching it.
 //
-// Other worlds haven't gotten this art treatment yet, so they still
-// render via the old code-drawn path (see drawCodePath/drawCodeNode
-// below) until each one's background gets replaced the same way (per
-// chat: one world at a time, pushed after each).
-//
-// Tapping an unlocked node goes straight to BoardScene. Tapping a
-// locked node just gives a small shake - no action.
+// Nodes are still plain circles for now - per chat, real icon-button
+// art is coming to replace them, at which point placeNode() is the
+// place to swap the graphics.fillCircle/text calls for actual images.
 export class LevelPathScene extends Phaser.Scene {
   constructor() {
     super('LevelPathScene');
@@ -38,8 +33,6 @@ export class LevelPathScene extends Phaser.Scene {
   init(sceneData) {
     this.worldId = sceneData?.worldId ?? 1;
     this.world = getWorld(this.worldId);
-    // Only Candy Garden has the new baked-in-nodes art so far.
-    this.usesBakedArt = this.worldId === 1;
   }
 
   preload() {
@@ -47,114 +40,10 @@ export class LevelPathScene extends Phaser.Scene {
   }
 
   create() {
-    if (this.usesBakedArt) {
-      this.createBakedArtPath();
-    } else {
-      this.createCodeDrawnPath();
-    }
-    this.createHud();
-  }
-
-  // --- New approach: full-bleed baked-in-nodes art (Candy Garden) --------
-
-  createBakedArtPath() {
     const { width, height } = this.scale;
-    const space = this.world.pathSpace;
-
-    this.add.rectangle(0, 0, width, height, APP_BG_COLOR).setOrigin(0);
-
-    // Same "cover" math as MainMenuScene.js: fills the canvas edge to
-    // edge, cropping only the minimal side overflow.
-    const scale = Math.max(width / space.width, height / space.height);
-    const artW = space.width * scale;
-    const artH = space.height * scale;
-    const artX = (width - artW) / 2;
-    const artY = (height - artH) / 2;
-
-    const bg = this.add.image(width / 2, height / 2, this.world.bgKey);
-    bg.setDisplaySize(artW, artH);
-
-    // Map each baked node's poster-space coords into screen space
-    // using that same box, exactly like MainMenuScene maps its Play
-    // banner box.
-    const nodes = getPathNodes(this.worldId);
-    nodes.forEach((n, i) => {
-      const levelNum = i + 1;
-      const x = artX + n.x * scale;
-      const y = artY + n.y * scale;
-      this.placeBakedNode(x, y, levelNum, scale);
-    });
-  }
-
-  placeBakedNode(x, y, levelNum, scale) {
-    const isBoss = levelNum === LEVELS_PER_WORLD;
-    const unlocked = isLevelUnlocked(this.worldId, levelNum);
-    const complete = isLevelComplete(levelIdFor(this.worldId, levelNum));
-    // Radius in poster-space, scaled down to screen space - sized to
-    // cover the baked medal + its star row as one tap target.
-    const radius = (isBoss ? 92 : 76) * scale;
-
-    if (!unlocked) {
-      // Art doesn't encode lock state, so dim + lock-badge the node
-      // in code. Not interactive - tapping a locked node just shakes.
-      const dim = this.add.circle(x, y, radius, 0x1a1230, 0.55);
-      this.drawLockIcon(x, y, radius);
-      dim.setInteractive({ useHandCursor: false });
-      dim.on('pointerup', () => this.shakeLockedNode(dim));
-      return;
-    }
-
-    // Fully invisible tap target over the baked-in medal art.
-    const hitArea = this.add.circle(x, y, radius, 0xffffff, 0).setInteractive({ useHandCursor: true });
-    hitArea.on('pointerup', () => this.selectLevel(levelNum));
-
-    if (complete) {
-      // Small code-drawn star badge in the corner so completed levels
-      // still read as completed even though the art itself is static.
-      const badgeX = x + radius * 0.6;
-      const badgeY = y - radius * 0.6;
-      const badge = this.add.circle(badgeX, badgeY, Math.max(9, radius * 0.24), 0xffc93c, 1);
-      badge.setStrokeStyle(2, 0xffffff, 0.9);
-      this.add
-        .text(badgeX, badgeY, '\u2605', { fontFamily: 'Arial', fontSize: `${Math.max(10, radius * 0.26)}px`, color: '#ffffff' })
-        .setOrigin(0.5);
-    }
-  }
-
-  drawLockIcon(x, y, radius) {
-    const s = radius * 0.5;
-    const g = this.add.graphics();
-    g.fillStyle(0xffffff, 0.95);
-    g.fillRoundedRect(x - s * 0.55, y - s * 0.1, s * 1.1, s * 0.85, s * 0.18);
-    g.lineStyle(s * 0.18, 0xffffff, 0.95);
-    g.beginPath();
-    g.arc(x, y - s * 0.15, s * 0.42, Math.PI, 0, false);
-    g.strokePath();
-  }
-
-  shakeLockedNode(target) {
-    const originX = target.x;
-    this.tweens.add({
-      targets: target,
-      x: originX + 6,
-      duration: 45,
-      yoyo: true,
-      repeat: 3,
-      ease: 'Sine.easeInOut',
-      onComplete: () => {
-        target.x = originX;
-      },
-    });
-  }
-
-  // --- Old approach: code-drawn path (worlds without new art yet) --------
-
-  createCodeDrawnPath() {
-    const { width, height } = this.scale;
-    const space = this.world.pathSpace;
 
     const bg = this.add.image(0, 0, this.world.bgKey).setOrigin(0);
-    this.bgScale = width / (bg.width || space.width);
+    this.bgScale = width / (bg.width || this.world.pathSpace.width);
     bg.setScale(this.bgScale);
     this.bgDisplayHeight = bg.displayHeight;
 
@@ -164,11 +53,12 @@ export class LevelPathScene extends Phaser.Scene {
     this.cameras.main.scrollY = Math.max(0, this.bgDisplayHeight - height);
 
     this.setupDragScroll(height);
-    this.drawCodePath();
-    this.drawCodeNodes();
+    this.drawPath();
+    this.drawNodes();
+    this.createHud();
   }
 
-  // --- Drag-to-scroll (code-drawn worlds only) ----------------------------
+  // --- Drag-to-scroll -------------------------------------------------------
 
   setupDragScroll(viewportHeight) {
     this.dragActive = false;
@@ -208,7 +98,9 @@ export class LevelPathScene extends Phaser.Scene {
     return this.dragDistance > 12;
   }
 
-  drawCodePath() {
+  // --- Path + nodes -----------------------------------------------------
+
+  drawPath() {
     const nodes = getPathNodes(this.worldId);
     const line = this.add.graphics();
     line.lineStyle(6, 0xffffff, 0.35);
@@ -222,7 +114,7 @@ export class LevelPathScene extends Phaser.Scene {
     line.strokePath();
   }
 
-  drawCodeNodes() {
+  drawNodes() {
     const nodes = getPathNodes(this.worldId);
     nodes.forEach((n, i) => {
       const levelNum = i + 1;
@@ -233,7 +125,7 @@ export class LevelPathScene extends Phaser.Scene {
       const complete = isLevelComplete(levelIdFor(this.worldId, levelNum));
 
       if (levelNum === 1) this.drawStartSignpost(x, y);
-      this.drawCodeNode(x, y, levelNum, { isBoss, unlocked, complete });
+      this.placeNode(x, y, levelNum, { isBoss, unlocked, complete });
     });
   }
 
@@ -252,7 +144,7 @@ export class LevelPathScene extends Phaser.Scene {
     label.setOrigin(0.5);
   }
 
-  drawCodeNode(x, y, levelNum, { isBoss, unlocked, complete }) {
+  placeNode(x, y, levelNum, { isBoss, unlocked, complete }) {
     const radius = isBoss ? 34 : 26;
 
     let fillColor = 0x8f8f9c; // locked
@@ -290,10 +182,41 @@ export class LevelPathScene extends Phaser.Scene {
         if (this.wasDrag()) return;
         this.selectLevel(levelNum);
       });
+    } else {
+      const hitArea = this.add.circle(x, y, radius + 8, 0xffffff, 0).setInteractive({ useHandCursor: false });
+      hitArea.on('pointerup', () => {
+        if (this.wasDrag()) return;
+        this.shakeLockedNode(circle, x);
+      });
     }
   }
 
-  // --- Shared HUD -----------------------------------------------------------
+  drawLockIcon(x, y, radius) {
+    const s = radius * 0.5;
+    const g = this.add.graphics();
+    g.fillStyle(0xffffff, 0.95);
+    g.fillRoundedRect(x - s * 0.55, y - s * 0.1, s * 1.1, s * 0.85, s * 0.18);
+    g.lineStyle(s * 0.18, 0xffffff, 0.95);
+    g.beginPath();
+    g.arc(x, y - s * 0.15, s * 0.42, Math.PI, 0, false);
+    g.strokePath();
+  }
+
+  shakeLockedNode(target, originX) {
+    this.tweens.add({
+      targets: target,
+      x: originX + 6,
+      duration: 45,
+      yoyo: true,
+      repeat: 3,
+      ease: 'Sine.easeInOut',
+      onComplete: () => {
+        target.x = originX;
+      },
+    });
+  }
+
+  // --- HUD ------------------------------------------------------------------
 
   createHud() {
     const { width } = this.scale;
@@ -321,7 +244,7 @@ export class LevelPathScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true });
 
     backButton.on('pointerup', () => {
-      if (this.wasDrag && this.wasDrag()) return;
+      if (this.wasDrag()) return;
       this.goBack();
     });
   }
