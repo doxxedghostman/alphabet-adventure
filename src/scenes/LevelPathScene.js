@@ -22,9 +22,13 @@ import { levelIdFor, isLevelUnlocked, isLevelComplete, LEVELS_PER_WORLD } from '
 // supported device viewport - see config.js's height range) rather
 // than cropping or stretching it.
 //
-// Nodes are still plain circles for now - per chat, real icon-button
-// art is coming to replace them, at which point placeNode() is the
-// place to swap the graphics.fillCircle/text calls for actual images.
+// Nodes render as one of three real icon images (public/assets/icons/
+// node-{locked,unlocked,complete}.png - see chat for the generation
+// prompts and how the checkerboard "transparency" the generator baked
+// in was removed) swapped per node based on progress, rather than
+// code-drawn circles. The level number is still drawn as text on top
+// of the unlocked icon (its center is intentionally blank in the art
+// for exactly this).
 export class LevelPathScene extends Phaser.Scene {
   constructor() {
     super('LevelPathScene');
@@ -37,6 +41,9 @@ export class LevelPathScene extends Phaser.Scene {
 
   preload() {
     this.load.image(this.world.bgKey, this.world.bgPath);
+    this.load.image('node-unlocked', 'assets/icons/node-unlocked.png');
+    this.load.image('node-locked', 'assets/icons/node-locked.png');
+    this.load.image('node-complete', 'assets/icons/node-complete.png');
   }
 
   create() {
@@ -145,61 +152,39 @@ export class LevelPathScene extends Phaser.Scene {
   }
 
   placeNode(x, y, levelNum, { isBoss, unlocked, complete }) {
-    const radius = isBoss ? 34 : 26;
+    const baseSize = isBoss ? 92 : 72; // on-screen diameter in px
 
-    let fillColor = 0x8f8f9c; // locked
-    if (complete) fillColor = 0xffc93c;
-    else if (unlocked) fillColor = 0xff6fa5;
+    const textureKey = !unlocked ? 'node-locked' : complete ? 'node-complete' : 'node-unlocked';
+    const icon = this.add.image(x, y, textureKey);
+    icon.setDisplaySize(baseSize, baseSize);
 
-    const circle = this.add.graphics();
-    if (isBoss) {
-      circle.lineStyle(5, 0xffd700, 1);
-      circle.strokeCircle(x, y, radius + 6);
-    }
-    circle.fillStyle(fillColor, 1);
-    circle.fillCircle(x, y, radius);
-    circle.lineStyle(3, 0xffffff, 0.9);
-    circle.strokeCircle(x, y, radius);
-
-    if (!unlocked) {
-      this.drawLockIcon(x, y, radius * 1.4);
-    } else if (complete) {
-      this.add.text(x, y, '\u2605', { fontFamily: 'Arial', fontSize: `${radius}px`, color: '#ffffff' }).setOrigin(0.5);
-    } else {
+    // Unlocked-but-not-complete nodes still need the level number -
+    // it isn't baked into node-unlocked.png (see the generation
+    // prompt in chat: center's left blank on purpose so it can be
+    // drawn per-level here).
+    if (unlocked && !complete) {
       this.add
         .text(x, y, String(levelNum), {
           fontFamily: 'Arial',
-          fontSize: isBoss ? '24px' : '20px',
+          fontSize: isBoss ? '26px' : '20px',
           fontStyle: 'bold',
           color: '#ffffff',
+          stroke: '#c0158f',
+          strokeThickness: 3,
         })
         .setOrigin(0.5);
     }
 
-    if (unlocked) {
-      const hitArea = this.add.circle(x, y, radius + 8, 0xffffff, 0).setInteractive({ useHandCursor: true });
-      hitArea.on('pointerup', () => {
-        if (this.wasDrag()) return;
-        this.selectLevel(levelNum);
-      });
-    } else {
-      const hitArea = this.add.circle(x, y, radius + 8, 0xffffff, 0).setInteractive({ useHandCursor: false });
-      hitArea.on('pointerup', () => {
-        if (this.wasDrag()) return;
-        this.shakeLockedNode(circle, x);
-      });
-    }
-  }
+    const radius = baseSize / 2;
+    const hitArea = this.add
+      .circle(x, y, radius + 6, 0xffffff, 0)
+      .setInteractive({ useHandCursor: unlocked });
 
-  drawLockIcon(x, y, radius) {
-    const s = radius * 0.5;
-    const g = this.add.graphics();
-    g.fillStyle(0xffffff, 0.95);
-    g.fillRoundedRect(x - s * 0.55, y - s * 0.1, s * 1.1, s * 0.85, s * 0.18);
-    g.lineStyle(s * 0.18, 0xffffff, 0.95);
-    g.beginPath();
-    g.arc(x, y - s * 0.15, s * 0.42, Math.PI, 0, false);
-    g.strokePath();
+    hitArea.on('pointerup', () => {
+      if (this.wasDrag()) return;
+      if (unlocked) this.selectLevel(levelNum);
+      else this.shakeLockedNode(icon, x);
+    });
   }
 
   shakeLockedNode(target, originX) {
