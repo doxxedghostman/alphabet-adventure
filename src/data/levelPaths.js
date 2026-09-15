@@ -76,7 +76,38 @@ function generateSerpentinePath() {
 
 const GENERIC_PATH = generateSerpentinePath();
 
+// Magic Mountain's art has one clear stone stairway winding up the
+// mountain (unlike Candy Garden's tighter zigzag), so this reuses the
+// same evenly-spaced sine-wave idea as CANDY_GARDEN_PATH but with a
+// gentler sweep (fewer bends, matching the stairway's actual shape)
+// over its own extended 600x1700 canvas - see worlds.js's pathSpace
+// for world 7 and levelPaths.js's header comment for why the art
+// needed extending in the first place.
+const MAGIC_MOUNTAIN_PATH = [
+  { x: 300, y: 1650 }, // 1: Start, bottom of the stairway
+  { x: 360, y: 1570 },
+  { x: 401, y: 1490 },
+  { x: 408, y: 1410 },
+  { x: 381, y: 1330 },
+  { x: 327, y: 1250 },
+  { x: 264, y: 1170 },
+  { x: 213, y: 1090 },
+  { x: 190, y: 1010 },
+  { x: 203, y: 930 },
+  { x: 248, y: 850 },
+  { x: 309, y: 770 },
+  { x: 368, y: 690 },
+  { x: 404, y: 610 },
+  { x: 407, y: 530 },
+  { x: 375, y: 450 },
+  { x: 318, y: 370 },
+  { x: 256, y: 290 },
+  { x: 208, y: 210 },
+  { x: 190, y: 130 }, // 20: boss node, at the castle gate
+];
+
 export function getPathNodes(worldId) {
   if (worldId === 1) return CANDY_GARDEN_PATH;
+  if (worldId === 7) return MAGIC_MOUNTAIN_PATH;
   return GENERIC_PATH;
 }

@@ -44,7 +44,16 @@ export const WORLDS = [
   { id: 4, name: 'Dino Valley', slug: 'dino-valley', gemColor: 0xffa726 },
   { id: 5, name: 'Cloud Kingdom', slug: 'cloud-kingdom', gemColor: 0xab47bc },
   { id: 6, name: 'Crystal Forest', slug: 'crystal-forest', gemColor: 0x26c6da },
-  { id: 7, name: 'Magic Mountain', slug: 'magic-mountain', gemColor: 0x8e24aa },
+  {
+    id: 7,
+    name: 'Magic Mountain',
+    slug: 'magic-mountain',
+    gemColor: 0x8e24aa,
+    // Same vertical-extension fix as Candy Garden (see
+    // levelPaths.js's header comment) - mirror-tiled taller so
+    // width-only scaling always covers the tallest device viewport.
+    pathSpace: { width: 600, height: 1700 },
+  },
   { id: 8, name: 'Space Words', slug: 'space-words', gemColor: 0x42a5f5 },
   { id: 9, name: 'Ancient Valley', slug: 'ancient-valley', gemColor: 0xffb300 },
   { id: 10, name: 'WordSwoop Kingdom', slug: 'wordswoop-kingdom', gemColor: 0xba68c8 },
