@@ -162,6 +162,7 @@ export class BoardScene extends Phaser.Scene {
     this.pointerDownPos = null;
     this.swipeHandled = false;
 
+    this.computeBoardGeometry();
     this.createBoardFrame();
     this.createHeader();
     this.createShuffleButton();
@@ -172,33 +173,62 @@ export class BoardScene extends Phaser.Scene {
     this.ensureSolvable();
   }
 
+  // ---------- board geometry (per-world tile size + centering) ----------
+
+  // Trial per chat: Candy Garden's frame needs a smaller grid to fit
+  // inside its border without covering the corners (see
+  // createBoardFrame()'s note), so tile size/gap are now per-instance
+  // rather than always the config.js constants - other worlds still get
+  // TILE_SIZE/TILE_GAP unchanged. This also computes how far to shift
+  // the grid+frame so they sit centered in the actual play area below
+  // the header, not pinned to its top-left corner - the real device
+  // canvas (getCanvasSize()) is often taller than the header+grid
+  // actually need, which is why the grid was landing high with empty
+  // space below it rather than centered.
+  computeBoardGeometry() {
+    const isCandyGarden = this.worldId === 1;
+    this.tileSize = isCandyGarden ? 42 : TILE_SIZE;
+    this.tileGap = isCandyGarden ? 3 : TILE_GAP;
+    this.tileFontSize = isCandyGarden ? 18 : 30;
+    this.gridPixelSize = BOARD_SIZE * (this.tileSize + this.tileGap);
+
+    // Horizontal: centers the grid in the canvas width. For the
+    // unchanged (non-Candy-Garden) tile size this works out to the same
+    // 24px BOARD_SIDE_MARGIN already used everywhere else, so it's a
+    // drop-in replacement rather than a behavior change for those
+    // worlds.
+    this.boardOffsetX = Math.max(0, (this.scale.width - this.gridPixelSize) / 2);
+
+    // Vertical: centers the grid in whatever room is left below the
+    // header (BOARD_TOP_MARGIN) and above the bottom edge, rather than
+    // starting the grid right at BOARD_TOP_MARGIN regardless of how
+    // much taller the real canvas is than the board actually needs.
+    const availableHeight = this.scale.height - BOARD_TOP_MARGIN - BOARD_SIDE_MARGIN;
+    const verticalSlack = Math.max(0, (availableHeight - this.gridPixelSize) / 2);
+    this.gridTopY = BOARD_TOP_MARGIN + verticalSlack;
+  }
+
   // ---------- board frame (per-world art, trial) ----------
 
   // Trial per chat: an ornate picture-frame behind the grid, for Candy
   // Garden (world 1) only right now - other worlds still render plain
-  // until this look is confirmed. The grid itself (468x468, unchanged)
-  // stays full size and centered exactly where it always was
-  // (BOARD_SIDE_MARGIN insets it 24px in a 516-wide canvas, which is
-  // already dead-center); the frame is centered on that same point,
-  // sized a little larger than the grid so a sliver of its candy-cane
-  // border shows around the edges.
+  // until this look is confirmed.
   //
-  // Heads up (per chat): this frame's ornate corners (lollipop
-  // flowers) are large relative to its open middle - about 20% of the
-  // image per side is decoration. At the grid's full 468px size, the
-  // grid mostly covers those corner flowers; only the straight-edge
-  // candy-cane border reliably peeks out. If that reads as too
-  // cramped once you see it live, the two ways to open it up are
-  // shrinking the tile size (touches every board-position calculation
-  // in this file, not just this method) or using a thinner-bordered
-  // frame for the wider rollout.
+  // Sizing note: measured directly off frame-candy-garden.png (not
+  // guessed) - its open "safe" area (clear of the corner lollipop
+  // flowers and edge icing) is about 58.5% of its own width. 490px is
+  // the largest the frame can be while still fitting the 516px-wide
+  // canvas with a little breathing room; at that size the safe zone
+  // works out to ~287px, comfortably bigger than the 42px-tile grid's
+  // 267px, so the corner flowers clear the grid instead of being
+  // covered by it - unlike the first version of this trial, which used
+  // the old full-size 468px grid against this same frame.
   createBoardFrame() {
     if (this.worldId !== 1) return;
 
-    const gridCenterX = BOARD_SIDE_MARGIN + (BOARD_SIZE * (TILE_SIZE + TILE_GAP)) / 2;
-    const gridCenterY = BOARD_TOP_MARGIN + (BOARD_SIZE * (TILE_SIZE + TILE_GAP)) / 2;
-    const gridSize = BOARD_SIZE * (TILE_SIZE + TILE_GAP);
-    const frameSize = gridSize + 40; // ~20px of border visible past the grid's edge
+    const gridCenterX = this.boardOffsetX + this.gridPixelSize / 2;
+    const gridCenterY = this.gridTopY + this.gridPixelSize / 2;
+    const frameSize = 490;
 
     this.add.image(gridCenterX, gridCenterY, 'frame-candy-garden').setDisplaySize(frameSize, frameSize);
   }
@@ -534,14 +564,14 @@ export class BoardScene extends Phaser.Scene {
 
   cellToPixel(row, col) {
     return {
-      x: BOARD_SIDE_MARGIN + col * (TILE_SIZE + TILE_GAP) + TILE_SIZE / 2,
-      y: BOARD_TOP_MARGIN + row * (TILE_SIZE + TILE_GAP) + TILE_SIZE / 2,
+      x: this.boardOffsetX + col * (this.tileSize + this.tileGap) + this.tileSize / 2,
+      y: this.gridTopY + row * (this.tileSize + this.tileGap) + this.tileSize / 2,
     };
   }
 
   cellFromPixel(x, y) {
-    const col = Math.floor((x - BOARD_SIDE_MARGIN) / (TILE_SIZE + TILE_GAP));
-    const row = Math.floor((y - BOARD_TOP_MARGIN) / (TILE_SIZE + TILE_GAP));
+    const col = Math.floor((x - this.boardOffsetX) / (this.tileSize + this.tileGap));
+    const row = Math.floor((y - this.gridTopY) / (this.tileSize + this.tileGap));
     if (row < 0 || row >= BOARD_SIZE || col < 0 || col >= BOARD_SIZE) return null;
     return { row, col };
   }
@@ -660,16 +690,16 @@ export class BoardScene extends Phaser.Scene {
 
   createTile(row, col, letter, spawnAbove = false) {
     const { x, y } = this.cellToPixel(row, col);
-    const spawnY = y - (row + 4) * (TILE_SIZE + TILE_GAP);
+    const spawnY = y - (row + 4) * (this.tileSize + this.tileGap);
     const container = this.add.container(x, spawnAbove ? spawnY : y);
 
     const color = LETTER_COLORS[letter] ?? 0xffffff;
-    const bg = this.add.rectangle(0, 0, TILE_SIZE, TILE_SIZE, color);
+    const bg = this.add.rectangle(0, 0, this.tileSize, this.tileSize, color);
     bg.setStrokeStyle(3, 0x1b1030, 0.35);
 
     const text = this.add
       .text(0, 0, letter, {
-        fontSize: '30px',
+        fontSize: `${this.tileFontSize}px`,
         fontStyle: 'bold',
         color: '#1b1030',
         fontFamily: 'system-ui, sans-serif',
@@ -677,7 +707,7 @@ export class BoardScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     container.add([bg, text]);
-    container.setSize(TILE_SIZE, TILE_SIZE);
+    container.setSize(this.tileSize, this.tileSize);
 
     const tile = { row, col, letter, container, bg, text };
     return tile;
@@ -747,7 +777,7 @@ export class BoardScene extends Phaser.Scene {
 
     const dx = pointer.x - this.pointerDownPos.x;
     const dy = pointer.y - this.pointerDownPos.y;
-    const threshold = TILE_SIZE * 0.35;
+    const threshold = this.tileSize * 0.35;
     if (Math.hypot(dx, dy) < threshold) return;
 
     let dRow = 0;
