@@ -1848,3 +1848,34 @@ from a busy composite - color-based extraction against that art was
 judged too fragile to attempt), it can drop into `WorldSelectScene
 .drawTile()` in place of the `Graphics` calls without touching the
 grid/scroll logic.
+
+### Milestone 43 — Candy Garden board visual pass: frame, glass tiles, shatter clear
+
+Done outside a Claude session; logged here for continuity.
+
+- Added dedicated ornate frame art (`frame-candy-garden.png`) behind
+  the board grid, Candy Garden (world 1) only.
+- First fit attempt used a guessed safe-zone of 58.5% of the frame
+  art's width for sizing the grid — never actually measured off the
+  PNG. Real measurement came in much larger: ~73.6% width / ~70.2%
+  height of contiguous wood clear of the corner lollipops/icing. Tiles
+  were floating in a sea of dead wood at the guessed size.
+- Corrected sizing in steps: 46px tiles (guessed safe-zone) -> 50px
+  tiles/4px gap/21px font (measured safe-zone, ~92% fill with a small
+  buffer off the corner flowers) -> 52px tiles/5px gap (as large as
+  the safe zone allows, ~6px buffer per side). Grid re-centered
+  vertically against the frame at each step.
+- Added a glass look to tiles: a translucent diagonal-gradient overlay
+  (bright top-left sheen fading to a faint dark bottom-right wash)
+  plus a soft white rim stroke, layered on top of the existing color
+  rect. Purely decorative — the underlying rect still holds the real
+  fill/stroke state, so existing recolor (solvability re-rolls) and
+  highlight (tap-to-select) logic didn't need to change.
+- Replaced the scale/fade match-clear animation with a glass-shatter
+  effect: a quick white flash sells the crack, then ~6 small colored
+  shard rectangles fly outward at random angles/rotation and fade over
+  220ms.
+- Scope: Candy Garden only. Other 9 worlds still use the original
+  plain tile look and scale/fade clear — rolling this treatment out
+  further (with per-world frame art, and possibly per-world
+  clear-effect flavor) is open follow-up work.

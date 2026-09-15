@@ -76,6 +76,14 @@ Player starts at World 1, Level 1.
 - Splitting the full alphabet into progressive stages (e.g. common
   letters unlocked first, rarer ones added in later worlds) is a
   planned follow-up — full alphabet went in first, staging is next.
+- Per-world visual theming has started: Candy Garden (world 1) has its
+  own ornate frame art behind the grid, glass-look tiles (diagonal
+  sheen + white rim stroke over the base color rect), and a
+  glass-shatter clear effect (flash + flying shards) in place of the
+  old scale/fade. Other 9 worlds still use the original plain tile
+  look — rolling the same treatment out to them (with per-world frame
+  art and possibly per-world clear-effect flavor) is open follow-up
+  work. See update.md Milestone 43.
 
 ## 3. Target words & objectives
 
