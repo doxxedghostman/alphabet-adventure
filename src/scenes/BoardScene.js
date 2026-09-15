@@ -187,9 +187,9 @@ export class BoardScene extends Phaser.Scene {
   // space below it rather than centered.
   computeBoardGeometry() {
     const isCandyGarden = this.worldId === 1;
-    this.tileSize = isCandyGarden ? 46 : TILE_SIZE;
-    this.tileGap = isCandyGarden ? 3 : TILE_GAP;
-    this.tileFontSize = isCandyGarden ? 19 : 30;
+    this.tileSize = isCandyGarden ? 50 : TILE_SIZE;
+    this.tileGap = isCandyGarden ? 4 : TILE_GAP;
+    this.tileFontSize = isCandyGarden ? 21 : 30;
     this.gridPixelSize = BOARD_SIZE * (this.tileSize + this.tileGap);
 
     // Horizontal: centers the grid in the canvas width. For the
@@ -214,16 +214,21 @@ export class BoardScene extends Phaser.Scene {
   // Garden (world 1) only right now - other worlds still render plain
   // until this look is confirmed.
   //
-  // Sizing note: measured directly off frame-candy-garden.png (not
-  // guessed) - its open "safe" area (clear of the corner lollipop
-  // flowers and edge icing) is about 58.5% of its own width. 505px is
-  // about as large as the frame can go while still fitting the 516px
-  // canvas with a sliver of margin; at that size the safe zone works
-  // out to ~296px. Per chat, tiles were sized up to 46px (291px grid)
-  // to fill most of that safe zone while keeping a small buffer so the
-  // grid doesn't risk touching the corner flowers - that buffer is
-  // there because the 58.5% figure is a measurement, not an exact
-  // value baked into the art, so it's deliberately not pushed to zero.
+  // Sizing note: re-measured directly off frame-candy-garden.png's
+  // pixels (previous 58.5% figure here was wrong - not an actual
+  // measurement of the art, just a guess that badly undersized the
+  // grid, leaving a big ring of dead wood around it). The PNG is
+  // 700x660 (not square); its open "safe" area (clear of the corner
+  // lollipop flowers and edge icing) is a contiguous wood-colored
+  // block ~515x463px, i.e. ~73.6% of the art's width and ~70.2% of
+  // its height. setDisplaySize below stretches that 700x660 art into
+  // a 505x505 square, which scales the two axes slightly differently
+  // (505/700 horizontally, 505/660 vertically) - working through both
+  // gives a displayed safe area of ~371px wide x ~354px tall, so the
+  // *height* is the tighter constraint. Tiles are sized to a 324px
+  // grid (50px tiles + 4px gaps), which is ~92% of that 354px safe
+  // height - big enough to actually fill the frame, with a small
+  // buffer (~15px each side) so it doesn't touch the corner flowers.
   createBoardFrame() {
     if (this.worldId !== 1) return;
 
