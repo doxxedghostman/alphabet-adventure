@@ -5,32 +5,35 @@
 // top (boss) — path reads bottom-to-top per PLAN.md §8.5.
 //
 // Per chat: Candy Garden went through a "baked-in numbered medals"
-// art experiment and back - see git history around
-// c0ea4c4/3418edc if that's ever worth resurrecting. We're back to
-// the original plain scenery art (public/assets/candy-garden-bg.jpg)
-// with these nodes as code-drawn circles/lock icons (see
-// LevelPathScene.js's createCodeDrawnPath), which is what lets the
-// scene show the FULL image edge-to-edge with no side cropping - it
-// scales to the canvas width only and scrolls vertically, rather than
-// "cover" scaling (which crops left/right) like the medal-art
-// approach used.
+// art experiment and back - see git history around c0ea4c4/3418edc
+// if that's ever worth resurrecting. Every world is now back to (or
+// started as) plain scenery art with these nodes as code-drawn icons
+// (see LevelPathScene.js), which is what lets the scene show the FULL
+// image edge-to-edge with no side cropping - it scales to the canvas
+// width only and scrolls vertically, rather than "cover" scaling
+// (which crops left/right).
 //
-// The original 600x900 art was too short for that width-only scaling
-// on tall phones though - once scaled to the 516-wide canvas it
-// mapped to well under the ~1342px a maxed-out-tall device's viewport
-// needs, leaving a flat-color gap below it (the "half the screen is
-// empty tan" bug from the first screenshot in this thread). Fixed by
-// vertically extending that same art (mirror-tiling its lower,
-// castle-free scenery band down to 600x1700 - comfortably taller than
-// any supported device viewport) rather than cropping or stretching
-// anything - see the extension script in chat history if regenerating.
+// Every world's original 600x900 art was too short for that
+// width-only scaling on tall phones though - once scaled to the
+// 516-wide canvas it mapped to well under the ~1342px a maxed-out-tall
+// device's viewport needs, leaving a flat-color gap below it (the
+// "half the screen is empty tan" bug from the first Candy Garden
+// screenshot in this thread). Fixed the same way for all 10 worlds:
+// vertically extending each world's own art (mirror-tiling a generic,
+// landmark-free band of its own scenery - a different band per world,
+// picked by eye to avoid duplicating each one's unique castle/statue/
+// shipwreck/etc.) down to 600x1700 - comfortably taller than any
+// supported device viewport.
 //
-// These 20 points are an evenly-spaced sine-wave serpentine over that
-// new 600x1700 canvas (not hand-placed) specifically so the nodes
-// have generous, consistent spacing top-to-bottom - per chat, the old
-// hand-placed points felt cramped. Retune amplitude/bends here if the
-// zigzag needs to hug the art's actual dirt path more closely once
-// real icon-button art replaces the plain circles.
+// Each world's 20 points below are an evenly-spaced sine-wave
+// serpentine over that world's own 600x1700 canvas (not hand-placed),
+// with centerX/amplitude/bends per world eyeballed against that
+// world's actual path shape (tight zigzag vs. wide sweeping S-curve
+// vs. switchback) so nodes track it reasonably closely - see the
+// per-world comments below. Retune any of these if the zigzag needs
+// to hug the art's actual path more closely.
+
+// Candy Garden - tight zigzag matching its narrow winding dirt path.
 const CANDY_GARDEN_PATH = [
   { x: 300, y: 1650 }, // 1: Start, bottom of the path
   { x: 396, y: 1571 },
@@ -54,35 +57,176 @@ const CANDY_GARDEN_PATH = [
   { x: 300, y: 150 }, // 20: boss node, on the castle courtyard steps
 ];
 
-// Fallback for worlds without hand-placed points yet: an evenly-spaced
-// sine-wave serpentine from bottom to top over the same 600x900 space,
-// so every world's LevelPathScene is at least navigable before its
-// real path gets hand-tuned.
-function generateSerpentinePath() {
-  const nodeCount = 20;
-  const topY = 130;
-  const bottomY = 855;
-  const centerX = 300;
-  const amplitude = 100;
-  const bends = 3.5; // how many full left-right swings top-to-bottom
+// Jungle Jumble - fairly straight jungle trail, mild wobble.
+const JUNGLE_JUMBLE_PATH = [
+  { x: 300, y: 1650 }, // 1: Start
+  { x: 323, y: 1572 },
+  { x: 343, y: 1494 },
+  { x: 359, y: 1416 },
+  { x: 368, y: 1338 },
+  { x: 370, y: 1261 },
+  { x: 364, y: 1183 },
+  { x: 352, y: 1105 },
+  { x: 333, y: 1027 },
+  { x: 312, y: 949 },
+  { x: 288, y: 871 },
+  { x: 267, y: 793 },
+  { x: 248, y: 715 },
+  { x: 236, y: 637 },
+  { x: 230, y: 559 },
+  { x: 232, y: 482 },
+  { x: 241, y: 404 },
+  { x: 257, y: 326 },
+  { x: 277, y: 248 },
+  { x: 300, y: 170 }, // 20: boss node, near the temple bridge
+];
 
-  return Array.from({ length: nodeCount }, (_, i) => {
-    const t = i / (nodeCount - 1);
-    const y = bottomY - t * (bottomY - topY);
-    const x = centerX + Math.sin(t * bends * Math.PI) * amplitude;
-    return { x, y };
-  });
-}
+// Ocean Words - sandy sea-floor path curving toward the shipwreck.
+const OCEAN_WORDS_PATH = [
+  { x: 310, y: 1650 }, // 1: Start
+  { x: 346, y: 1573 },
+  { x: 376, y: 1495 },
+  { x: 395, y: 1418 },
+  { x: 400, y: 1341 },
+  { x: 389, y: 1263 },
+  { x: 365, y: 1186 },
+  { x: 332, y: 1108 },
+  { x: 295, y: 1031 },
+  { x: 261, y: 954 },
+  { x: 235, y: 876 },
+  { x: 221, y: 799 },
+  { x: 223, y: 722 },
+  { x: 239, y: 644 },
+  { x: 267, y: 567 },
+  { x: 303, y: 489 },
+  { x: 339, y: 412 },
+  { x: 371, y: 335 },
+  { x: 392, y: 257 },
+  { x: 400, y: 180 }, // 20: boss node, at the shipwreck
+];
 
-const GENERIC_PATH = generateSerpentinePath();
+// Dino Valley - riverside trail toward the volcano/dino skyline.
+const DINO_VALLEY_PATH = [
+  { x: 300, y: 1650 }, // 1: Start
+  { x: 323, y: 1573 },
+  { x: 343, y: 1495 },
+  { x: 359, y: 1418 },
+  { x: 368, y: 1341 },
+  { x: 370, y: 1263 },
+  { x: 364, y: 1186 },
+  { x: 352, y: 1108 },
+  { x: 333, y: 1031 },
+  { x: 312, y: 954 },
+  { x: 288, y: 876 },
+  { x: 267, y: 799 },
+  { x: 248, y: 722 },
+  { x: 236, y: 644 },
+  { x: 230, y: 567 },
+  { x: 232, y: 489 },
+  { x: 241, y: 412 },
+  { x: 257, y: 335 },
+  { x: 277, y: 257 },
+  { x: 300, y: 180 }, // 20: boss node, near the volcano
+];
 
-// Magic Mountain's art has one clear stone stairway winding up the
-// mountain (unlike Candy Garden's tighter zigzag), so this reuses the
-// same evenly-spaced sine-wave idea as CANDY_GARDEN_PATH but with a
-// gentler sweep (fewer bends, matching the stairway's actual shape)
-// over its own extended 600x1700 canvas - see worlds.js's pathSpace
-// for world 7 and levelPaths.js's header comment for why the art
-// needed extending in the first place.
+// Cloud Kingdom - wide island-to-island sweep, gazebo to castle.
+const CLOUD_KINGDOM_PATH = [
+  { x: 280, y: 1650 }, // 1: Start, near the gazebo
+  { x: 342, y: 1573 },
+  { x: 389, y: 1495 },
+  { x: 410, y: 1418 },
+  { x: 399, y: 1341 },
+  { x: 360, y: 1263 },
+  { x: 301, y: 1186 },
+  { x: 238, y: 1108 },
+  { x: 184, y: 1031 },
+  { x: 154, y: 954 },
+  { x: 154, y: 876 },
+  { x: 184, y: 799 },
+  { x: 238, y: 722 },
+  { x: 301, y: 644 },
+  { x: 360, y: 567 },
+  { x: 399, y: 489 },
+  { x: 410, y: 412 },
+  { x: 389, y: 335 },
+  { x: 342, y: 257 },
+  { x: 280, y: 180 }, // 20: boss node, at the castle
+];
+
+// Crystal Forest - gentle trail past the glowing crystal grove.
+const CRYSTAL_FOREST_PATH = [
+  { x: 300, y: 1650 }, // 1: Start
+  { x: 323, y: 1577 },
+  { x: 343, y: 1504 },
+  { x: 359, y: 1431 },
+  { x: 368, y: 1357 },
+  { x: 370, y: 1284 },
+  { x: 364, y: 1211 },
+  { x: 352, y: 1138 },
+  { x: 333, y: 1065 },
+  { x: 312, y: 992 },
+  { x: 288, y: 918 },
+  { x: 267, y: 845 },
+  { x: 248, y: 772 },
+  { x: 236, y: 699 },
+  { x: 230, y: 626 },
+  { x: 232, y: 553 },
+  { x: 241, y: 479 },
+  { x: 257, y: 406 },
+  { x: 277, y: 333 },
+  { x: 300, y: 260 }, // 20: boss node, at the crystal peaks
+];
+
+// Space Words - rocky trail from the crash site up toward the robot.
+const SPACE_WORDS_PATH = [
+  { x: 300, y: 1650 }, // 1: Start
+  { x: 323, y: 1577 },
+  { x: 343, y: 1504 },
+  { x: 359, y: 1431 },
+  { x: 368, y: 1357 },
+  { x: 370, y: 1284 },
+  { x: 364, y: 1211 },
+  { x: 352, y: 1138 },
+  { x: 333, y: 1065 },
+  { x: 312, y: 992 },
+  { x: 288, y: 918 },
+  { x: 267, y: 845 },
+  { x: 248, y: 772 },
+  { x: 236, y: 699 },
+  { x: 230, y: 626 },
+  { x: 232, y: 553 },
+  { x: 241, y: 479 },
+  { x: 257, y: 406 },
+  { x: 277, y: 333 },
+  { x: 300, y: 260 }, // 20: boss node, near the robot/ship
+];
+
+// Ancient Valley - desert path past the oasis toward the pyramids.
+const ANCIENT_VALLEY_PATH = [
+  { x: 300, y: 1650 }, // 1: Start
+  { x: 323, y: 1575 },
+  { x: 343, y: 1499 },
+  { x: 359, y: 1424 },
+  { x: 368, y: 1349 },
+  { x: 370, y: 1274 },
+  { x: 364, y: 1198 },
+  { x: 352, y: 1123 },
+  { x: 333, y: 1048 },
+  { x: 312, y: 973 },
+  { x: 288, y: 897 },
+  { x: 267, y: 822 },
+  { x: 248, y: 747 },
+  { x: 236, y: 672 },
+  { x: 230, y: 596 },
+  { x: 232, y: 521 },
+  { x: 241, y: 446 },
+  { x: 257, y: 371 },
+  { x: 277, y: 295 },
+  { x: 300, y: 220 }, // 20: boss node, at the pyramids/sphinx
+];
+
+// Magic Mountain - single sweeping stone stairway (fewer, wider bends
+// than the others, matching the actual art - see chat).
 const MAGIC_MOUNTAIN_PATH = [
   { x: 300, y: 1650 }, // 1: Start, bottom of the stairway
   { x: 360, y: 1570 },
@@ -106,8 +250,43 @@ const MAGIC_MOUNTAIN_PATH = [
   { x: 190, y: 130 }, // 20: boss node, at the castle gate
 ];
 
+// WordSwoop Kingdom - switchback courtyard path, fountain to castle.
+const WORDSWOOP_KINGDOM_PATH = [
+  { x: 300, y: 1650 }, // 1: Start, near the fountain
+  { x: 348, y: 1574 },
+  { x: 384, y: 1497 },
+  { x: 400, y: 1421 },
+  { x: 392, y: 1345 },
+  { x: 361, y: 1268 },
+  { x: 316, y: 1192 },
+  { x: 268, y: 1116 },
+  { x: 226, y: 1039 },
+  { x: 203, y: 963 },
+  { x: 203, y: 887 },
+  { x: 226, y: 811 },
+  { x: 268, y: 734 },
+  { x: 316, y: 658 },
+  { x: 361, y: 582 },
+  { x: 392, y: 505 },
+  { x: 400, y: 429 },
+  { x: 384, y: 353 },
+  { x: 348, y: 276 },
+  { x: 300, y: 200 }, // 20: boss node, at the castle
+];
+
+const PATHS_BY_WORLD = {
+  1: CANDY_GARDEN_PATH,
+  2: JUNGLE_JUMBLE_PATH,
+  3: OCEAN_WORDS_PATH,
+  4: DINO_VALLEY_PATH,
+  5: CLOUD_KINGDOM_PATH,
+  6: CRYSTAL_FOREST_PATH,
+  7: MAGIC_MOUNTAIN_PATH,
+  8: SPACE_WORDS_PATH,
+  9: ANCIENT_VALLEY_PATH,
+  10: WORDSWOOP_KINGDOM_PATH,
+};
+
 export function getPathNodes(worldId) {
-  if (worldId === 1) return CANDY_GARDEN_PATH;
-  if (worldId === 7) return MAGIC_MOUNTAIN_PATH;
-  return GENERIC_PATH;
+  return PATHS_BY_WORLD[worldId] ?? CANDY_GARDEN_PATH;
 }

@@ -21,39 +21,23 @@
 import { LEVELS_PER_WORLD, levelIdFor } from '../utils/progressStore.js';
 
 // `pathSpace` is the natural pixel size of that world's LevelPathScene
-// background art (bgPath above), i.e. the coordinate space the hand-
-// placed node points in levelPaths.js are expressed in. Defaults to
-// the original 600x900 art size; overridden per-world as each world's
-// background gets replaced with new full-bleed "baked-in nodes" art
-// (see LevelPathScene.js's header comment) at a different resolution.
-const DEFAULT_PATH_SPACE = { width: 600, height: 900 };
+// background art (bgPath above), i.e. the coordinate space the node
+// points in levelPaths.js are expressed in. All 10 worlds' art got
+// vertically extended (600x900 -> 600x1700, mirror-tiling each one's
+// own generic scenery band) per chat, so width-only scaling always
+// covers the tallest supported device viewport with zero gap below
+// it and zero side-cropping - see levelPaths.js's header comment for
+// the full story and LevelPathScene.js for how it's applied.
+const DEFAULT_PATH_SPACE = { width: 600, height: 1700 };
 
 export const WORLDS = [
-  {
-    id: 1,
-    name: 'Candy Garden',
-    slug: 'candy-garden',
-    gemColor: 0xff6fae,
-    // Vertically-extended version of the original art (see
-    // levelPaths.js's header comment) so width-only scaling always
-    // covers the tallest supported device viewport with no gap.
-    pathSpace: { width: 600, height: 1700 },
-  },
+  { id: 1, name: 'Candy Garden', slug: 'candy-garden', gemColor: 0xff6fae },
   { id: 2, name: 'Jungle Jumble', slug: 'jungle-jumble', gemColor: 0x4caf50 },
   { id: 3, name: 'Ocean Words', slug: 'ocean-words', gemColor: 0x29b6f6 },
   { id: 4, name: 'Dino Valley', slug: 'dino-valley', gemColor: 0xffa726 },
   { id: 5, name: 'Cloud Kingdom', slug: 'cloud-kingdom', gemColor: 0xab47bc },
   { id: 6, name: 'Crystal Forest', slug: 'crystal-forest', gemColor: 0x26c6da },
-  {
-    id: 7,
-    name: 'Magic Mountain',
-    slug: 'magic-mountain',
-    gemColor: 0x8e24aa,
-    // Same vertical-extension fix as Candy Garden (see
-    // levelPaths.js's header comment) - mirror-tiled taller so
-    // width-only scaling always covers the tallest device viewport.
-    pathSpace: { width: 600, height: 1700 },
-  },
+  { id: 7, name: 'Magic Mountain', slug: 'magic-mountain', gemColor: 0x8e24aa },
   { id: 8, name: 'Space Words', slug: 'space-words', gemColor: 0x42a5f5 },
   { id: 9, name: 'Ancient Valley', slug: 'ancient-valley', gemColor: 0xffb300 },
   { id: 10, name: 'WordSwoop Kingdom', slug: 'wordswoop-kingdom', gemColor: 0xba68c8 },
