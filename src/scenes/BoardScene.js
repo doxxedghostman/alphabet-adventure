@@ -187,9 +187,9 @@ export class BoardScene extends Phaser.Scene {
   // space below it rather than centered.
   computeBoardGeometry() {
     const isCandyGarden = this.worldId === 1;
-    this.tileSize = isCandyGarden ? 42 : TILE_SIZE;
+    this.tileSize = isCandyGarden ? 46 : TILE_SIZE;
     this.tileGap = isCandyGarden ? 3 : TILE_GAP;
-    this.tileFontSize = isCandyGarden ? 18 : 30;
+    this.tileFontSize = isCandyGarden ? 19 : 30;
     this.gridPixelSize = BOARD_SIZE * (this.tileSize + this.tileGap);
 
     // Horizontal: centers the grid in the canvas width. For the
@@ -216,19 +216,20 @@ export class BoardScene extends Phaser.Scene {
   //
   // Sizing note: measured directly off frame-candy-garden.png (not
   // guessed) - its open "safe" area (clear of the corner lollipop
-  // flowers and edge icing) is about 58.5% of its own width. 490px is
-  // the largest the frame can be while still fitting the 516px-wide
-  // canvas with a little breathing room; at that size the safe zone
-  // works out to ~287px, comfortably bigger than the 42px-tile grid's
-  // 267px, so the corner flowers clear the grid instead of being
-  // covered by it - unlike the first version of this trial, which used
-  // the old full-size 468px grid against this same frame.
+  // flowers and edge icing) is about 58.5% of its own width. 505px is
+  // about as large as the frame can go while still fitting the 516px
+  // canvas with a sliver of margin; at that size the safe zone works
+  // out to ~296px. Per chat, tiles were sized up to 46px (291px grid)
+  // to fill most of that safe zone while keeping a small buffer so the
+  // grid doesn't risk touching the corner flowers - that buffer is
+  // there because the 58.5% figure is a measurement, not an exact
+  // value baked into the art, so it's deliberately not pushed to zero.
   createBoardFrame() {
     if (this.worldId !== 1) return;
 
     const gridCenterX = this.boardOffsetX + this.gridPixelSize / 2;
     const gridCenterY = this.gridTopY + this.gridPixelSize / 2;
-    const frameSize = 490;
+    const frameSize = 505;
 
     this.add.image(gridCenterX, gridCenterY, 'frame-candy-garden').setDisplaySize(frameSize, frameSize);
   }
