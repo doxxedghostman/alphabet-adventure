@@ -45,6 +45,10 @@ export class BoardScene extends Phaser.Scene {
   preload() {
     this.load.image('boardIconShuffle', 'assets/icon-shuffle.png');
     this.load.image('boardIconBomb', 'assets/icon-bomb.png');
+    // Trial per chat: ornate board frame, Candy Garden (world 1) only for
+    // now - see createBoardFrame(). Loaded unconditionally since preload()
+    // doesn't know worldId yet, but it's one small image either way.
+    this.load.image('frame-candy-garden', 'assets/frame-candy-garden.png');
   }
 
   // Full-screen wall shown instead of the board when out of lives.
@@ -158,6 +162,7 @@ export class BoardScene extends Phaser.Scene {
     this.pointerDownPos = null;
     this.swipeHandled = false;
 
+    this.createBoardFrame();
     this.createHeader();
     this.createShuffleButton();
     this.createBombButton();
@@ -165,6 +170,37 @@ export class BoardScene extends Phaser.Scene {
     this.createInitialBoard();
     this.setupInput();
     this.ensureSolvable();
+  }
+
+  // ---------- board frame (per-world art, trial) ----------
+
+  // Trial per chat: an ornate picture-frame behind the grid, for Candy
+  // Garden (world 1) only right now - other worlds still render plain
+  // until this look is confirmed. The grid itself (468x468, unchanged)
+  // stays full size and centered exactly where it always was
+  // (BOARD_SIDE_MARGIN insets it 24px in a 516-wide canvas, which is
+  // already dead-center); the frame is centered on that same point,
+  // sized a little larger than the grid so a sliver of its candy-cane
+  // border shows around the edges.
+  //
+  // Heads up (per chat): this frame's ornate corners (lollipop
+  // flowers) are large relative to its open middle - about 20% of the
+  // image per side is decoration. At the grid's full 468px size, the
+  // grid mostly covers those corner flowers; only the straight-edge
+  // candy-cane border reliably peeks out. If that reads as too
+  // cramped once you see it live, the two ways to open it up are
+  // shrinking the tile size (touches every board-position calculation
+  // in this file, not just this method) or using a thinner-bordered
+  // frame for the wider rollout.
+  createBoardFrame() {
+    if (this.worldId !== 1) return;
+
+    const gridCenterX = BOARD_SIDE_MARGIN + (BOARD_SIZE * (TILE_SIZE + TILE_GAP)) / 2;
+    const gridCenterY = BOARD_TOP_MARGIN + (BOARD_SIZE * (TILE_SIZE + TILE_GAP)) / 2;
+    const gridSize = BOARD_SIZE * (TILE_SIZE + TILE_GAP);
+    const frameSize = gridSize + 40; // ~20px of border visible past the grid's edge
+
+    this.add.image(gridCenterX, gridCenterY, 'frame-candy-garden').setDisplaySize(frameSize, frameSize);
   }
 
   // ---------- header (level / moves / goal / score) ----------
