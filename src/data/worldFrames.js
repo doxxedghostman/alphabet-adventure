@@ -34,10 +34,20 @@
 // `frameKey`/`framePath` follow the same texture-key convention as
 // worlds.js's thumbKey/bgKey (Phaser image key + its assets/ path).
 //
-// Worlds with no entry here (5 Cloud Kingdom, 7 Magic Mountain, 8 Space
-// Words, 10 WordSwoop Kingdom) still render with the plain default
-// tile look (TILE_SIZE/TILE_GAP from config.js, no frame art) until
-// they get one - see update.md for why those four are still open.
+// Worlds with a `bossFrameKey`/`bossFramePath`/`bossTile*` set use that
+// variant instead for a world's boss level (level 20 - see
+// progressStore.js's LEVELS_PER_WORLD and BoardScene.js's `isBoss`) -
+// same idea as Candy Garden/Dino Valley each having 2 source frames in
+// the original batch, just wired to level number instead of picked
+// arbitrarily.
+//
+// All 10 worlds now have an entry (200/200 levels covered), but not
+// all with equal confidence: worlds 1-4, 6, 9 got a frame whose art
+// was actually made for that theme. Worlds 5, 7, 8, 10 use leftover
+// frames from the same batch with no purpose-built match to their
+// world name/theme - best-available substitutes, flagged inline below
+// on each of those entries. Swap freely once better-fitting art shows
+// up for those four.
 
 export const WORLD_FRAMES = {
   1: {
@@ -72,6 +82,17 @@ export const WORLD_FRAMES = {
     tileGap: 5,
     tileFontSize: 18,
   },
+  5: {
+    // Weakest theme match of the whole batch - "plain_leaf" was the
+    // least-wrong option left over for a world named "Cloud Kingdom".
+    // Worth swapping for real Cloud Kingdom art later.
+    frameKey: 'frame-cloud-kingdom',
+    framePath: 'assets/frame-cloud-kingdom.png',
+    frameDisplaySize: 505,
+    tileSize: 41,
+    tileGap: 5,
+    tileFontSize: 17,
+  },
   6: {
     frameKey: 'frame-crystal-forest',
     framePath: 'assets/frame-crystal-forest.png',
@@ -80,6 +101,32 @@ export const WORLD_FRAMES = {
     tileGap: 5,
     tileFontSize: 21,
   },
+  7: {
+    // "tribal_beads"/"tiki" read as ritual/idol imagery - closest
+    // available fit to "Magic Mountain", not a purpose-built match.
+    frameKey: 'frame-magic-mountain',
+    framePath: 'assets/frame-magic-mountain.png',
+    frameDisplaySize: 505,
+    tileSize: 39,
+    tileGap: 5,
+    tileFontSize: 16,
+    bossFrameKey: 'frame-magic-mountain-boss',
+    bossFramePath: 'assets/frame-magic-mountain-boss.png',
+    bossTileSize: 41,
+    bossTileGap: 5,
+    bossTileFontSize: 17,
+  },
+  8: {
+    // Stands in for the batch's actual "space" frame, which has a
+    // checkerboard-instead-of-transparency bug (see update.md) - this
+    // sci-fi frame has no such issue and is a reasonable thematic fit.
+    frameKey: 'frame-space-words',
+    framePath: 'assets/frame-space-words.png',
+    frameDisplaySize: 505,
+    tileSize: 45,
+    tileGap: 5,
+    tileFontSize: 19,
+  },
   9: {
     frameKey: 'frame-ancient-valley',
     framePath: 'assets/frame-ancient-valley.png',
@@ -87,6 +134,22 @@ export const WORLD_FRAMES = {
     tileSize: 36,
     tileGap: 5,
     tileFontSize: 15,
+  },
+  10: {
+    // "lagos"/"military" - a personal pick (Ayobami's home city as the
+    // finale kingdom) rather than a theme match to "WordSwoop
+    // Kingdom"; easy to swap out if it doesn't read right in-game.
+    frameKey: 'frame-wordswoop-kingdom',
+    framePath: 'assets/frame-wordswoop-kingdom.png',
+    frameDisplaySize: 505,
+    tileSize: 43,
+    tileGap: 5,
+    tileFontSize: 18,
+    bossFrameKey: 'frame-wordswoop-kingdom-boss',
+    bossFramePath: 'assets/frame-wordswoop-kingdom-boss.png',
+    bossTileSize: 41,
+    bossTileGap: 5,
+    bossTileFontSize: 17,
   },
 };
 

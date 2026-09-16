@@ -48,10 +48,11 @@ export class BoardScene extends Phaser.Scene {
     this.load.image('boardIconBomb', 'assets/icon-bomb.png');
     // Per-world board frame art (see worldFrames.js) - loaded
     // unconditionally since preload() doesn't know worldId yet, but
-    // they're small (~400-550KB each) so loading all of them every
+    // they're small (~330-530KB each) so loading all of them every
     // time is cheap relative to a per-world conditional load.
-    Object.values(WORLD_FRAMES).forEach(({ frameKey, framePath }) => {
+    Object.values(WORLD_FRAMES).forEach(({ frameKey, framePath, bossFrameKey, bossFramePath }) => {
       this.load.image(frameKey, framePath);
+      if (bossFrameKey) this.load.image(bossFrameKey, bossFramePath);
     });
   }
 
@@ -192,10 +193,12 @@ export class BoardScene extends Phaser.Scene {
   // with empty space below it rather than centered.
   computeBoardGeometry() {
     const worldFrame = getWorldFrame(this.worldId);
+    const isBoss = this.worldId && this.levelNum === LEVELS_PER_WORLD;
     this.worldFrame = worldFrame;
-    this.tileSize = worldFrame ? worldFrame.tileSize : TILE_SIZE;
-    this.tileGap = worldFrame ? worldFrame.tileGap : TILE_GAP;
-    this.tileFontSize = worldFrame ? worldFrame.tileFontSize : 30;
+    this.isBossFrame = Boolean(worldFrame?.bossFrameKey && isBoss);
+    this.tileSize = this.isBossFrame ? worldFrame.bossTileSize : worldFrame ? worldFrame.tileSize : TILE_SIZE;
+    this.tileGap = this.isBossFrame ? worldFrame.bossTileGap : worldFrame ? worldFrame.tileGap : TILE_GAP;
+    this.tileFontSize = this.isBossFrame ? worldFrame.bossTileFontSize : worldFrame ? worldFrame.tileFontSize : 30;
     this.gridPixelSize = BOARD_SIZE * (this.tileSize + this.tileGap);
 
     // Horizontal: centers the grid in the canvas width. For the
@@ -227,7 +230,8 @@ export class BoardScene extends Phaser.Scene {
 
     const gridCenterX = this.boardOffsetX + this.gridPixelSize / 2;
     const gridCenterY = this.gridTopY + this.gridPixelSize / 2;
-    const { frameKey, frameDisplaySize } = this.worldFrame;
+    const frameKey = this.isBossFrame ? this.worldFrame.bossFrameKey : this.worldFrame.frameKey;
+    const frameDisplaySize = this.worldFrame.frameDisplaySize;
 
     this.add.image(gridCenterX, gridCenterY, frameKey).setDisplaySize(frameDisplaySize, frameDisplaySize);
   }
