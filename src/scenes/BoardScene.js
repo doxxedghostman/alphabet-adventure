@@ -711,17 +711,17 @@ export class BoardScene extends Phaser.Scene {
 
     container.add([bg, text]);
 
-    // Candy Garden glass-tile look, per chat: a translucent overlay
-    // sitting on top of the plain color rect (bg) rather than
-    // replacing it, since bg still needs its fill/stroke swapped
-    // around by setFillStyle/setTileHighlight elsewhere (solvability
-    // re-rolls, tap-to-select) - it's a static decoration, not
-    // per-letter state, so it never needs to be touched again after
-    // creation. Diagonal white-to-transparent sheen (top-left corner
-    // brightest) plus a faint dark wash in the bottom-right corner
-    // approximates a beveled glass surface; a soft white rim stroke on
-    // top of that sells the edge highlight.
-    if (this.worldId === 1) {
+    // Glass-tile look (extended to all worlds, per chat), applied on
+    // top of the plain color rect (bg) rather than replacing it, since
+    // bg still needs its fill/stroke swapped around by
+    // setFillStyle/setTileHighlight elsewhere (solvability re-rolls,
+    // tap-to-select) - it's a static decoration, not per-letter state,
+    // so it never needs to be touched again after creation. Diagonal
+    // white-to-transparent sheen (top-left corner brightest) plus a
+    // faint dark wash in the bottom-right corner approximates a
+    // beveled glass surface; a soft white rim stroke on top of that
+    // sells the edge highlight.
+    {
       const half = this.tileSize / 2;
       const glass = this.add.graphics();
       glass.fillGradientStyle(0xffffff, 0xffffff, 0x000000, 0x000000, 0.55, 0.12, 0.1, 0.3);
@@ -739,9 +739,9 @@ export class BoardScene extends Phaser.Scene {
     return tile;
   }
 
-  // ---------- Candy Garden glass-shatter clear effect ----------
+  // ---------- glass-shatter clear effect ----------
 
-  // Per chat: match-clears on Candy Garden's glass tiles shatter
+  // Per chat: match-clears on the glass tiles shatter (all worlds)
   // instead of just scaling/fading out. Cheap approximation - no
   // texture slicing, just a handful of small colored shard rectangles
   // spawned at the tile's position, flung outward with random angle/
@@ -1432,37 +1432,20 @@ export class BoardScene extends Phaser.Scene {
       }
     }
 
-    if (this.worldId === 1) {
-      // Candy Garden: glass-shatter per chat, instead of the plain
-      // scale/fade below. Container destroyed immediately since the
-      // shards (spawned at its position) fly independently of it.
-      await Promise.all(
-        tiles.map((tile) => {
-          // shatterTile reads container.x/y and bg.fillColor
-          // synchronously before it awaits anything, so it's safe to
-          // destroy the (now-visually-replaced) container right after
-          // calling it rather than waiting on it.
-          const promise = this.shatterTile(tile);
-          tile.container.destroy();
-          return promise;
-        })
-      );
-      return;
-    }
-
+    // Glass-shatter clear (all worlds, per chat) instead of a plain
+    // scale/fade. Container destroyed immediately since the shards
+    // (spawned at its position) fly independently of it.
     await Promise.all(
-      tiles.map((tile) =>
-        this.tweenPromise({
-          targets: tile.container,
-          scale: 0,
-          alpha: 0,
-          duration: 180,
-          ease: 'Back.easeIn',
-        })
-      )
+      tiles.map((tile) => {
+        // shatterTile reads container.x/y and bg.fillColor
+        // synchronously before it awaits anything, so it's safe to
+        // destroy the (now-visually-replaced) container right after
+        // calling it rather than waiting on it.
+        const promise = this.shatterTile(tile);
+        tile.container.destroy();
+        return promise;
+      })
     );
-
-    tiles.forEach((tile) => tile.container.destroy());
   }
 
   async collapseAndRefill() {
