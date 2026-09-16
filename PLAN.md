@@ -89,6 +89,15 @@ Player starts at World 1, Level 1.
   data table (`src/data/worldFrames.js`) rather than one-off scene
   code — see update.md Milestone 44 for how each world's fit was
   measured and what's still unassigned (worlds 5, 7, 8, 10).
+- All 10 worlds now have frame art (update.md Milestone 45) - 200/200
+  levels covered. Worlds 5 (Cloud Kingdom), 7 (Magic Mountain), 8
+  (Space Words), and 10 (WordSwoop Kingdom) run on leftover art with
+  no purpose-built match to that world's name/theme (weakest: Cloud
+  Kingdom's "plain_leaf", and World 10's frame is a personal Lagos
+  pick rather than a "WordSwoop Kingdom" match) - these four are the
+  first candidates to replace if proper themed art gets made later.
+  Worlds 7 and 10 also got a distinct frame for their boss level
+  (level 20) via new bossFrameKey/bossTile* fields in worldFrames.js.
 
 ## 3. Target words & objectives
 

@@ -1930,3 +1930,47 @@ Held back from the same batch (not guessed):
   represent new/renamed world concepts), before proceeding further.
 
 Build verified clean (`npm run build`) before pushing.
+
+### Milestone 45 — Remaining 4 worlds framed, all 200 levels covered
+
+Assigned the 6 leftover frames from the batch (Milestone 44) to the 4
+worlds that still had no theme-matched art, and added boss-frame
+support so a world can show a different frame on its level-20 boss
+level:
+
+- World 5 Cloud Kingdom -> `frame_plain_leaf`. Weakest match in the
+  whole batch — nothing left over reads as "sky/clouds"; this is the
+  least-wrong option, not a real match. First candidate to replace if
+  proper Cloud Kingdom art turns up.
+- World 7 Magic Mountain -> `frame_tribal_beads` (regular) /
+  `frame_tiki` (boss). Ritual/idol imagery read as the closest
+  available fit to "magic."
+- World 8 Space Words -> `frame_tech_scifi`, standing in for the
+  batch's actual `frame_space` file, which has a checkerboard baked
+  into its RGBA pixel data instead of real transparency (see
+  Milestone 44) — this sidesteps that bug rather than needing a
+  cleanup pass, and reads fine thematically on its own.
+- World 10 WordSwoop Kingdom (finale) -> `frame_lagos` (regular) /
+  `frame_military` (boss). A personal pick — Ayobami's home city as
+  the finale kingdom — not a theme match to "WordSwoop Kingdom" as
+  named; flagged as the easiest of the four to swap if it doesn't
+  land right once seen running.
+
+`worldFrames.js` gained optional `bossFrameKey`/`bossFramePath`/
+`bossTile*` fields per world; `BoardScene.js` picks them using the
+game's existing boss check (`this.levelNum === LEVELS_PER_WORLD`,
+i.e. level 20 of each world) — not a new concept, just reused.
+
+Same measurement discipline as Milestone 44: each frame's safe
+interior measured off the actual PNG pixels via a grid overlay (not
+guessed), tile grid sized to ~90% of the tighter axis, fit verified
+by overlaying the computed grid back onto the source art before
+touching code. Source PNGs downsized to 1024x1024 and pngquant'd to
+332-503KB each.
+
+All 10 worlds now have board frame art - 200/200 levels covered.
+Worlds 1-4, 6, 9 have art actually made for that world's theme;
+worlds 5, 7, 8, 10 use best-available leftovers with no purpose-built
+match, called out individually in `worldFrames.js` and above.
+
+Build verified clean (`npm run build`) before pushing.
