@@ -84,6 +84,11 @@ Player starts at World 1, Level 1.
   look — rolling the same treatment out to them (with per-world frame
   art and possibly per-world clear-effect flavor) is open follow-up
   work. See update.md Milestone 43.
+- Frame art (border only, not the glass-tile/shatter effect) is now
+  also in for worlds 2, 3, 4, 6, and 9, driven by a shared per-world
+  data table (`src/data/worldFrames.js`) rather than one-off scene
+  code — see update.md Milestone 44 for how each world's fit was
+  measured and what's still unassigned (worlds 5, 7, 8, 10).
 
 ## 3. Target words & objectives
 

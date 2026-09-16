@@ -1879,3 +1879,54 @@ Done outside a Claude session; logged here for continuity.
   plain tile look and scale/fade clear — rolling this treatment out
   further (with per-world frame art, and possibly per-world
   clear-effect flavor) is open follow-up work.
+
+### Milestone 44 — Generalized per-world board frame system, 5 more worlds
+
+Replaced the `isCandyGarden` special case in `BoardScene.js` with a
+data table (`src/data/worldFrames.js`) — one row per world (frame
+key/path, `tileSize`, `tileGap`, `tileFontSize`) — so each new world's
+frame is now "measure it, add a row" instead of editing scene sizing
+and render logic per world. Candy Garden's existing numbers carried
+over unchanged.
+
+From a 15-frame batch the person provided, wired up 5 worlds whose
+theme matched a frame unambiguously:
+
+- World 2 Jungle Jumble, World 3 Ocean Words, World 6 Crystal Forest,
+  World 9 Ancient Valley — plain bordered frame over the existing
+  flat board background.
+- World 4 Dino Valley — this frame has a full baked scene (sky +
+  volcano), not just a border, so it doubles as the board backdrop
+  for that world too.
+
+Method (applied to all 5, to avoid repeating Candy Garden's original
+wrong-58.5%-guess bug): each frame's safe interior was measured
+directly off the source PNG's pixels via a coordinate-grid overlay,
+not eyeballed/guessed. Tile grid sized to ~90% of the tighter
+safe-zone axis (more conservative than Candy Garden's live-tuned
+~92-97%, since these haven't been seen running in the actual game
+yet — safe to tighten per-world later the same way). Fit was verified
+by overlaying the computed grid back onto each source frame before
+committing, not just computed and hoped for.
+
+Source PNGs (1200x1200, 1.2-2.2MB) downsized to 1024x1024 and
+pngquant'd to 384-529KB each, matching the project's existing
+image-compression practice for world thumb/bg art.
+
+Held back from the same batch (not guessed):
+
+- `frame_dino_transparent` / `frame_space` — both have a checkerboard
+  pattern baked into the RGBA pixel data in place of real
+  transparency (looks like a generation artifact), would render as a
+  visible checkerboard behind the frame as-is. Needs either a cleanup
+  pass or regeneration before use.
+- `frame_candy_royal` / `frame_candy_swirl` — Candy Garden already has
+  a working frame; not swapped without being asked.
+- `frame_lagos`, `frame_military`, `frame_tiki`, `frame_tribal_beads`,
+  `frame_tech_scifi`, `frame_plain_leaf` — no obvious 1:1 theme match
+  to the 4 worlds still without frame art (5 Cloud Kingdom, 7 Magic
+  Mountain, 8 Space Words, 10 WordSwoop Kingdom). Open question for
+  the person: how these 6 map to those 4 worlds (or whether they
+  represent new/renamed world concepts), before proceeding further.
+
+Build verified clean (`npm run build`) before pushing.
