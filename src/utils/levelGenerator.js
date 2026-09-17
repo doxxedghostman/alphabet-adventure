@@ -33,7 +33,6 @@ export const SCRAMBLE_COUNT_BY_LENGTH = {
   3: 6,
   4: 9,
   5: 12,
-  6: 15,
 };
 
 // How much extra swap budget to hand the player on top of the scramble
