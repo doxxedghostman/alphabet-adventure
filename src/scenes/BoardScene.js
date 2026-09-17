@@ -47,6 +47,7 @@ export class BoardScene extends Phaser.Scene {
   preload() {
     this.load.image('boardIconShuffle', 'assets/icon-shuffle.png');
     this.load.image('boardIconBomb', 'assets/icon-bomb.png');
+    this.load.image('boardBackIcon', 'assets/icon-back.png');
     // Per-world board frame art (see worldFrames.js) - loaded
     // unconditionally since preload() doesn't know worldId yet, but
     // they're small (~330-530KB each) so loading all of them every
@@ -107,16 +108,23 @@ export class BoardScene extends Phaser.Scene {
 
     this.worldId = sceneData?.worldId ?? null;
 
-    const backLabel = this.add
-      .text(width / 2, height * 0.35 + 160, '\u2190 Back', {
-        fontFamily: 'Arial',
-        fontSize: '16px',
-        fontStyle: 'bold',
-        color: '#ffd93d',
-      })
-      .setOrigin(0.5)
+    // Real icon back button (per chat) replacing the plain "\u2190 Back"
+    // text link - same baseScale-relative tap-bounce pattern used in
+    // CalendarScene's createHud(). Centered like the text it replaces
+    // (this sits in the middle of the out-of-lives wall, not a HUD bar).
+    const backSize = 40;
+    const backIcon = this.add.image(width / 2, height * 0.35 + 160, 'boardBackIcon');
+    backIcon.setDisplaySize(backSize, backSize);
+    const backBase = backIcon.scale;
+
+    const backHit = this.add
+      .circle(backIcon.x, backIcon.y, backSize / 2, 0xffffff, 0)
       .setInteractive({ useHandCursor: true });
-    backLabel.on('pointerup', () => this.goBack());
+    backHit.on('pointerdown', () => this.tweens.add({ targets: backIcon, scale: backBase * 0.9, duration: 70 }));
+    backHit.on('pointerup', () => {
+      this.tweens.add({ targets: backIcon, scale: backBase, duration: 100 });
+      this.goBack();
+    });
 
     const tick = () => {
       const status = getLivesStatus();

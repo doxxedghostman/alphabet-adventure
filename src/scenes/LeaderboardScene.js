@@ -36,6 +36,13 @@ export class LeaderboardScene extends Phaser.Scene {
     super('LeaderboardScene');
   }
 
+  preload() {
+    // Own copy of the key (same per-scene-load convention CalendarScene
+    // already uses for this same icon) rather than assuming another
+    // scene has loaded it first.
+    this.load.image('lbBackIcon', 'assets/icon-back.png');
+  }
+
   create() {
     const { width, height } = this.scale;
     this.hudHeight = 56;
@@ -149,15 +156,21 @@ export class LeaderboardScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    this.add
-      .text(16, this.hudHeight / 2, '\u2190 Back', {
-        fontFamily: 'Arial',
-        fontSize: '18px',
-        fontStyle: 'bold',
-        color: '#ffd93d',
-      })
-      .setOrigin(0, 0.5)
-      .setInteractive({ useHandCursor: true })
-      .on('pointerup', () => this.goBack());
+    // Real icon back button (per chat) replacing the plain "\u2190 Back"
+    // text link - same baseScale-relative tap-bounce pattern used in
+    // CalendarScene's createHud().
+    const backSize = this.hudHeight - 12;
+    const backIcon = this.add.image(16 + backSize / 2, this.hudHeight / 2, 'lbBackIcon');
+    backIcon.setDisplaySize(backSize, backSize);
+    const backBase = backIcon.scale;
+
+    const backHit = this.add
+      .circle(backIcon.x, backIcon.y, backSize / 2, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true });
+    backHit.on('pointerdown', () => this.tweens.add({ targets: backIcon, scale: backBase * 0.9, duration: 70 }));
+    backHit.on('pointerup', () => {
+      this.tweens.add({ targets: backIcon, scale: backBase, duration: 100 });
+      this.goBack();
+    });
   }
 }

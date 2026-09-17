@@ -82,6 +82,7 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('iconLeaderboard', 'assets/icon-leaderboard.png');
     this.load.image('iconCalendar', 'assets/icon-calendar.png');
     this.load.image('iconVideo', 'assets/icon-video.png');
+    this.load.image('hubBackIcon', 'assets/icon-back.png');
 
     // Real profile photo (Google avatar) to overlay on the baked-in
     // avatar badge when signed in - same pattern as Settings' signed-in
@@ -265,6 +266,30 @@ export class HomeHubScene extends Phaser.Scene {
     this.add.circle(gearPos.x, gearPos.y, gearPos.d / 2, 0xffffff, 0)
       .setInteractive({ useHandCursor: true })
       .on('pointerup', () => this.scene.start('SettingsScene'));
+
+    // Back button (per chat) - same icon-back.png + tap-bounce pattern
+    // as every other scene's back control. Home Hub had no on-screen
+    // Back before now (it's the landing screen, one tap deep from
+    // MainMenuScene). Left-inset to match the other scenes' ~16px
+    // convention, but dropped just below the baked top bar rather than
+    // vertically centered inside it - the bar's own avatar badge
+    // already occupies that top-left corner, so overlapping it there
+    // would sit on top of the avatar photo instead of next to it.
+    const backSize = 40;
+    const backX = 16 + backSize / 2;
+    const backY = imgTop + displayH + 8 + backSize / 2;
+    const backIcon = this.add.image(backX, backY, 'hubBackIcon');
+    backIcon.setDisplaySize(backSize, backSize);
+    const backBase = backIcon.scale;
+
+    const backHit = this.add
+      .circle(backX, backY, backSize / 2, 0xffffff, 0)
+      .setInteractive({ useHandCursor: true });
+    backHit.on('pointerdown', () => this.tweens.add({ targets: backIcon, scale: backBase * 0.9, duration: 70 }));
+    backHit.on('pointerup', () => {
+      this.tweens.add({ targets: backIcon, scale: backBase, duration: 100 });
+      this.goBack();
+    });
   }
 
   // --- Center: logo + decorative mini map preview -------------------------
