@@ -1,24 +1,46 @@
-// Prototype config: 6x6 board, swap -> match 3-6 letter word -> clear -> fall -> score.
+// Prototype config: 5x5 board, swap -> match 3-5 letter word -> clear -> fall -> score.
 // No target words, no special tiles, no obstacles yet (those are Phase 2/3).
+//
+// Was 6x6 / 3-6 letters. Dropped to 5x5 / 3-5 per chat: screen width is
+// fixed at 516px regardless of column count (BOARD_PIXEL_SIZE.width below),
+// so fewer columns puts more of that fixed width into each tile - a real
+// ceiling raise, not another per-world fill-percentage guess. Simulated
+// against two frames of different measured safe-zone size (Candy Garden,
+// Magic Mountain) before committing: both come out ~21-23% bigger per tile
+// at the same edge-to-edge fill they already have today. See worldFrames.js
+// for the resulting per-world tileSize/tileGap/tileFontSize recalculation.
 import Phaser from 'phaser';
 
-export const BOARD_SIZE = 6;
+export const BOARD_SIZE = 5;
 export const MIN_WORD_LENGTH = 3;
-export const MAX_WORD_LENGTH = 6;
+export const MAX_WORD_LENGTH = 5;
 export const TILE_SIZE = 72;
 export const TILE_GAP = 6;
 export const BOARD_TOP_MARGIN = 132; // room for title/subtitle/current-word/score UI above the grid
 export const BOARD_SIDE_MARGIN = 24;
 
+// Width is intentionally NOT derived from BOARD_SIZE below. This used to be
+// BOARD_SIZE * (TILE_SIZE + TILE_GAP) + margins - fine back when the grid
+// was always 6 columns, but getCanvasSize() (main.js) uses this width as
+// the WHOLE APP's canvas width (every scene, not just BoardScene). Letting
+// it shrink/grow with the grid's column count would resize every menu
+// screen every time the grid changes - not what the grid change is for.
+// Hardcoded at the same 516px the app has always used (still a good
+// tap-target width on a phone); BoardScene's own HUD layout (pills, score
+// text, word-wrap) reads this same constant and is meant to fill the real
+// canvas width regardless of how many grid columns sit inside it.
+const CANVAS_WIDTH = 516;
+
 export const BOARD_PIXEL_SIZE = {
-  width: BOARD_SIZE * (TILE_SIZE + TILE_GAP) + BOARD_SIDE_MARGIN * 2,
+  width: CANVAS_WIDTH,
   height: BOARD_SIZE * (TILE_SIZE + TILE_GAP) + BOARD_TOP_MARGIN + BOARD_SIDE_MARGIN,
 };
 
 // The actual Phaser canvas resolution used by main.js - deliberately
-// NOT the same as BOARD_PIXEL_SIZE. BOARD_PIXEL_SIZE is just "how big
-// the 6x6 grid + its header naturally is"; using that as the whole
-// canvas made every screen (menus included) get boxed into a stubby
+// NOT the same as BOARD_PIXEL_SIZE. BOARD_PIXEL_SIZE.height is "how big
+// the grid + its header naturally is" (width is now a fixed constant,
+// see above); using the height as-is for the whole canvas made every
+// screen (menus included) get boxed into a stubby
 // 516x624 window and letterboxed top/bottom on real phones, which are
 // much taller and narrower than that.
 //
@@ -50,8 +72,9 @@ export const BOARD_PIXEL_SIZE = {
 //     outlier tall-screen devices, without letting a genuinely
 //     extreme window (e.g. a very short landscape strip) stretch the
 //     canvas into something unreasonable.
-// 516 wide stays fixed either way (unchanged - it's a good tap-target
-// width for a 6-col grid); only the height adapts.
+// 516 wide stays fixed either way (unchanged - CANVAS_WIDTH above is a
+// good tap-target width on a phone regardless of grid column count);
+// only the height adapts.
 const MIN_HEIGHT_RATIO = 1.7;
 const MAX_HEIGHT_RATIO = 2.6;
 
@@ -113,7 +136,7 @@ export const ALPHABET = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
 
 // Full-alphabet pool, weighted by standard English/Scrabble-style letter
 // frequency so common letters (vowels, R/S/T/N/L) still come up often
-// enough to form 3-6 letter words, while rare ones (Q/X/Z/J/K) show up
+// enough to form 3-5 letter words, while rare ones (Q/X/Z/J/K) show up
 // only occasionally - present, but not so often they choke word density.
 // NOTE: this is the full A-Z pool for now. Splitting it into progressive
 // stages (e.g. Stage 1 = vowels + common consonants, later stages unlock
