@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { APP_BG_COLOR } from '../config.js';
 import { supabase } from '../utils/supabaseClient.js';
 import { isSignedIn } from '../utils/authStore.js';
+import { bindHardwareBack } from '../utils/hardwareBack.js';
 
 // Leaderboard — Home Hub's Leaderboard icon used to just show a
 // "coming soon" toast; this is the real screen. Ranks players by
@@ -52,6 +53,11 @@ export class LeaderboardScene extends Phaser.Scene {
       .setOrigin(0.5);
 
     this.fetchLeaderboard(width);
+    bindHardwareBack(this, () => this.goBack());
+  }
+
+  goBack() {
+    this.scene.start('HomeHubScene');
   }
 
   async fetchLeaderboard(width) {
@@ -152,6 +158,6 @@ export class LeaderboardScene extends Phaser.Scene {
       })
       .setOrigin(0, 0.5)
       .setInteractive({ useHandCursor: true })
-      .on('pointerup', () => this.scene.start('HomeHubScene'));
+      .on('pointerup', () => this.goBack());
   }
 }

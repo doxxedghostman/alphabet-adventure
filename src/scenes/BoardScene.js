@@ -21,6 +21,7 @@ import { getLivesStatus, loseLife, MAX_LIVES } from '../utils/livesStore.js';
 import { showRewardedAdForLife } from '../utils/adsStore.js';
 import { getBoosters, spendBooster } from '../utils/boosterStore.js';
 import { WORLD_FRAMES, getWorldFrame } from '../data/worldFrames.js';
+import { bindHardwareBack } from '../utils/hardwareBack.js';
 
 // Word-Swap mechanic:
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
@@ -115,11 +116,7 @@ export class BoardScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setInteractive({ useHandCursor: true });
-    backLabel.on('pointerup', () => {
-      this.worldId
-        ? this.scene.start('LevelPathScene', { worldId: this.worldId })
-        : this.scene.start('MainMenuScene');
-    });
+    backLabel.on('pointerup', () => this.goBack());
 
     const tick = () => {
       const status = getLivesStatus();
@@ -135,10 +132,26 @@ export class BoardScene extends Phaser.Scene {
     this.time.addEvent({ delay: 1000, loop: true, callback: tick });
   }
 
+  // Same "leave the board" destination the out-of-lives wall's own
+  // Back label uses (see showOutOfLivesWall) - worldId is set by
+  // whichever create() path ran before this is ever invoked, so it's
+  // safe to read lazily here.
+  goBack() {
+    this.worldId
+      ? this.scene.start('LevelPathScene', { worldId: this.worldId })
+      : this.scene.start('MainMenuScene');
+  }
+
   create(sceneData) {
     this.isBusy = false;
     this.score = 0;
     this.grid = [];
+
+    // Hardware/gesture back button - same destination as the on-screen
+    // Back label above. Registered up front (before the lives-gate
+    // branch below) since goBack() only reads this.worldId at press
+    // time, by which point either create() path has already set it.
+    bindHardwareBack(this, () => this.goBack());
 
     // Lives gate - per PLAN.md §14, now enforced for real. Checked
     // before anything else builds so an out-of-lives player never

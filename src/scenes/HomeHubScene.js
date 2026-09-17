@@ -4,6 +4,7 @@ import { getGems } from '../utils/currencyStore.js';
 import { getLivesStatus, MAX_LIVES } from '../utils/livesStore.js';
 import { showRewardedAd } from '../utils/adsStore.js';
 import { syncLocalProgressToCloud, getAvatarUrl, isSignedIn } from '../utils/authStore.js';
+import { bindHardwareBack } from '../utils/hardwareBack.js';
 
 // Home Hub (per chat): sits between the splash/logo Main Menu and the
 // World Map. Modeled on the reference mockup image the user provided -
@@ -105,6 +106,15 @@ export class HomeHubScene extends Phaser.Scene {
     // handleWatchToEarn) - shown after restart rather than before it,
     // since restart() tears down whatever toast was already on screen.
     if (sceneData?.toastMessage) this.showComingSoonToast(sceneData.toastMessage);
+
+    bindHardwareBack(this, () => this.goBack());
+  }
+
+  // No on-screen Back button here (Home Hub is the app's real landing
+  // screen, one tap deep from MainMenuScene) - but the hardware back
+  // gesture still needs somewhere to go rather than exiting outright.
+  goBack() {
+    this.scene.start('MainMenuScene');
   }
 
   // --- Background -----------------------------------------------------------

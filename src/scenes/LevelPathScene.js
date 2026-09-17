@@ -3,6 +3,7 @@ import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 import { getWorld } from '../data/worlds.js';
 import { getPathNodes } from '../data/levelPaths.js';
 import { levelIdFor, isLevelUnlocked, isLevelComplete, LEVELS_PER_WORLD } from '../utils/progressStore.js';
+import { bindHardwareBack } from '../utils/hardwareBack.js';
 
 // Per-world node path (PLAN.md §8.5): a scrollable background with 20
 // code-drawn nodes (lock icon / number / star depending on progress),
@@ -63,6 +64,7 @@ export class LevelPathScene extends Phaser.Scene {
     this.drawPath();
     this.drawNodes();
     this.createHud();
+    bindHardwareBack(this, () => this.goBack());
   }
 
   // --- Drag-to-scroll -------------------------------------------------------

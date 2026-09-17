@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { APP_BG_COLOR, LETTERBOX_BG_COLOR } from '../config.js';
 import { getStatus, claimToday, REWARD_SCHEDULE } from '../utils/dailyRewardStore.js';
 import { syncLocalProgressToCloud } from '../utils/authStore.js';
+import { bindHardwareBack } from '../utils/hardwareBack.js';
 
 // Calendar / Daily Rewards — Home Hub's Calendar icon used to just
 // show a "coming soon" toast; this is the real screen. Per chat: a
@@ -54,6 +55,11 @@ export class CalendarScene extends Phaser.Scene {
     this.createDayGrid(width, height);
     this.createClaimButton(width, height);
     this.createHud(width);
+    bindHardwareBack(this, () => this.goBack());
+  }
+
+  goBack() {
+    this.scene.start('HomeHubScene');
   }
 
   // --- Streak header ------------------------------------------------------
@@ -313,7 +319,7 @@ export class CalendarScene extends Phaser.Scene {
     backHit.on('pointerdown', () => this.tweens.add({ targets: backIcon, scale: backBase * 0.9, duration: 70 }));
     backHit.on('pointerup', () => {
       this.tweens.add({ targets: backIcon, scale: backBase, duration: 100 });
-      this.scene.start('HomeHubScene');
+      this.goBack();
     });
   }
 }

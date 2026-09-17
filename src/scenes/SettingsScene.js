@@ -4,6 +4,7 @@ import pkg from '../../package.json';
 import { resetProgress } from '../utils/progressStore.js';
 import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } from '../utils/settingsStore.js';
 import { isSignedIn, getDisplayName, getAvatarUrl, signInWithGoogle, signOut, onAuthChange } from '../utils/authStore.js';
+import { bindHardwareBack } from '../utils/hardwareBack.js';
 
 // Settings — was a small fixed-height popup inside HomeHubScene with
 // exactly two buttons (Reset Progress, Close). That doesn't scale to a
@@ -122,6 +123,7 @@ export class SettingsScene extends Phaser.Scene {
       if (this.scene.isActive()) this.scene.restart();
     });
     this.events.once('shutdown', () => this._unsubscribeAuth());
+    bindHardwareBack(this, () => this.goBack());
 
     let y = this.hudHeight + 16;
 
@@ -577,7 +579,11 @@ export class SettingsScene extends Phaser.Scene {
 
     backButton.on('pointerup', () => {
       if (this.wasDrag()) return;
-      this.scene.start('HomeHubScene');
+      this.goBack();
     });
+  }
+
+  goBack() {
+    this.scene.start('HomeHubScene');
   }
 }

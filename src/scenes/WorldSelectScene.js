@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { APP_BG_COLOR_RGB } from '../config.js';
 import { WORLDS } from '../data/worlds.js';
 import { isWorldUnlocked } from '../utils/progressStore.js';
+import { bindHardwareBack } from '../utils/hardwareBack.js';
 
 // World Map entry screen (PLAN.md §8.5).
 //
@@ -48,6 +49,7 @@ export class WorldSelectScene extends Phaser.Scene {
     this.drawTiles();
     this.setupDragScroll(height);
     this.createHud(width);
+    bindHardwareBack(this, () => this.goBack());
   }
 
   createBackground(width, height) {
@@ -239,10 +241,7 @@ export class WorldSelectScene extends Phaser.Scene {
 
     backButton.on('pointerup', () => {
       if (this.wasDrag()) return;
-      this.cameras.main.fadeOut(220, ...APP_BG_COLOR_RGB);
-      this.cameras.main.once('camerafadeoutcomplete', () => {
-        this.scene.start('HomeHubScene');
-      });
+      this.goBack();
     });
   }
 
@@ -250,6 +249,13 @@ export class WorldSelectScene extends Phaser.Scene {
     this.cameras.main.fadeOut(220, ...APP_BG_COLOR_RGB);
     this.cameras.main.once('camerafadeoutcomplete', () => {
       this.scene.start('LevelPathScene', { worldId });
+    });
+  }
+
+  goBack() {
+    this.cameras.main.fadeOut(220, ...APP_BG_COLOR_RGB);
+    this.cameras.main.once('camerafadeoutcomplete', () => {
+      this.scene.start('HomeHubScene');
     });
   }
 }

@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
+import { App } from '@capacitor/app';
 import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
+import { bindHardwareBack } from '../utils/hardwareBack.js';
 
 // Landing screen after the splash. Per chat: this now shows nothing but
 // the full forest-adventure poster art (logo + two scout characters +
@@ -83,6 +85,11 @@ export class MainMenuScene extends Phaser.Scene {
       delay: 200,
       ease: 'Back.easeOut',
     });
+
+    // This is the top of the navigation stack - nowhere left to "go
+    // back" to, so the hardware back gesture here actually exits the
+    // app instead of being swallowed like on every other scene.
+    bindHardwareBack(this, () => App.exitApp());
   }
 
   createPlayButton(x, y, displayWidth, displayHeight) {
