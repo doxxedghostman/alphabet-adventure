@@ -19,6 +19,14 @@
 //    square, so its numbers below bake in that non-uniform stretch -
 //    see the old inline comment history in BoardScene.js/git log for
 //    that derivation).
+// Recalculated for a 5x5 grid (per chat, config.js) - each world's total
+// covered footprint inside its safe zone was kept identical to its old
+// 6x6 numbers (same measured fill, no re-guessing needed), just redivided
+// into 5 cells instead of 6: newTileSize = round(6*(oldTile+oldGap)/5 - gap).
+// That's a straight ~21-23% tile-size increase everywhere, same edge-to-
+// edge coverage as before. Original derivation method below still applies
+// to the underlying safe-zone measurements themselves.
+//
 // 3. The 6x6 tile grid was sized to ~90% of whichever axis (width or
 //    height) of that displayed safe zone is tighter, leaving a buffer
 //    on both sides so tiles don't touch corner decorations. Candy
@@ -54,33 +62,33 @@ export const WORLD_FRAMES = {
     frameKey: 'frame-candy-garden',
     framePath: 'assets/frame-candy-garden.png',
     frameDisplaySize: 505,
-    tileSize: 52,
+    tileSize: 63,
     tileGap: 5,
-    tileFontSize: 22,
+    tileFontSize: 26,
   },
   2: {
     frameKey: 'frame-jungle-jumble',
     framePath: 'assets/frame-jungle-jumble.png',
     frameDisplaySize: 505,
-    tileSize: 41,
+    tileSize: 50,
     tileGap: 5,
-    tileFontSize: 17,
+    tileFontSize: 21,
   },
   3: {
     frameKey: 'frame-ocean-words',
     framePath: 'assets/frame-ocean-words.png',
     frameDisplaySize: 505,
-    tileSize: 41,
+    tileSize: 50,
     tileGap: 5,
-    tileFontSize: 17,
+    tileFontSize: 21,
   },
   4: {
     frameKey: 'frame-dino-valley',
     framePath: 'assets/frame-dino-valley.png',
     frameDisplaySize: 505,
-    tileSize: 42,
+    tileSize: 51,
     tileGap: 5,
-    tileFontSize: 18,
+    tileFontSize: 21,
   },
   5: {
     // Weakest theme match of the whole batch - "plain_leaf" was the
@@ -89,17 +97,17 @@ export const WORLD_FRAMES = {
     frameKey: 'frame-cloud-kingdom',
     framePath: 'assets/frame-cloud-kingdom.png',
     frameDisplaySize: 505,
-    tileSize: 41,
+    tileSize: 50,
     tileGap: 5,
-    tileFontSize: 17,
+    tileFontSize: 21,
   },
   6: {
     frameKey: 'frame-crystal-forest',
     framePath: 'assets/frame-crystal-forest.png',
     frameDisplaySize: 505,
-    tileSize: 49,
+    tileSize: 60,
     tileGap: 5,
-    tileFontSize: 21,
+    tileFontSize: 25,
   },
   7: {
     // "tribal_beads"/"tiki" read as ritual/idol imagery - closest
@@ -107,14 +115,14 @@ export const WORLD_FRAMES = {
     frameKey: 'frame-magic-mountain',
     framePath: 'assets/frame-magic-mountain.png',
     frameDisplaySize: 505,
-    tileSize: 39,
+    tileSize: 48,
     tileGap: 5,
-    tileFontSize: 16,
+    tileFontSize: 20,
     bossFrameKey: 'frame-magic-mountain-boss',
     bossFramePath: 'assets/frame-magic-mountain-boss.png',
-    bossTileSize: 41,
+    bossTileSize: 50,
     bossTileGap: 5,
-    bossTileFontSize: 17,
+    bossTileFontSize: 21,
   },
   8: {
     // Stands in for the batch's actual "space" frame, which has a
@@ -123,17 +131,17 @@ export const WORLD_FRAMES = {
     frameKey: 'frame-space-words',
     framePath: 'assets/frame-space-words.png',
     frameDisplaySize: 505,
-    tileSize: 45,
+    tileSize: 55,
     tileGap: 5,
-    tileFontSize: 19,
+    tileFontSize: 23,
   },
   9: {
     frameKey: 'frame-ancient-valley',
     framePath: 'assets/frame-ancient-valley.png',
     frameDisplaySize: 505,
-    tileSize: 36,
+    tileSize: 44,
     tileGap: 5,
-    tileFontSize: 15,
+    tileFontSize: 18,
   },
   10: {
     // "lagos"/"military" - a personal pick (Ayobami's home city as the
@@ -142,14 +150,14 @@ export const WORLD_FRAMES = {
     frameKey: 'frame-wordswoop-kingdom',
     framePath: 'assets/frame-wordswoop-kingdom.png',
     frameDisplaySize: 505,
-    tileSize: 43,
+    tileSize: 53,
     tileGap: 5,
-    tileFontSize: 18,
+    tileFontSize: 22,
     bossFrameKey: 'frame-wordswoop-kingdom-boss',
     bossFramePath: 'assets/frame-wordswoop-kingdom-boss.png',
-    bossTileSize: 41,
+    bossTileSize: 50,
     bossTileGap: 5,
-    bossTileFontSize: 17,
+    bossTileFontSize: 21,
   },
 };
 
