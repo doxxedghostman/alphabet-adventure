@@ -30,7 +30,7 @@ export const WORDS_3 = [
   'SAX', 'SAY', 'SEA', 'SEC', 'SEE', 'SET', 'SEW', 'SHE', 'SHY', 'SIC', 'SIN', 'SIP',
   'SIR', 'SIT', 'SIX', 'SKI', 'SKY', 'SOL', 'SON', 'SOS', 'SOX', 'SOY', 'SPY', 'SUB',
   'SUE', 'SUM', 'SUN', 'TAD', 'TAG', 'TAN', 'TAP', 'TAR', 'TAX', 'TEA', 'TEE', 'TEN',
-  'THE', 'THY', 'TIC', 'TIE', 'TIL', 'TIN', 'TIP', 'TIS', 'TOE', 'TON', 'TOO', 'TOP',
+  'THE', 'THY', 'TIC', 'TIE', 'TIL', 'TIN', 'TIP', 'TOE', 'TON', 'TOO', 'TOP',
   'TRY', 'TUB', 'TWO', 'USE', 'VAN', 'VAT', 'VET',
   'VIA', 'VIE', 'WAR', 'WAS', 'WAX', 'WAY', 'WEB', 'WED', 'WEE', 'WEN', 'WET', 'WHO',
   'WHY', 'WIG', 'WIN', 'WIT', 'WON', 'WOO', 'WOW', 'YAY', 'YEA', 'YEN', 'YEP', 'YES',
