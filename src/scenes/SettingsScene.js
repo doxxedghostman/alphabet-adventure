@@ -102,10 +102,16 @@ export class SettingsScene extends Phaser.Scene {
     this.load.image('settingsParchmentCapLeft', 'assets/parchment-cap-left.png');
     this.load.image('settingsParchmentCapRight', 'assets/parchment-cap-right.png');
     this.load.image('settingsParchmentMiddle', 'assets/parchment-middle.png');
+    // Shared light/cream ambient backdrop (per chat) - see utility-bg.jpg's
+    // generation notes in CalendarScene.js's header comment. Replaces
+    // this screen having no background at all (just the bare canvas
+    // fallback color showing through behind the rows/cards).
+    this.load.image('utilityBg', 'assets/utility-bg.jpg');
   }
 
   create() {
     const { width, height } = this.scale;
+    this.add.image(width / 2, height / 2, 'utilityBg').setDisplaySize(width, height);
     this.hudHeight = 56;
     this.rowHeight = 46;
     this.sectionGap = 14;

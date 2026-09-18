@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { APP_BG_COLOR, LETTERBOX_BG_COLOR } from '../config.js';
+import { APP_BG_COLOR } from '../config.js';
 import { getStatus, claimToday, REWARD_SCHEDULE } from '../utils/dailyRewardStore.js';
 import { syncLocalProgressToCloud } from '../utils/authStore.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
@@ -38,6 +38,15 @@ export class CalendarScene extends Phaser.Scene {
     this.load.image('calGemIcon', 'assets/icon-gem.png');
     this.load.image('calBackIcon', 'assets/icon-back.png');
     this.load.image('calClaimButton', 'assets/icon-claim-button.png');
+    // Procedural warm-parchment vignette (radial gradient + subtle paper
+    // grain, generated - not a photo), per chat: this screen shouldn't
+    // be flat solid color, but per this file's own header comment above
+    // it's also deliberately NOT meant to reuse the forest art Home
+    // Hub/World Map use, so a textured wash in the same cream family
+    // instead of a flat rectangle. Shared with SettingsScene/
+    // LeaderboardScene (same 'utilityBg' key, same file) for a
+    // consistent light-screen identity across all three.
+    this.load.image('utilityBg', 'assets/utility-bg.jpg');
   }
 
   create() {
@@ -46,8 +55,11 @@ export class CalendarScene extends Phaser.Scene {
 
     // Warm cream background instead of the app's usual dark forest
     // fill, per chat — this screen is meant to feel distinct/bolder,
-    // not blend into the same palette as Home Hub/World Map.
-    this.add.rectangle(0, this.hudHeight, width, height - this.hudHeight, LETTERBOX_BG_COLOR).setOrigin(0);
+    // not blend into the same palette as Home Hub/World Map. Was a
+    // flat rectangle; now a textured (but still non-forest, still
+    // cream-family) image instead, per later chat.
+    this.add.image(width / 2, this.hudHeight + (height - this.hudHeight) / 2, 'utilityBg')
+      .setDisplaySize(width, height - this.hudHeight);
 
     this.status = getStatus();
 

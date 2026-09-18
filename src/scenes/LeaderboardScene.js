@@ -41,13 +41,19 @@ export class LeaderboardScene extends Phaser.Scene {
     // already uses for this same icon) rather than assuming another
     // scene has loaded it first.
     this.load.image('lbBackIcon', 'assets/icon-back.png');
+    // Same shared textured cream background as CalendarScene/
+    // SettingsScene (see CalendarScene.js's preload comment for the
+    // generation notes) - per chat, replacing this screen's flat
+    // solid-color fill too.
+    this.load.image('utilityBg', 'assets/utility-bg.jpg');
   }
 
   create() {
     const { width, height } = this.scale;
     this.hudHeight = 56;
 
-    this.add.rectangle(0, this.hudHeight, width, height - this.hudHeight, 0xe8d3a8).setOrigin(0);
+    this.add.image(width / 2, this.hudHeight + (height - this.hudHeight) / 2, 'utilityBg')
+      .setDisplaySize(width, height - this.hudHeight);
     this.createHud(width);
 
     this.loadingText = this.add
