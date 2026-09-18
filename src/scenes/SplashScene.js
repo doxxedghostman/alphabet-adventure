@@ -28,13 +28,23 @@ export class SplashScene extends Phaser.Scene {
 
   preload() {
     this.load.image('logo', 'assets/logo.png');
+    // Same forest scene already used by Home Hub/World Select - reused
+    // here for brand consistency (per chat: splash was flat plain
+    // color) rather than commissioning new art for a screen that's
+    // only on screen ~3 seconds.
+    this.load.image('hubForestBg', 'assets/forest-background.jpg');
   }
 
   create() {
     const { width, height } = this.scale;
     this.finished = false;
 
-    this.add.rectangle(0, 0, width, height, APP_BG_COLOR).setOrigin(0);
+    this.add.image(width / 2, height / 2, 'hubForestBg').setDisplaySize(width, height);
+    // Dark overlay on top of the scene, not a flat replacement for it -
+    // keeps the same contrast the sparkle particles (ADD blend, needs a
+    // dark base to read against) and white logo/text already depend on,
+    // while still showing the forest through as ambient color/mood.
+    this.add.rectangle(0, 0, width, height, APP_BG_COLOR, 0.62).setOrigin(0);
 
     this.buildSparkleTexture();
 
