@@ -57,6 +57,25 @@
 // on each of those entries. Swap freely once better-fitting art shows
 // up for those four.
 
+// Re-measured for real (per chat: "other maps still small not like candy").
+// Worlds 2-10's 5x5 numbers below were, until now, still derived from the
+// OLD 6x6 numbers via a formula (see git history) that itself came from a
+// generic "~90% of a guessed safe zone" placeholder - never actually
+// measured per-image the way Candy Garden was. Measured all 11 remaining
+// frames (9 base + 2 boss) directly off their pixels this time, same
+// method as Candy Garden: grid overlay image generated per frame, safe
+// interior read off by eye (left/right/top/bottom in source pixels),
+// then the same target fill Candy Garden itself uses (~95% of the
+// tighter axis) applied uniformly - no more leaving the other 9 worlds
+// on a more conservative number "because nobody's tested them live yet".
+// Biggest corrections: Dino Valley (safe zone nearly DOUBLE what the old
+// formula assumed - its frame is a thin corner-decoration-only border
+// with a huge open interior) and Crystal Forest (also well under-filled).
+// Jungle/Ocean/Ancient/Space came out within a pixel or two of their
+// prior numbers - those frames' thicker decorative borders genuinely do
+// eat more of the square, so the old formula happened to land close by
+// coincidence there, not because it was measuring anything real.
+
 export const WORLD_FRAMES = {
   1: {
     frameKey: 'frame-candy-garden',
@@ -70,7 +89,7 @@ export const WORLD_FRAMES = {
     frameKey: 'frame-jungle-jumble',
     framePath: 'assets/frame-jungle-jumble.png',
     frameDisplaySize: 505,
-    tileSize: 50,
+    tileSize: 49,
     tileGap: 5,
     tileFontSize: 21,
   },
@@ -78,7 +97,7 @@ export const WORLD_FRAMES = {
     frameKey: 'frame-ocean-words',
     framePath: 'assets/frame-ocean-words.png',
     frameDisplaySize: 505,
-    tileSize: 50,
+    tileSize: 49,
     tileGap: 5,
     tileFontSize: 21,
   },
@@ -86,9 +105,9 @@ export const WORLD_FRAMES = {
     frameKey: 'frame-dino-valley',
     framePath: 'assets/frame-dino-valley.png',
     frameDisplaySize: 505,
-    tileSize: 51,
+    tileSize: 64,
     tileGap: 5,
-    tileFontSize: 21,
+    tileFontSize: 27,
   },
   5: {
     // Weakest theme match of the whole batch - "plain_leaf" was the
@@ -97,17 +116,17 @@ export const WORLD_FRAMES = {
     frameKey: 'frame-cloud-kingdom',
     framePath: 'assets/frame-cloud-kingdom.png',
     frameDisplaySize: 505,
-    tileSize: 50,
+    tileSize: 52,
     tileGap: 5,
-    tileFontSize: 21,
+    tileFontSize: 22,
   },
   6: {
     frameKey: 'frame-crystal-forest',
     framePath: 'assets/frame-crystal-forest.png',
     frameDisplaySize: 505,
-    tileSize: 60,
+    tileSize: 67,
     tileGap: 5,
-    tileFontSize: 25,
+    tileFontSize: 28,
   },
   7: {
     // "tribal_beads"/"tiki" read as ritual/idol imagery - closest
@@ -115,14 +134,14 @@ export const WORLD_FRAMES = {
     frameKey: 'frame-magic-mountain',
     framePath: 'assets/frame-magic-mountain.png',
     frameDisplaySize: 505,
-    tileSize: 48,
+    tileSize: 50,
     tileGap: 5,
-    tileFontSize: 20,
+    tileFontSize: 21,
     bossFrameKey: 'frame-magic-mountain-boss',
     bossFramePath: 'assets/frame-magic-mountain-boss.png',
-    bossTileSize: 50,
+    bossTileSize: 58,
     bossTileGap: 5,
-    bossTileFontSize: 21,
+    bossTileFontSize: 24,
   },
   8: {
     // Stands in for the batch's actual "space" frame, which has a
@@ -131,7 +150,7 @@ export const WORLD_FRAMES = {
     frameKey: 'frame-space-words',
     framePath: 'assets/frame-space-words.png',
     frameDisplaySize: 505,
-    tileSize: 55,
+    tileSize: 54,
     tileGap: 5,
     tileFontSize: 23,
   },
@@ -139,9 +158,9 @@ export const WORLD_FRAMES = {
     frameKey: 'frame-ancient-valley',
     framePath: 'assets/frame-ancient-valley.png',
     frameDisplaySize: 505,
-    tileSize: 44,
+    tileSize: 49,
     tileGap: 5,
-    tileFontSize: 18,
+    tileFontSize: 21,
   },
   10: {
     // "lagos"/"military" - a personal pick (Ayobami's home city as the
@@ -150,14 +169,14 @@ export const WORLD_FRAMES = {
     frameKey: 'frame-wordswoop-kingdom',
     framePath: 'assets/frame-wordswoop-kingdom.png',
     frameDisplaySize: 505,
-    tileSize: 53,
+    tileSize: 59,
     tileGap: 5,
-    tileFontSize: 22,
+    tileFontSize: 25,
     bossFrameKey: 'frame-wordswoop-kingdom-boss',
     bossFramePath: 'assets/frame-wordswoop-kingdom-boss.png',
-    bossTileSize: 50,
+    bossTileSize: 55,
     bossTileGap: 5,
-    bossTileFontSize: 21,
+    bossTileFontSize: 23,
   },
 };
 
