@@ -21,6 +21,7 @@ import { getLivesStatus, loseLife, MAX_LIVES } from '../utils/livesStore.js';
 import { showRewardedAdForLife } from '../utils/adsStore.js';
 import { getBoosters, spendBooster } from '../utils/boosterStore.js';
 import { WORLD_FRAMES, getWorldFrame } from '../data/worldFrames.js';
+import { getWorld, WORLDS } from '../data/worlds.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
 
 // Word-Swap mechanic:
@@ -55,6 +56,12 @@ export class BoardScene extends Phaser.Scene {
     Object.values(WORLD_FRAMES).forEach(({ frameKey, framePath, bossFrameKey, bossFramePath }) => {
       this.load.image(frameKey, framePath);
       if (bossFrameKey) this.load.image(bossFrameKey, bossFramePath);
+    });
+    // Same reasoning, same unconditional-load pattern - per-world board
+    // backdrop (blurred/dimmed crop of that world's own bgPath art, see
+    // worlds.js). These are small (~19KB each, already-blurred JPEGs).
+    WORLDS.forEach(({ boardBgKey, boardBgPath }) => {
+      this.load.image(boardBgKey, boardBgPath);
     });
   }
 
@@ -189,6 +196,7 @@ export class BoardScene extends Phaser.Scene {
     this.swipeHandled = false;
 
     this.computeBoardGeometry();
+    this.createBoardBackdrop();
     this.createBoardFrame();
     this.createHeader();
     this.createShuffleButton();
@@ -236,6 +244,25 @@ export class BoardScene extends Phaser.Scene {
     const availableHeight = this.scale.height - BOARD_TOP_MARGIN - BOARD_SIDE_MARGIN;
     const verticalSlack = Math.max(0, (availableHeight - this.gridPixelSize) / 2);
     this.gridTopY = BOARD_TOP_MARGIN + verticalSlack;
+  }
+
+  // ---------- board backdrop (per-world blurred art, replaces flat color) ----------
+
+  // Per chat: BoardScene used to draw nothing at all behind the frame,
+  // so the plain cream LETTERBOX_BG_COLOR (main.js's Phaser canvas
+  // backgroundColor) showed through everywhere. Now fills that same
+  // area with a blurred/dimmed crop of this world's own bgPath art
+  // (see worlds.js's boardBgKey/boardBgPath) - deliberately processed
+  // rather than sharp, so it reads as ambient color behind the tiles
+  // rather than competing detail. No world context (old-style direct
+  // BoardScene launch with no worldId) falls back to the original flat
+  // color, unchanged.
+  createBoardBackdrop() {
+    if (!this.worldId) return;
+    const world = getWorld(this.worldId);
+    if (!world?.boardBgKey) return;
+    const { width, height } = this.scale;
+    this.add.image(width / 2, height / 2, world.boardBgKey).setDisplaySize(width, height);
   }
 
   // ---------- board frame (per-world art) ----------

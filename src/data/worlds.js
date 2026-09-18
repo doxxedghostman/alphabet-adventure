@@ -46,8 +46,16 @@ export const WORLDS = [
   ...w,
   thumbKey: `${w.slug}-thumb`,
   bgKey: `${w.slug}-bg`,
+  // Blurred/dimmed crop of this same world's bgPath art, generated for
+  // BoardScene's backdrop (per chat: "cant just leave it plain color").
+  // Deliberately processed rather than the sharp original - a detailed
+  // scene sitting right behind colorful letter tiles would compete for
+  // attention, especially for kids. Reuses existing art, no new assets
+  // commissioned.
+  boardBgKey: `${w.slug}-board-bg`,
   thumbPath: `assets/${w.slug}-thumb.jpg`,
   bgPath: `assets/${w.slug}-bg.jpg`,
+  boardBgPath: `assets/${w.slug}-board-bg.jpg`,
   levelStart: levelIdFor(w.id, 1),
   levelEnd: levelIdFor(w.id, LEVELS_PER_WORLD),
 }));
