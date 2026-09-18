@@ -1974,3 +1974,96 @@ worlds 5, 7, 8, 10 use best-available leftovers with no purpose-built
 match, called out individually in `worldFrames.js` and above.
 
 Build verified clean (`npm run build`) before pushing.
+
+### Milestone 46 — Glass-tile look extended to all worlds; board dropped to 5x5 for a real tile-size win
+
+**Glass tiles + shatter clear, everywhere** (`3f9bcb5`): these were a
+Candy-Garden-only (`worldId === 1`) trial since Milestone 43. Now that
+every world has its own frame and its own `tileSize`/`tileGap` looked
+up from `worldFrames.js`, there was no reason to keep either
+world-gated. Both `worldId === 1` checks dropped - the glass sheen
+overlay is now always added in `createTile`, and match-clears always
+shatter (the old plain scale/fade clear path is dead code, removed).
+Spot-checked World 2's jungle frame via headless render to confirm the
+glass sheen renders correctly there too, not just on Candy Garden's
+art.
+
+**5x5 board, dropped from 6x6** (`b8aaa79`, `57331de`): per chat -
+screen width is fixed at 516px regardless of column count, so fewer
+columns puts more of that same fixed width into each tile. This is a
+real ceiling raise, not another per-world fill-percentage guess.
+Simulated against two frames of very different measured safe-zone
+shape (Candy Garden, Magic Mountain) before committing - both came out
+~21-23% bigger per tile at the same edge-to-edge fill they already
+had. `MAX_WORD_LENGTH` dropped 6 -> 5 to match.
+
+Caught mid-change: `BOARD_PIXEL_SIZE.width` used to be derived from
+`BOARD_SIZE`, and fed `getCanvasSize()` in `main.js` - which sets the
+canvas width for the **whole app**, not just `BoardScene`. Shipping
+`BOARD_SIZE = 5` unchanged would have silently shrunk every menu
+screen from 516px to 438px along with the grid. Decoupled into a
+standalone `CANVAS_WIDTH` constant, hardcoded at the existing 516px,
+so the grid's column count no longer has any say over the app's
+overall canvas size.
+
+All 10 worlds' (and both boss variants') `tileSize`/`tileGap`/
+`tileFontSize` in `worldFrames.js` recalculated for the new column
+count - same measured safe-zone footprint each world already fit
+inside, just redivided into 5 cells instead of 6
+(`newTileSize = round(6*(oldTile+oldGap)/5 - gap)`), so this was a
+straight ~21-23% size increase everywhere, not a re-guess.
+
+### Milestone 47 — Word lists and levels updated for the 5-letter max
+
+**9 target levels' 6-letter words replaced** (`d0b3e52`): a straight-
+line 6-letter word no longer fits on a 5x5 grid. All 9 replaced with
+5-letter equivalents already present in `WORDS_5`, `maxSwaps` matched
+to 22 (what every other 5-letter target level already uses - was 26,
+tuned for the old 6-letter/15-scramble tier): World 8's MONKEY->ROBOT;
+World 9's DRAGON->STONE, GARDEN->PLANT, FLOWER->TULIP, ISLAND->BEACH;
+World 10's CASTLE->CROWN, FOREST->WOODS, CIRCUS->CLOWN,
+MUSEUM->MAGIC. None collide with the 31 other existing target words;
+max target word length across all 200 levels verified at 5.
+
+**Dead 6-length scramble entry removed** (`3f5b374`):
+`SCRAMBLE_COUNT_BY_LENGTH`'s length-6 entry was dead code once
+`MAX_WORD_LENGTH = 5` - no word can ever be that long now.
+
+**Word-list cleanup** (same commit): cross-checked all 3,520 words
+across `WORDS_3`/`WORDS_4`/`WORDS_5` against a 130k-word system
+dictionary (`wamerican-large`), then manually reviewed every one it
+didn't recognize (16 entries). 12 were legitimate and kept (informal
+real words like OLE/YAY/TOON/BOING, or British spellings like FIBRE/
+LITRE/MATHS/METRE/TYRES/CAFE(S)). Removed the 4 that read as
+abbreviation-flavored jargon rather than words a kid would recognize:
+LIBS, OLDS, REGS, CODEC. None were used as a target word anywhere.
+
+**TIS removed from WORDS_3** (`51d0ae1`, separate follow-up): valid
+per NWL/TWL/Collins Scrabble dictionaries (archaic contraction of "it
+is"), but meaningless out of context to a child solving a word puzzle
+- unlike OLE/YAY, which read as recognizable interjections on their
+own. Not used as a target word anywhere.
+
+### Milestone 48 — Android hardware back button wired in; text "Back" labels replaced with real icon art
+
+**Hardware back button** (`9435ba9`): new shared
+`bindHardwareBack(scene, onBack)` helper
+(`src/utils/hardwareBack.js`) registers a `@capacitor/app` backButton
+listener and tears it down on the scene's own `shutdown` event, so
+only the currently-active scene has a handler live at any time. Each
+scene's hardware back now triggers the exact same navigation its
+on-screen Back control already uses (extracted into shared `goBack()`
+methods so both paths call identical code, not two copies that could
+drift): BoardScene -> LevelPathScene (or MainMenuScene with no
+worldId); LevelPathScene -> WorldSelectScene; WorldSelectScene ->
+HomeHubScene; SettingsScene/CalendarScene/LeaderboardScene ->
+HomeHubScene; HomeHubScene -> MainMenuScene; MainMenuScene ->
+`App.exitApp()` (top of the nav stack).
+
+**Text "Back" labels -> real icon art** (`bf5eb2a`): BoardScene's
+Out-of-Lives wall and LeaderboardScene both used a plain "<- Back" text
+label - swapped both for the same `icon-back.png` + tap-bounce pattern
+CalendarScene already used. HomeHubScene had no on-screen Back at all
+before this - added one (-> MainMenuScene), positioned just below the
+baked top-bar art rather than centered inside it, since the bar's own
+avatar badge already sits in that top-left corner.

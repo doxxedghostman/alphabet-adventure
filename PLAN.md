@@ -53,12 +53,12 @@ Player starts at World 1, Level 1.
 
 ## 2. The puzzle board
 
-- Start with a 6x6 board of letter tiles, using the full A-Z alphabet
+- Start with a 5x5 board of letter tiles, using the full A-Z alphabet
   (frequency-weighted so common letters like vowels/R/S/T/N/L come up
   more often than rare ones like Q/X/Z/J/K).
 - Player taps or swipes two orthogonally-adjacent tiles to swap them —
   classic Candy Crush swap input, not a multi-tile drag.
-- After the swap, the whole board is scanned for any 3-6 letter
+- After the swap, the whole board is scanned for any 3-5 letter
   straight-line word (row or column, either reading direction) that the
   swap created. A single swap can complete more than one word at once
   (e.g. it finishes a word in its row and a different word in its
@@ -71,19 +71,27 @@ Player starts at World 1, Level 1.
   automatically too, without the player touching anything, and can
   keep chaining further cascades, exactly like a Candy Crush combo
   chain.
-- At 6x6, a full 6-letter word can span an entire row or column
+- At 5x5, a full 5-letter word can span an entire row or column
   edge-to-edge.
+- Was 6x6/max-6 until update.md Milestone 46: dropped a column per
+  chat once it became clear screen width is fixed (516px) regardless
+  of column count, so fewer columns puts more of that same fixed width
+  into each tile — a real tile-size ceiling raise (~21-23% bigger per
+  world, same edge-to-edge fill each already had), not another
+  per-world fill-percentage guess. Canvas width was decoupled into its
+  own constant first so this only affects the grid, not every menu
+  screen's size too. All 10 worlds' frame tile numbers, and the 9
+  target levels whose 6-letter word no longer fits, were updated to
+  match (Milestones 46-47).
 - Splitting the full alphabet into progressive stages (e.g. common
   letters unlocked first, rarer ones added in later worlds) is a
   planned follow-up — full alphabet went in first, staging is next.
-- Per-world visual theming has started: Candy Garden (world 1) has its
-  own ornate frame art behind the grid, glass-look tiles (diagonal
-  sheen + white rim stroke over the base color rect), and a
-  glass-shatter clear effect (flash + flying shards) in place of the
-  old scale/fade. Other 9 worlds still use the original plain tile
-  look — rolling the same treatment out to them (with per-world frame
-  art and possibly per-world clear-effect flavor) is open follow-up
-  work. See update.md Milestone 43.
+- Per-world visual theming: all 10 worlds now have their own ornate
+  frame art behind the grid (`src/data/worldFrames.js`), and — as of
+  Milestone 46 — the glass-look tile treatment (diagonal sheen + white
+  rim stroke) and glass-shatter clear effect (flash + flying shards)
+  that started as a Candy-Garden-only trial are live on every world,
+  not just world 1. See update.md Milestones 43-46.
 - Frame art (border only, not the glass-tile/shatter effect) is now
   also in for worlds 2, 3, 4, 6, and 9, driven by a shared per-world
   data table (`src/data/worldFrames.js`) rather than one-off scene
@@ -114,9 +122,12 @@ Player starts at World 1, Level 1.
 - Spell a 5+ letter word -> Rainbow/wild letter: stands in for any
   letter in a future swap.
 - Combos (e.g. rainbow + rocket) -> large board clears.
-- (Length thresholds above were set when 5 was the max word length;
-  worth revisiting now that 6-letter words are possible — e.g. whether
-  6-letter words deserve their own tier above Rainbow.)
+- (These thresholds were set when 5 was the max word length, then a
+  6-letter max existed for a while too, which is why an earlier version
+  of this note flagged a possible 6-letter tier above Rainbow as worth
+  considering. The board is back to 5x5/max-5 as of update.md Milestone
+  46, so that question is moot again — noted here only so it doesn't
+  get re-asked.)
 
 ## 5. Obstacles (introduced gradually)
 
@@ -172,9 +183,13 @@ PNG for the size win).
   bigger gold-ringed node for the boss level at 20, Back button to
   return to World Select).
 - Only 20 unique art images needed total (10 world thumbnails + 10
-  path backgrounds), not 200 - nodes, stars, lock icon, signpost, and
-  Back button are drawn/reused in code, matching how tiles/popups
-  already work in `BoardScene.js`.
+  path backgrounds), not 200 - nodes, stars, lock icon, and signpost
+  are drawn/reused in code, matching how tiles/popups already work in
+  `BoardScene.js`. Back navigation now uses real icon art
+  (`icon-back.png`) everywhere instead of a code-drawn text label, and
+  the on-screen Back button's target is also wired to the Android
+  hardware back button on every scene, not just this one — see
+  update.md Milestones 47-48.
 - New `worlds.js` data file: id, display name, thumbnail/background
   asset keys, level ID range per world (mirrors `levels.js`'s pattern).
 - New progress store (localStorage): tracks completed level ids (and
@@ -529,24 +544,23 @@ Characters, animated letters, particle effects, explosions, sound
 effects, music, level-complete animations.
 
 **Phase 6 — Content**
-Target: 10 worlds (§9), **200 levels total**. Every 5th level (40
+Target: 10 worlds (§9), **200 levels total** — all 200 now exist and
+are unlocked by default (update.md Milestones 39-40; see Milestone 38
+for a level 1-3 objective-type fix along the way). Every 5th level (40
 total) is a `type: 'target'` level (specific word, board generated via
 `generateGuaranteedBoard()` — see solvability section below); the rest
 (160) are `type: 'free'` — **score target**: reach `scoreTarget` points
 within `maxSwaps` swaps, any words count. Chosen over "find N words" or
 a bare move-limit objective since it reuses the existing scoring math
 directly and doubles as the star threshold for the planned §14 3-star
-meter. Both types are implemented in `BoardScene.js`/`levels.js`; 20 of the
-planned 200 levels exist so far (4 target, 16 free — all still within
-Candy Garden, world 1) — authoring the remaining 180 (words per world,
-score targets per difficulty tier) is still open. Build a level-data format
-so levels are defined as data, not hand-coded, e.g.:
+meter. Both types are implemented in `BoardScene.js`/`levels.js`.
+Level-data format (data, not hand-coded), e.g.:
 
 ```
 Level: 27
-Board: 6x6
-Target: PLANET
-Swaps: 25
+Board: 5x5
+Target: PLANT
+Swaps: 22
 Obstacle: ICE
 Goal: Find word
 Stars: 10000 / 15000 / 20000
@@ -562,7 +576,7 @@ legal action at all.
 
 **Resolved (Phase 1):** `hasValidSwap()` in `BoardScene.js` checks
 every adjacent tile pair on the board and simulates the swap
-(`wouldSwapCreateWord()`) to see if it would produce a 3-6 letter word
+(`wouldSwapCreateWord()`) to see if it would produce a 3-5 letter word
 in the row(s)/column(s) it touches. This replaced an earlier
 `hasValidWord()` check that only asked "does a word already exist on
 the board" — the wrong question for a swap mechanic, since completed
@@ -591,8 +605,9 @@ no search needed. `maxSwaps` per level just needs to be >= scrambleCount
 since they won't necessarily find the exact reverse path). Wired into
 `BoardScene.createInitialBoard()` for any level with `type: 'target'`.
 Placeholder scramble counts by word length live in
-`SCRAMBLE_COUNT_BY_LENGTH` (3-letter: 6, 4: 9, 5: 12, 6: 15) — the
-sweet spot per length (too few scrambles = word looks near-complete and
+`SCRAMBLE_COUNT_BY_LENGTH` (3-letter: 6, 4: 9, 5: 12 — the old 6-letter
+entry was removed as dead code once MAX_WORD_LENGTH dropped to 5, see
+update.md Milestone 47) — the sweet spot per length (too few scrambles = word looks near-complete and
 easy; too many = eats most of the swap budget resetting the board) still
 needs playtesting and tuning, this is just a starting point. Obstacles/
 wildcards aren't accounted for yet since they don't exist in the game
