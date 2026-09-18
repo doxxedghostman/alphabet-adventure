@@ -2067,3 +2067,29 @@ CalendarScene already used. HomeHubScene had no on-screen Back at all
 before this - added one (-> MainMenuScene), positioned just below the
 baked top-bar art rather than centered inside it, since the bar's own
 avatar badge already sits in that top-left corner.
+
+### Milestone 49 — Bomb/Shuffle hold caps (2 Bomb, 3 Shuffle); Watch to Earn falls back to gems when a roll would exceed the cap
+
+Per chat: a player shouldn't be able to bank Bomb/Shuffle past a
+small hold limit. `boosterStore.js`'s `addBooster(type)` now checks a
+new `MAX_BOOSTERS` (`{ bomb: 2, shuffle: 3 }`) before granting - at
+the cap, nothing changes and it returns `{ value, granted: false }`
+instead of `{ value, granted: true }`, so callers can tell whether the
+reward actually landed. Starting supply changed to match (both start
+full: Bomb 2, Shuffle 3 - Shuffle's earlier starting value of 5 was
+higher than its own new cap, which didn't make sense).
+
+**Watch to Earn** (`adsStore.js`): a Bomb/Shuffle roll that lands on
+an already-full inventory falls back to granting gems instead,
+tagged `{ type: 'gems', amount, fullInventory: 'bomb' | 'shuffle' }` -
+the player watched the whole ad, so getting nothing at all for it felt
+wrong even though the specific item couldn't be added; the toast
+reflects this ("Bomb full – +10 Gems instead!") rather than claiming
+a Bomb was won when it wasn't.
+
+**Calendar's Day 7** (`dailyRewardStore.js`) has no such fallback -
+per chat's literal ask, a capped Day 7 roll is simply not granted,
+full stop. Not currently visible either way since `CalendarScene`
+doesn't show a reward-specific message on claim (only the day
+advancing/checkmark) - worth a fallback or an honest "inventory full"
+note there too if that ever changes.

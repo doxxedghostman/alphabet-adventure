@@ -13,6 +13,12 @@
 // its dashboard reporting to look sane; the actual grant logic and
 // amount live entirely in this file, independent of that setting.
 //
+// Bomb/Shuffle both have a hold cap (boosterStore.js's MAX_BOOSTERS -
+// 2 Bomb, 3 Shuffle). If the roll picks one the player is already
+// full on, grantReward() falls back to gems instead of wasting a full
+// ad watch on nothing - the player watched the whole thing, they get
+// *something* real either way, just not banked past the cap.
+//
 // @capacitor-community/admob's web implementation is a no-op stub
 // that always resolves with { amount: 0 } (see its web.js) - that's
 // exactly the signal used below to mean "no real ad watched, don't
@@ -53,12 +59,16 @@ function pickReward() {
 
 function grantReward(type) {
   switch (type) {
-    case 'bomb':
-      addBooster('bomb');
+    case 'bomb': {
+      const result = addBooster('bomb');
+      if (!result.granted) return { type: 'gems', amount: GEM_REWARD_AMOUNT, fullInventory: 'bomb' };
       return { type: 'bomb', amount: 1 };
-    case 'shuffle':
-      addBooster('shuffle');
+    }
+    case 'shuffle': {
+      const result = addBooster('shuffle');
+      if (!result.granted) return { type: 'gems', amount: GEM_REWARD_AMOUNT, fullInventory: 'shuffle' };
       return { type: 'shuffle', amount: 1 };
+    }
     case 'life':
       addLives(1);
       return { type: 'life', amount: 1 };

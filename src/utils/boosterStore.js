@@ -1,8 +1,8 @@
 // Booster inventory — per chat, Bomb and Shuffle are documented in
 // PLAN.md §14 as planned meta-systems but were never actually built:
-// there was no way to hold or spend one. Starting supply (bomb: 2,
-// shuffle: 5) matches §14's suggested numbers, applied here now that
-// both are actually spendable (BoardScene) instead of just a count
+// there was no way to hold or spend one. Starting supply now matches
+// the hold caps below (both start full) - applied here now that both
+// are actually spendable (BoardScene) instead of just a count
 // Calendar could grant. Existing players who already have a stored
 // count (even 0, from a prior Calendar claim) keep it - these
 // defaults only apply to a install that's never touched this store.
@@ -12,7 +12,12 @@
 const STORAGE_KEY = 'wordswoop_boosters';
 
 export const BOOSTER_TYPES = ['bomb', 'shuffle'];
-const DEFAULTS = { bomb: 2, shuffle: 5 };
+
+// Max held at once, per chat: 2 Bomb, 3 Shuffle. A reward that would
+// push past this (Calendar Day 7, Watch to Earn) is simply not
+// granted rather than banked past the cap - see addBooster() below.
+export const MAX_BOOSTERS = { bomb: 2, shuffle: 3 };
+const DEFAULTS = { bomb: MAX_BOOSTERS.bomb, shuffle: MAX_BOOSTERS.shuffle };
 
 function loadRaw() {
   try {
@@ -41,13 +46,19 @@ export function getBoosters() {
   return loadRaw();
 }
 
-/** Grants +1 of the given booster type ('bomb' | 'shuffle'). */
+/** Grants +1 of the given booster type ('bomb' | 'shuffle'), unless
+ * already at MAX_BOOSTERS for that type - in which case nothing
+ * changes. Returns { value, granted } so callers (adsStore.js,
+ * dailyRewardStore.js) can tell whether the reward actually landed or
+ * was wasted at a full inventory, and message the player honestly
+ * either way instead of always saying "You won a Bomb!". */
 export function addBooster(type) {
   const data = loadRaw();
-  if (!(type in data)) return data;
+  if (!(type in data)) return { value: data[type], granted: false };
+  if (data[type] >= MAX_BOOSTERS[type]) return { value: data[type], granted: false };
   data[type] += 1;
   saveRaw(data);
-  return data;
+  return { value: data[type], granted: true };
 }
 
 /** Spends 1 of the given booster type. Returns true if one was

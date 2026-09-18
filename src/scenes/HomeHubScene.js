@@ -415,12 +415,14 @@ export class HomeHubScene extends Phaser.Scene {
     const result = await showRewardedAd();
 
     if (result.granted) {
-      const rewardLabel = {
-        gems: `+${result.amount} Gems!`,
-        bomb: 'You won a Bomb!',
-        shuffle: 'You won a Shuffle!',
-        life: '+1 Life!',
-      }[result.type] || 'Reward earned!';
+      const rewardLabel = result.fullInventory
+        ? `${result.fullInventory === 'bomb' ? 'Bomb' : 'Shuffle'} full \u2013 +${result.amount} Gems instead!`
+        : {
+            gems: `+${result.amount} Gems!`,
+            bomb: 'You won a Bomb!',
+            shuffle: 'You won a Shuffle!',
+            life: '+1 Life!',
+          }[result.type] || 'Reward earned!';
       syncLocalProgressToCloud();
       this.scene.restart({ toastMessage: rewardLabel });
       return;
