@@ -2093,3 +2093,41 @@ full stop. Not currently visible either way since `CalendarScene`
 doesn't show a reward-specific message on claim (only the day
 advancing/checkmark) - worth a fallback or an honest "inventory full"
 note there too if that ever changes.
+
+### Milestone 50 — Board screen HUD rebuilt from the wood art set (top bar, goal banner, bottom booster bar)
+
+Per chat: the in-game board screen was restyled after a reference
+mockup - bigger icons, a real top bar, a goal banner and a bottom
+booster bar - built from the wood art so it reads the same in all 10
+worlds (the mockup's pink candy look would clash outside Candy Garden).
+
+**New files:** `src/utils/woodPanel.js` (shared 3-slice wood plank;
+Settings/Calendar still have their own copies, left alone for now),
+`src/utils/boardHud.js` (all HUD drawing + layout), and
+`public/assets/booster-bomb.png` / `booster-shuffle.png` (256x256
+gold-ringed round buttons, magenta background cut out with edge
+un-mixing so there's no pink fringe).
+
+**HUD:** wood top bar with the profile avatar (Google photo when signed
+in, drawn default silhouette for guests) + level number on a gold
+star, gem count, and a gear that opens a Paused card (Resume / Leave
+Level - deliberately no Restart, since Restart is what Bomb costs).
+`word-map-banner.png` is now the goal banner: goal text, progress bar
+and 3 stars for score-goal levels (each star lights per third of the
+goal - a stand-in until real 3-star scoring exists), plain
+"Find: WORD" + score line for word levels, and a Moves tag hanging off
+the bottom edge (turns red at 3 or fewer). Bottom wood bar holds big
+Bomb and Shuffle buttons with count badges; Bomb still needs a second
+tap to confirm and still restarts the level.
+
+**Removed from the board screen:** Level pill, the old 20px Shuffle/Bomb
+boxes, the right-hand pills, hearts and the paw coin from the mockup.
+`icon-bomb.png` / `icon-shuffle.png` are no longer referenced.
+
+**Layout:** `computeHudLayout()` reserves the top and bottom blocks,
+centers the frame between them (slightly above middle), grows the HUD
+up to 115% on tall phones and shrinks it down to 70% on short ones.
+Status-bar / nav-bar room is fixed constants (28px top, 20px bottom),
+not read from the device. Word/combo toasts now float just above the
+frame. Background and tile look intentionally unchanged (being replaced
+separately).

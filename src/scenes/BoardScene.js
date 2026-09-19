@@ -4,7 +4,6 @@ import {
   BOARD_SIZE,
   TILE_SIZE,
   TILE_GAP,
-  BOARD_TOP_MARGIN,
   BOARD_SIDE_MARGIN,
   BOARD_PIXEL_SIZE,
   LETTER_COLORS,
@@ -23,6 +22,7 @@ import { getBoosters, spendBooster } from '../utils/boosterStore.js';
 import { WORLD_FRAMES, getWorldFrame } from '../data/worldFrames.js';
 import { getWorld, WORLDS } from '../data/worlds.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
+import { preloadBoardHud, computeHudLayout, createBoardHud } from '../utils/boardHud.js';
 
 // Word-Swap mechanic:
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
@@ -46,9 +46,9 @@ export class BoardScene extends Phaser.Scene {
   }
 
   preload() {
-    this.load.image('boardIconShuffle', 'assets/icon-shuffle.png');
-    this.load.image('boardIconBomb', 'assets/icon-bomb.png');
     this.load.image('boardBackIcon', 'assets/icon-back.png');
+    // Top bar / goal banner / bottom booster bar art (see boardHud.js).
+    preloadBoardHud(this);
     // Per-world board frame art (see worldFrames.js) - loaded
     // unconditionally since preload() doesn't know worldId yet, but
     // they're small (~330-530KB each) so loading all of them every
@@ -159,6 +159,7 @@ export class BoardScene extends Phaser.Scene {
 
   create(sceneData) {
     this.isBusy = false;
+    this.isPaused = false;
     this.score = 0;
     this.grid = [];
 
@@ -198,9 +199,7 @@ export class BoardScene extends Phaser.Scene {
     this.computeBoardGeometry();
     this.createBoardBackdrop();
     this.createBoardFrame();
-    this.createHeader();
-    this.createShuffleButton();
-    this.createBombButton();
+    this.createHud();
 
     this.createInitialBoard();
     this.setupInput();
@@ -237,13 +236,16 @@ export class BoardScene extends Phaser.Scene {
     // worlds.
     this.boardOffsetX = Math.max(0, (this.scale.width - this.gridPixelSize) / 2);
 
-    // Vertical: centers the grid in whatever room is left below the
-    // header (BOARD_TOP_MARGIN) and above the bottom edge, rather than
-    // starting the grid right at BOARD_TOP_MARGIN regardless of how
-    // much taller the real canvas is than the board actually needs.
-    const availableHeight = this.scale.height - BOARD_TOP_MARGIN - BOARD_SIDE_MARGIN;
-    const verticalSlack = Math.max(0, (availableHeight - this.gridPixelSize) / 2);
-    this.gridTopY = BOARD_TOP_MARGIN + verticalSlack;
+    // Vertical: the HUD (top bar + goal banner above, booster bar below -
+    // see boardHud.js) reserves its own space; the frame is centered in
+    // whatever is left between them. The HUD shrinks a little on short
+    // screens (computeHudLayout) rather than overlapping the frame.
+    const frameSize = worldFrame ? worldFrame.frameDisplaySize : this.gridPixelSize;
+    this.hudLayout = computeHudLayout(this.scale.width, this.scale.height, frameSize);
+    // Sits slightly above the exact middle so the leftover space on tall
+    // phones is split ~46/54 (a touch closer to the goal banner).
+    const gridCenterY = this.hudLayout.topEnd + (this.hudLayout.boardBottom - this.hudLayout.topEnd) * 0.46;
+    this.gridTopY = gridCenterY - this.gridPixelSize / 2;
   }
 
   // ---------- board backdrop (per-world blurred art, replaces flat color) ----------
@@ -284,169 +286,117 @@ export class BoardScene extends Phaser.Scene {
     this.add.image(gridCenterX, gridCenterY, frameKey).setDisplaySize(frameDisplaySize, frameDisplaySize);
   }
 
-  // ---------- header (level / moves / goal / score) ----------
+  // ---------- HUD (top bar / goal banner / booster bar) ----------
 
-  createHeader() {
-    this.createPill(20, 18, `Level ${this.level.id}`, 0xffd93d, 'left');
-    this.movesPill = this.createPill(BOARD_PIXEL_SIZE.width - 20, 18, `Moves ${this.movesLeft}`, 0x6bc9ef, 'right');
-
+  // Visual layout lives in utils/boardHud.js; this only feeds it the
+  // level's data and wires its buttons to the existing game logic.
+  createHud() {
     // 'target' levels show the word to find; 'free' levels show the
-    // score to reach instead - the score line itself then shows progress
-    // toward it ("120 / 500") rather than just a running total.
-    const goalLabel = this.level.type === 'free' ? `Reach ${this.scoreTarget} points` : `Find: ${this.targetWord}`;
-
-    this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 60, goalLabel, {
-        fontSize: '19px',
-        fontStyle: 'bold',
-        color: '#ffffff',
-        fontFamily: 'system-ui, sans-serif',
-      })
-      .setOrigin(0.5);
-
-    this.scoreText = this.add
-      .text(BOARD_PIXEL_SIZE.width / 2, 92, this.scoreDisplayText(), {
-        fontSize: '14px',
-        fontStyle: 'bold',
-        color: '#a79ccf',
-        fontFamily: 'system-ui, sans-serif',
-      })
-      .setOrigin(0.5, 0);
-  }
-
-  // 'free' levels show progress toward the score target; 'target' levels
-  // just show the running score (no fixed number to compare it to).
-  scoreDisplayText() {
-    return this.level.type === 'free' ? `Score: ${this.score} / ${this.scoreTarget}` : `Score: ${this.score}`;
-  }
-
-  // Small rounded-rect + centered text, used for the Level/Moves badges.
-  // align 'left' anchors the pill's left edge at x; 'right' anchors its
-  // right edge at x (so it hugs the board's right border like the Shuffle
-  // button does).
-  createPill(x, y, label, color, align = 'left') {
-    const width = 92;
-    const height = 30;
-    const originX = align === 'right' ? 1 : 0;
-    const rectX = align === 'right' ? x - width : x;
-
-    const bg = this.add.graphics();
-    bg.fillStyle(color, 0.18);
-    bg.fillRoundedRect(rectX, y, width, height, 10);
-    bg.lineStyle(1.5, color, 0.6);
-    bg.strokeRoundedRect(rectX, y, width, height, 10);
-
-    const text = this.add
-      .text(rectX + width / 2, y + height / 2, label, {
-        fontSize: '14px',
-        fontStyle: 'bold',
-        color: '#ffffff',
-        fontFamily: 'system-ui, sans-serif',
-      })
-      .setOrigin(0.5);
-
-    return { bg, text, x: rectX, y, width, height, originX };
-  }
-
-  updateMovesText() {
-    this.movesPill.text.setText(`Moves ${this.movesLeft}`);
-  }
-
-
-  // ---------- shuffle / solvability ----------
-
-  createShuffleButton() {
-    const bg = this.add
-      .rectangle(BOARD_PIXEL_SIZE.width - 20, 54, 100, 26, 0xffffff, 0.12)
-      .setOrigin(1, 0)
-      .setStrokeStyle(1.5, 0xffffff, 0.4);
-
-    const icon = this.add.image(BOARD_PIXEL_SIZE.width - 20 - 92, 54 + 13, 'boardIconShuffle');
-    icon.setDisplaySize(20, 20);
-
-    const label = this.add
-      .text(BOARD_PIXEL_SIZE.width - 20 - 48, 54 + 13, '', {
-        fontSize: '12px',
-        fontStyle: 'bold',
-        color: '#ffffff',
-        fontFamily: 'system-ui, sans-serif',
-      })
-      .setOrigin(0.5);
-
-    bg.setInteractive({ useHandCursor: true }).on('pointerup', () => {
-      if (this.isBusy || this.levelOver) return;
-      if (!spendBooster('shuffle')) {
-        this.showWordToast('Out of Shuffles!', '#ff6b6b');
-        return;
-      }
-      this.updateShuffleLabel();
-      this.shuffleBoard(false);
+    // score to reach, with a progress bar + stars filling toward it.
+    const isFree = this.level.type === 'free';
+    this.hud = createBoardHud(this, this.hudLayout, {
+      level: this.level,
+      isFree,
+      scoreTarget: this.scoreTarget,
+      goalLabel: isFree ? `Reach ${this.scoreTarget} points` : `Find: ${this.targetWord}`,
+      moves: this.movesLeft,
+      onPause: () => this.showPauseMenu(),
+      onBomb: () => this.onBombPressed(),
+      onShuffle: () => this.onShufflePressed(),
     });
-
-    this.shuffleButtonBg = bg;
-    this.shuffleButtonLabel = label;
-    this.updateShuffleLabel();
+    this.hud.setProgress(this.score);
   }
 
-  updateShuffleLabel() {
-    this.shuffleButtonLabel.setText(`Shuffle (${getBoosters().shuffle})`);
+  // Popups (word toasts / combo text) float just above the board frame.
+  get toastY() {
+    return this.gridTopY - 6;
+  }
+
+  // Gear button: pauses input and shows Resume / Leave. No Restart here
+  // on purpose - Restart is what the Bomb booster costs.
+  showPauseMenu() {
+    if (this.isPaused || this.levelOver) return;
+    this.isPaused = true;
+    this.deselectTile();
+
+    const centerX = this.scale.width / 2;
+    const centerY = this.scale.height / 2;
+
+    // Interactive overlay swallows taps so nothing underneath reacts.
+    const overlay = this.add
+      .rectangle(centerX, centerY, this.scale.width, this.scale.height, 0x000000, 0.6)
+      .setDepth(2000)
+      .setInteractive();
+
+    const cardWidth = BOARD_PIXEL_SIZE.width - 60;
+    const cardHeight = 230;
+    const card = this.add.container(centerX, centerY).setDepth(2001);
+
+    const cardBg = this.add.graphics();
+    cardBg.fillStyle(0x2a1f47, 1);
+    cardBg.fillRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 22);
+    cardBg.lineStyle(2, 0xffffff, 0.15);
+    cardBg.strokeRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 22);
+
+    const title = this.add
+      .text(0, -cardHeight / 2 + 44, 'Paused', {
+        fontSize: '26px',
+        fontStyle: 'bold',
+        color: '#ffd93d',
+        fontFamily: 'system-ui, sans-serif',
+      })
+      .setOrigin(0.5);
+
+    const close = () => {
+      overlay.destroy();
+      card.destroy();
+      this.isPaused = false;
+    };
+
+    card.add([cardBg, title]);
+    card.add(this.createPopupButton(0, -8, 'Resume', 0xffd93d, '#1b1030', close));
+    card.add(
+      this.createPopupButton(0, 46, 'Leave Level', 0x3a2c5c, '#ffffff', () => {
+        close();
+        this.goToMainMenu();
+      })
+    );
+  }
+
+  // ---------- shuffle / bomb boosters ----------
+
+  onShufflePressed() {
+    if (this.isBusy || this.levelOver || this.isPaused) return;
+    if (!spendBooster('shuffle')) {
+      this.showWordToast('Out of Shuffles!', '#ff6b6b');
+      return;
+    }
+    this.hud.refreshBoosters();
+    this.shuffleBoard(false);
   }
 
   // Bomb: "clears/resets the current board for another attempt"
   // (PLAN.md §14) - the simplest reliable way to do that is restarting
   // the scene fresh (same init path as a normal level start), rather
   // than trying to hand-reset moves/board/score mid-scene. Needs a
-  // confirm tap first (per §14's "avoid accidental taps" note) - same
-  // tap-once-then-confirm pattern SettingsScene uses for Reset
-  // Progress, rather than a separate modal dialog.
-  createBombButton() {
-    const bg = this.add
-      .rectangle(BOARD_PIXEL_SIZE.width - 20, 84, 100, 26, 0xffffff, 0.12)
-      .setOrigin(1, 0)
-      .setStrokeStyle(1.5, 0xffffff, 0.4);
-
-    const icon = this.add.image(BOARD_PIXEL_SIZE.width - 20 - 92, 84 + 13, 'boardIconBomb');
-    icon.setDisplaySize(20, 20);
-
-    const label = this.add
-      .text(BOARD_PIXEL_SIZE.width - 20 - 48, 84 + 13, '', {
-        fontSize: '12px',
-        fontStyle: 'bold',
-        color: '#ffffff',
-        fontFamily: 'system-ui, sans-serif',
-      })
-      .setOrigin(0.5);
-
-    this.bombButtonBg = bg;
-    this.bombButtonLabel = label;
-    this.bombConfirmArmed = false;
-    this.updateBombLabel();
-
-    bg.setInteractive({ useHandCursor: true }).on('pointerup', () => {
-      if (this.isBusy || this.levelOver) return;
-      if (getBoosters().bomb <= 0) {
-        this.showWordToast('Out of Bombs!', '#ff6b6b');
-        return;
-      }
-      if (!this.bombConfirmArmed) {
-        this.bombConfirmArmed = true;
-        this.bombButtonLabel.setText('Confirm?');
-        this.time.delayedCall(2500, () => {
-          if (this.bombConfirmArmed) {
-            this.bombConfirmArmed = false;
-            this.updateBombLabel();
-          }
-        });
-        return;
-      }
-      this.bombConfirmArmed = false;
-      spendBooster('bomb');
-      this.restartLevel();
-    });
-  }
-
-  updateBombLabel() {
-    this.bombButtonLabel.setText(`Bomb (${getBoosters().bomb})`);
+  // confirm tap first (per §14's "avoid accidental taps" note) - tap
+  // once to arm (the button pulses + shows a hint), tap again to fire.
+  onBombPressed() {
+    if (this.isBusy || this.levelOver || this.isPaused) return;
+    if (getBoosters().bomb <= 0) {
+      this.showWordToast('Out of Bombs!', '#ff6b6b');
+      return;
+    }
+    if (!this.hud.bombArmed) {
+      this.hud.setBombArmed(true);
+      this.time.delayedCall(2500, () => {
+        if (this.hud?.bombArmed) this.hud.setBombArmed(false);
+      });
+      return;
+    }
+    this.hud.setBombArmed(false);
+    spendBooster('bomb');
+    this.restartLevel();
   }
 
   // Silent safety net: called after the board first appears and after every
@@ -865,7 +815,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   handlePointerDown(pointer) {
-    if (this.isBusy || this.levelOver) return;
+    if (this.isBusy || this.levelOver || this.isPaused) return;
     const cell = this.cellFromPixel(pointer.x, pointer.y);
     if (!cell) return;
     const tile = this.grid[cell.row][cell.col];
@@ -901,7 +851,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   handlePointerMove(pointer) {
-    if (this.isBusy || this.levelOver || this.swipeHandled || !this.pointerDownTile) return;
+    if (this.isBusy || this.levelOver || this.isPaused || this.swipeHandled || !this.pointerDownTile) return;
 
     const dx = pointer.x - this.pointerDownPos.x;
     const dy = pointer.y - this.pointerDownPos.y;
@@ -1045,7 +995,7 @@ export class BoardScene extends Phaser.Scene {
 
   spendMove() {
     this.movesLeft = Math.max(0, this.movesLeft - 1);
-    this.updateMovesText();
+    this.hud.setMoves(this.movesLeft);
   }
 
   // The win condition can be met either as the direct result of the
@@ -1364,7 +1314,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   showWordToast(word, color) {
-    this.spawnCandyPop(word, color, { fontSize: '26px', y: BOARD_TOP_MARGIN + 30 });
+    this.spawnCandyPop(word, color, { fontSize: '26px', y: this.toastY });
   }
 
   showComboText(chainLevel, wordsFound, labelOverride) {
@@ -1378,7 +1328,7 @@ export class BoardScene extends Phaser.Scene {
 
     this.spawnCandyPop(text, color, {
       fontSize: chainLevel > 1 ? '27px' : '22px',
-      y: BOARD_TOP_MARGIN + 40,
+      y: this.toastY + 10,
       wordWrap: BOARD_PIXEL_SIZE.width - 30,
       sparkle: chainLevel > 1,
     });
@@ -1388,7 +1338,7 @@ export class BoardScene extends Phaser.Scene {
   // with an overshoot + tiny rotation wobble, holds briefly, then floats up
   // and fades. Always drawn above the board (see setDepth).
   spawnCandyPop(text, color, opts = {}) {
-    const { fontSize = '24px', y = BOARD_TOP_MARGIN + 30, wordWrap, sparkle = false } = opts;
+    const { fontSize = '24px', y = this.toastY, wordWrap, sparkle = false } = opts;
     const x = BOARD_PIXEL_SIZE.width / 2;
 
     const label = this.add
@@ -1547,6 +1497,6 @@ export class BoardScene extends Phaser.Scene {
   }
 
   updateScoreText() {
-    this.scoreText.setText(this.scoreDisplayText());
+    this.hud.setProgress(this.score);
   }
 }
