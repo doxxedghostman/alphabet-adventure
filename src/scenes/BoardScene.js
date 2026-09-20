@@ -249,23 +249,28 @@ export class BoardScene extends Phaser.Scene {
     this.gridTopY = gridCenterY - this.gridPixelSize / 2;
   }
 
-  // ---------- board backdrop (per-world blurred art, replaces flat color) ----------
+  // ---------- board backdrop (per-world art) ----------
 
-  // Per chat: BoardScene used to draw nothing at all behind the frame,
-  // so the plain cream LETTERBOX_BG_COLOR (main.js's Phaser canvas
-  // backgroundColor) showed through everywhere. Now fills that same
-  // area with a blurred/dimmed crop of this world's own bgPath art
-  // (see worlds.js's boardBgKey/boardBgPath) - deliberately processed
-  // rather than sharp, so it reads as ambient color behind the tiles
-  // rather than competing detail. No world context (old-style direct
+  // Per chat: fills the whole canvas behind the frame with this world's
+  // own board background (worlds.js's boardBgKey/boardBgPath). Worlds
+  // are being switched over to new sharp 9:16 art one at a time; worlds
+  // not switched yet still have the old small blurred/dimmed picture,
+  // which works fine here too. No world context (old-style direct
   // BoardScene launch with no worldId) falls back to the original flat
   // color, unchanged.
+  //
+  // "Cover" fit: scales the picture up until it fills the canvas in
+  // both directions and crops the overflow evenly (phones range from
+  // about 1:1.7 to 1:2.6, so the picture is never stretched). New art
+  // should therefore keep anything important away from the far left and
+  // right edges.
   createBoardBackdrop() {
     if (!this.worldId) return;
     const world = getWorld(this.worldId);
     if (!world?.boardBgKey) return;
     const { width, height } = this.scale;
-    this.add.image(width / 2, height / 2, world.boardBgKey).setDisplaySize(width, height);
+    const img = this.add.image(width / 2, height / 2, world.boardBgKey);
+    img.setScale(Math.max(width / img.width, height / img.height));
   }
 
   // ---------- board frame (per-world art) ----------

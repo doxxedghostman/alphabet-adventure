@@ -2140,3 +2140,17 @@ page (`settingsStore`), so flipping one there or here is the same
 setting. Settings itself is unchanged - it can't be reused mid-level
 because it's a full scene that would end the level and always returns
 to the Home Hub.
+
+### Milestone 52 — Board backgrounds: no-stretch fit + Candy Garden's new sharp art
+
+`createBoardBackdrop()` used to stretch the picture to the canvas (the
+old 600x900 blurred files were squeezed onto much taller phones). It now
+"covers": scales up until the canvas is filled and crops the overflow
+evenly, so nothing is ever distorted at any phone shape. First world
+switched to new art: `candy-garden-board-bg.jpg` (940x1672, 9:16, sharp,
+~118KB). The other 9 worlds keep their old blurred backgrounds until
+their new art arrives - drop each new file in under the same
+`<slug>-board-bg.jpg` name, no code change needed. Art brief: calm
+top fifth (HUD), quiet low-detail middle (board frame covers it),
+scenery in the bands above/below the frame, keep important things away
+from the far left/right edges.
