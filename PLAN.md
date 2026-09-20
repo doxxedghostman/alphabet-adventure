@@ -92,6 +92,8 @@ Player starts at World 1, Level 1.
   rim stroke) and glass-shatter clear effect (flash + flying shards)
   that started as a Candy-Garden-only trial are live on every world,
   not just world 1. See update.md Milestones 43-46.
+- Board backgrounds: being switched to new sharp per-world art one
+  world at a time (Candy Garden done, 9 to go) - see section 2.5.
 - Frame art (border only, not the glass-tile/shatter effect) is now
   also in for worlds 2, 3, 4, 6, and 9, driven by a shared per-world
   data table (`src/data/worldFrames.js`) rather than one-off scene
@@ -106,6 +108,124 @@ Player starts at World 1, Level 1.
   first candidates to replace if proper themed art gets made later.
   Worlds 7 and 10 also got a distinct frame for their boss level
   (level 20) via new bossFrameKey/bossTile* fields in worldFrames.js.
+
+## 2.5 Board screen — HUD, backgrounds, and how to fix them
+
+Built in update.md Milestones 50-53. This is the reference for what is
+on the board screen, where it lives, and step-by-step fixes.
+
+### What is on the screen
+
+Top to bottom (all sized for the fixed 516px-wide canvas):
+
+1. **Wood top bar** — profile avatar in a gold ring with the level
+   number on a gold star (real Google photo when signed in, drawn
+   default silhouette for guests), gem count, gear = pause.
+2. **Goal banner** (`word-map-banner.png`) — score-goal levels: "Reach
+   N points", a progress bar, and 3 stars above it (each lights per
+   third of the goal, stand-in for real 3-star scoring). Word levels:
+   "Find: WORD" and a plain score line, no stars.
+3. **Moves tag** — small pill hanging off the banner; text turns red at
+   3 or fewer moves.
+4. **The board frame**, centered in the space between the banner and
+   the booster bar (slightly above the exact middle).
+5. **Wood bottom bar** — big round Bomb and Shuffle buttons with count
+   badges (red when in stock, grey at 0 and the button dims).
+6. **Pause card** (gear): Music / Sound effects / Vibration toggles
+   (the same saved settings as the Settings page) + Resume + Leave
+   Level. No Restart on purpose - Restart is what Bomb costs. Settings
+   itself cannot be reused here: it is a full scene that would end the
+   level and always returns to the Home Hub.
+
+Deliberately not on it: hearts/lives (still enforced - see the Out of
+Lives wall), the paw coin, a Level pill, the old right-hand pills.
+
+### Where the code is
+
+| What | File |
+|---|---|
+| All HUD drawing + layout numbers | `src/utils/boardHud.js` |
+| Shared 3-slice wood plank | `src/utils/woodPanel.js` (Settings/Calendar still have their own copies) |
+| Wiring to game logic, pause card, backdrop, geometry | `src/scenes/BoardScene.js` (`createHud`, `showPauseMenu`, `addPauseToggle`, `onBombPressed`, `onShufflePressed`, `createBoardBackdrop`, `computeBoardGeometry`) |
+| HUD art | `public/assets/`: `wood-cap-left/right`, `wood-middle`, `word-map-banner`, `icon-gem`, `icon-settings`, `booster-bomb`, `booster-shuffle` |
+| Helper scripts | `tools/` (see below) |
+
+Layout rules worth knowing: `computeHudLayout()` reserves the top block
+and the bottom bar, then the frame is centered in what is left. The HUD
+scales between 70% (short phones) and 115% (tall phones). The
+status-bar / gesture-bar room is fixed constants (`SAFE_TOP = 28`,
+`SAFE_BOTTOM = 20` in `boardHud.js`) - not read from the device.
+
+### Board backgrounds — status
+
+Each world loads `public/assets/<slug>-board-bg.jpg` (worlds.js:
+`boardBgKey`/`boardBgPath`). The scene "covers" the canvas with it
+(scaled to fill, overflow cropped evenly - never stretched).
+
+| id | slug | board background |
+|---|---|---|
+| 1 | candy-garden | NEW sharp art (940x1672) |
+| 2 | jungle-jumble | old blurred 600x900 - to replace |
+| 3 | ocean-words | old blurred - to replace |
+| 4 | dino-valley | old blurred - to replace |
+| 5 | cloud-kingdom | old blurred - to replace |
+| 6 | crystal-forest | old blurred - to replace |
+| 7 | magic-mountain | old blurred - to replace |
+| 8 | space-words | old blurred - to replace |
+| 9 | ancient-valley | old blurred - to replace |
+| 10 | wordswoop-kingdom | old blurred - to replace |
+
+### How to fix / replace things
+
+**A. Replace a world's board background (no code change)**
+1. Generate a portrait 9:16 picture, as large as the tool allows. Brief:
+   calm, simple top fifth (the HUD sits there); quiet, low-detail,
+   medium-brightness middle half (the frame covers it); the main
+   scenery in the bands just above and just below the frame; a calm
+   bottom (behind the booster bar); nothing important near the far
+   left/right edges (tall phones crop them); no text, characters, or
+   UI. Sharp, not blurred.
+2. `python3 tools/prep_board_bg.py <picture> <slug>` - writes
+   `public/assets/<slug>-board-bg.jpg` (~120KB, progressive JPEG). The
+   file name is what worlds.js already loads, so nothing else changes.
+3. Check it (recipe D below): a tall phone and a short phone.
+4. Commit, add a line to update.md, push, and flip the row in the
+   status table above.
+
+**B. Replace the Bomb / Shuffle button art**
+Generate the button on a solid flat magenta (#FF00FF) background (never
+"transparent" - it bakes in a fake checkerboard), then
+`python3 tools/cutout_magenta.py <picture> public/assets/booster-bomb.png --size 256`
+(same for `booster-shuffle.png`). No code change. The cutout only
+removes magenta connected to the image border, so pink shapes inside
+the art (the Shuffle arrows) are safe, and the edge is un-mixed so
+there is no pink fringe. 256px is the size the HUD needs (shown ~84px
+wide; ~3x pixel density phones).
+
+**C. The HUD looks wrong on a phone - what to change**
+
+| Symptom | Fix |
+|---|---|
+| HUD touches the status bar or the gesture bar | raise `SAFE_TOP` / `SAFE_BOTTOM` in `boardHud.js` |
+| Icons too big/small on all phones | the `* s` sizes in `createBoardHud` (avatar 80, gem 50, gear 58, buttons 84 at scale 1) |
+| HUD overlaps the frame on a short phone | lower the 0.7 minimum or raise the 12px gap inside `computeHudLayout` |
+| Too much empty space above/below the frame on tall phones | the 0.46 vertical bias in `computeBoardGeometry`, or raise the 1.15 max scale |
+| Text on the goal banner too big / clipped | the font sizes in the banner block; goal text auto-shrinks to fit `BANNER.interiorW` |
+| Stars cover the goal text | the `8 * s` offset in `bannerTop` |
+| A world's background looks stretched/cropped wrong | it is not 9:16 - regenerate closer to 9:16 or move key shapes toward the center |
+| Tap on a booster button misses | hit area is a circle the size of the art (`makeBooster`) |
+| Fonts look plain | HUD uses `Arial Black` fallbacks; no game font is bundled yet |
+
+**D. Check a change visually without a phone**
+`tools/render_board.mjs` renders the real board in headless Chromium and
+saves a screenshot (setup and gotchas are in the file's header comment;
+key ones: run it from a scratch folder with `puppeteer-core` +
+`@sparticuz/chromium` installed, serve `dist/` with a detached
+`python3 -m http.server 4173`, use the numeric world id, stop the server
+with `fuser -k 4173/tcp`, and never `pkill -f chromium`). Render one
+tall phone (393x852) and one short (360x640), and look at both.
+
+---
 
 ## 3. Target words & objectives
 
@@ -457,14 +577,19 @@ Milestone 34) — the rest below is still planned, not built.
   full ad watch isn't wasted; Calendar's Day 7 has no such fallback
   yet), resets the current level for a fresh attempt (simplest
   reliable implementation: restarts the scene), needs a tap-then-
-  confirm ("Confirm?") before it fires. Real icon art on the board's
-  Bomb button (`icon-bomb.png`, Milestone 35). Passive regen over time
+  confirm before it fires (first tap arms it - the button pulses, shows
+  a "!" badge and a "Tap again to restart" hint for 2.5s; second tap
+  fires). Its button is now the big round art in the board's bottom
+  booster bar (`booster-bomb.png`, Milestone 50; the old small
+  `icon-bomb.png` is no longer used). Passive regen over time
   is not built — right now the only ways to gain more are Calendar's
   Day 7 reward and Watch to Earn's reward pool.
 - **Shuffle economy** — built: starts at 3, capped at a max hold of 3
   (same cap/fallback behavior as Bomb above), the existing manual
-  Shuffle button spends one and shows the remaining count with real
-  icon art (`icon-shuffle.png`, Milestone 35); the automatic
+  Shuffle button spends one and shows the remaining count as a badge
+  on its big round button in the bottom booster bar
+  (`booster-shuffle.png`, Milestone 50; the old small `icon-shuffle.png`
+  is no longer used); the automatic
   `ensureSolvable()` safety-shuffle stays free (it's a fairness
   mechanic, not a player action, so it doesn't touch this supply).
   Same "no passive regen yet" gap as Bomb above.
@@ -484,7 +609,10 @@ Milestone 34) — the rest below is still planned, not built.
   completing a level shows a 1/2/3-star result and saves the player's
   best score/stars/moves for that level so they can replay to improve
   it. Mostly a level-complete-screen and profile feature; the
-  underlying score number already exists.
+  underlying score number already exists. (The board HUD already draws
+  3 stars on the goal banner - Milestone 50 - but they are only a
+  stand-in: each lights per third of the score goal. Real thresholds,
+  the result screen, and saved best stars are still to build.)
 
 ## 15. Monetization
 

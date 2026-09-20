@@ -2154,3 +2154,39 @@ their new art arrives - drop each new file in under the same
 top fifth (HUD), quiet low-detail middle (board frame covers it),
 scenery in the bands above/below the frame, keep important things away
 from the far left/right edges.
+
+### Milestone 53 — Docs: board-screen runbook + reusable tools
+
+`PLAN.md` gets a new **section 2.5 (Board screen — HUD, backgrounds,
+and how to fix them)**: what is on the screen, where the code lives, a
+per-world status table for the board backgrounds, and step-by-step
+fixes (replace a background, replace the Bomb/Shuffle art, a
+symptom -> what-to-change table for HUD problems, and how to check a
+change visually without a phone). Stale lines in section 14 (Bomb /
+Shuffle art and the Bomb confirm wording) and the 3-star bullet were
+corrected to match Milestone 50.
+
+New `tools/` folder, each script tested to reproduce the shipped files
+byte-for-byte:
+- `prep_board_bg.py` - shrinks/compresses a new 9:16 background into
+  `public/assets/<slug>-board-bg.jpg`.
+- `cutout_magenta.py` - removes a flat magenta background from button/
+  icon art (border-connected only, edge un-mixed) and sizes it.
+- `render_board.mjs` - renders the real board in headless Chromium for
+  screenshots (setup notes and gotchas in its header).
+
+**Still to do (as of this milestone):**
+- Board backgrounds for worlds 2-10 (drop each in with
+  `prep_board_bg.py`; status table in PLAN.md 2.5).
+- Tile look (currently the semi-transparent glass tiles) - to be
+  replaced later, per chat.
+- `icon-bomb.png` / `icon-shuffle.png` are no longer referenced -
+  safe to delete once nothing else needs them.
+- SettingsScene / CalendarScene still carry their own copies of the
+  wood-panel code; switch them to `src/utils/woodPanel.js`.
+- Status-bar / gesture-bar room is fixed constants; check on real
+  phones and adjust `SAFE_TOP` / `SAFE_BOTTOM` if anything overlaps.
+- Real 3-star scoring (thresholds, result screen, saved best stars);
+  the HUD stars are a stand-in.
+- No game font is bundled; the HUD falls back to Arial Black.
+- Bomb / Shuffle passive regen still not built.
