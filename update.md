@@ -2131,3 +2131,12 @@ Status-bar / nav-bar room is fixed constants (28px top, 20px bottom),
 not read from the device. Word/combo toasts now float just above the
 frame. Background and tile look intentionally unchanged (being replaced
 separately).
+
+### Milestone 51 — Pause card gets Music / Sound effects / Vibration toggles
+
+The board's gear opens the Paused card (Milestone 50); it now also has
+the three audio switches, using the same saved settings as the Settings
+page (`settingsStore`), so flipping one there or here is the same
+setting. Settings itself is unchanged - it can't be reused mid-level
+because it's a full scene that would end the level and always returns
+to the Home Hub.

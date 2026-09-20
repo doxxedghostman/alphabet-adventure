@@ -22,6 +22,7 @@ import { getBoosters, spendBooster } from '../utils/boosterStore.js';
 import { WORLD_FRAMES, getWorldFrame } from '../data/worldFrames.js';
 import { getWorld, WORLDS } from '../data/worlds.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
+import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } from '../utils/settingsStore.js';
 import { preloadBoardHud, computeHudLayout, createBoardHud } from '../utils/boardHud.js';
 
 // Word-Swap mechanic:
@@ -329,7 +330,7 @@ export class BoardScene extends Phaser.Scene {
       .setInteractive();
 
     const cardWidth = BOARD_PIXEL_SIZE.width - 60;
-    const cardHeight = 230;
+    const cardHeight = 356;
     const card = this.add.container(centerX, centerY).setDepth(2001);
 
     const cardBg = this.add.graphics();
@@ -339,7 +340,7 @@ export class BoardScene extends Phaser.Scene {
     cardBg.strokeRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 22);
 
     const title = this.add
-      .text(0, -cardHeight / 2 + 44, 'Paused', {
+      .text(0, -cardHeight / 2 + 42, 'Paused', {
         fontSize: '26px',
         fontStyle: 'bold',
         color: '#ffd93d',
@@ -354,13 +355,55 @@ export class BoardScene extends Phaser.Scene {
     };
 
     card.add([cardBg, title]);
-    card.add(this.createPopupButton(0, -8, 'Resume', 0xffd93d, '#1b1030', close));
+
+    // Same saved switches as the Settings page (utils/settingsStore.js),
+    // so flipping one here changes it there too.
+    this.addPauseToggle(card, cardWidth, -82, 'Music', isMusicOn(), setMusicOn);
+    this.addPauseToggle(card, cardWidth, -36, 'Sound effects', isSfxOn(), setSfxOn);
+    this.addPauseToggle(card, cardWidth, 10, 'Vibration', isHapticsOn(), setHapticsOn);
+
+    card.add(this.createPopupButton(0, 82, 'Resume', 0xffd93d, '#1b1030', close));
     card.add(
-      this.createPopupButton(0, 46, 'Leave Level', 0x3a2c5c, '#ffffff', () => {
+      this.createPopupButton(0, 136, 'Leave Level', 0x3a2c5c, '#ffffff', () => {
         close();
         this.goToMainMenu();
       })
     );
+  }
+
+  // One label + on/off switch row for the pause card (look matches the
+  // Settings page toggles: green when on, muted brown when off).
+  addPauseToggle(card, cardWidth, y, label, initialValue, onChange) {
+    const rowW = cardWidth - 56;
+    const rowBg = this.add.graphics();
+    rowBg.fillStyle(0x3a2c5c, 0.55);
+    rowBg.fillRoundedRect(-rowW / 2, y - 20, rowW, 40, 12);
+
+    const labelText = this.add
+      .text(-rowW / 2 + 16, y, label, { fontFamily: 'system-ui, sans-serif', fontSize: '17px', color: '#ffffff' })
+      .setOrigin(0, 0.5);
+
+    const trackW = 46;
+    const trackH = 26;
+    const trackX = rowW / 2 - 16 - trackW / 2;
+    const onColor = 0x4caf50;
+    const offColor = 0x8a7658;
+    const knobOffset = trackW / 2 - trackH / 2;
+
+    const track = this.add.rectangle(trackX, y, trackW, trackH, initialValue ? onColor : offColor, 1);
+    track.setStrokeStyle(1, 0x000000, 0.3);
+    const knob = this.add.circle(trackX + (initialValue ? knobOffset : -knobOffset), y, trackH / 2 - 3, 0xffffff, 1);
+
+    let value = initialValue;
+    const hit = this.add.rectangle(0, y, rowW, 40, 0xffffff, 0.001).setInteractive({ useHandCursor: true });
+    hit.on('pointerup', () => {
+      value = !value;
+      onChange(value);
+      track.setFillStyle(value ? onColor : offColor);
+      this.tweens.add({ targets: knob, x: trackX + (value ? knobOffset : -knobOffset), duration: 120, ease: 'Sine.easeOut' });
+    });
+
+    card.add([rowBg, labelText, track, knob, hit]);
   }
 
   // ---------- shuffle / bomb boosters ----------
