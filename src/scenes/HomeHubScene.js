@@ -172,10 +172,16 @@ export class HomeHubScene extends Phaser.Scene {
     // fixed to this specific image, not derived from anything dynamic.
     const NATIVE_W = 805;
     const NATIVE_H = 310;
+    // heart/gem measured directly off the pixels of top-bar-icons.png
+    // (gold-ring outer edge) rather than eyeballed - the old d values
+    // here (100/105) undersold the actual badge size by ~10-12 native
+    // px per side, which put the "gap start" the lives/gem counts get
+    // positioned at still inside the badge's gold ring, so the numbers
+    // rendered on top of the icon instead of clearing it (per chat).
     const BADGE = {
       avatar: { x: 78, y: 150, d: 124 },
-      heart: { x: 285, y: 142, d: 100 },
-      gem: { x: 505, y: 142, d: 105 },
+      heart: { x: 291, y: 144, d: 124 },
+      gem: { x: 506, y: 142, d: 124 },
       gear: { x: 720, y: 150, d: 110 },
     };
 
