@@ -46,10 +46,29 @@ export class WorldSelectScene extends Phaser.Scene {
 
     this.createBackground(width, height);
     this.layoutGrid(width);
-    this.drawTiles();
-    this.setupDragScroll(height);
     this.createHud(width);
     bindHardwareBack(this, () => this.goBack());
+
+    // World names use the Cinzel webfont (per chat, added via
+    // index.html's <link>) instead of the plain Arial Black label
+    // this used to draw. The browser may not have that font ready yet
+    // on a cold app start straight into World Map, so drawTiles()
+    // (which is what actually draws the name text) waits for it -
+    // otherwise every tile would draw once in the fallback serif and
+    // visibly reflow a beat later. Capped at 1.5s so a slow/blocked
+    // font fetch can never hang the screen; background/HUD/back
+    // button above are already live in that window regardless.
+    const fontReady = document.fonts?.load
+      ? Promise.race([
+          document.fonts.load('900 20px Cinzel'),
+          new Promise((resolve) => setTimeout(resolve, 1500)),
+        ]).catch(() => {})
+      : Promise.resolve();
+
+    fontReady.then(() => {
+      this.drawTiles();
+      this.setupDragScroll(height);
+    });
   }
 
   createBackground(width, height) {
@@ -69,7 +88,7 @@ export class WorldSelectScene extends Phaser.Scene {
     const columns = 2;
     this.tileWidth = (width - margin * 2 - gap * (columns - 1)) / columns;
     this.tileHeight = this.tileWidth * (360 / 480); // matches thumb aspect
-    this.nameplateHeight = 34;
+    this.nameplateHeight = 42; // bumped from 34 (per chat) for the bigger Cinzel name text
     this.gemRadius = 9;
     this.labelHeight = this.nameplateHeight * 0.7 + this.gemRadius * 2 + 6;
     this.rowHeight = this.tileHeight + this.labelHeight + gap;
@@ -117,16 +136,7 @@ export class WorldSelectScene extends Phaser.Scene {
     plate.lineStyle(2.5, 0xf6c94a, 1);
     plate.strokeRoundedRect(cx - plateWidth / 2, plateY - this.nameplateHeight / 2, plateWidth, this.nameplateHeight, this.nameplateHeight / 2);
 
-    const label = this.add.text(cx, plateY, world.name, {
-      fontFamily: 'Arial Black, Arial',
-      fontSize: '13px',
-      color: unlocked ? '#ffe9a8' : '#9a9a9a',
-      stroke: '#4a2a0e',
-      strokeThickness: 3,
-      align: 'center',
-      wordWrap: { width: plateWidth - 12 },
-    });
-    label.setOrigin(0.5);
+    this.drawWorldName(cx, plateY, world.name, plateWidth - 16, unlocked);
 
     // Gem: small tinted diamond below the nameplate.
     const gemY = plateY + this.nameplateHeight / 2 + this.gemRadius + 4;
@@ -160,6 +170,51 @@ export class WorldSelectScene extends Phaser.Scene {
       if (this.wasDrag()) return;
       this.selectWorld(world.id);
     });
+  }
+
+  // World name text (per chat, Style C from the demo) - Cinzel, big and
+  // bold, carved-engraving look: a soft cream highlight offset
+  // up-left, a dark bronze shadow offset down-right, and the gold
+  // face on top. Same "stacked text copies" trick HomeHubScene's
+  // renderMetalNumber() uses for the lives/gem counts (a single
+  // Phaser text 'shadow' config can only do one offset, not a
+  // highlight+shadow pair) - just three layers instead of two here to
+  // get the engraved bevel rather than a flat emboss.
+  drawWorldName(cx, y, text, maxWidth, unlocked) {
+    let fontSize = 20;
+    const goldColor = unlocked ? '#f6c94a' : '#9a9a9a';
+    const strokeColor = unlocked ? '#3a2008' : '#4a4a4a';
+    const style = () => ({
+      fontFamily: 'Cinzel',
+      fontStyle: '900',
+      fontSize: `${fontSize}px`,
+      color: goldColor,
+      stroke: strokeColor,
+      strokeThickness: fontSize * 0.14,
+      align: 'center',
+    });
+
+    // Shrink to fit before drawing anything, same pattern as
+    // renderMetalNumber - measure with a throwaway probe rather than
+    // draw-then-resize, avoids a visible flash.
+    const probe = this.add.text(0, 0, text, style()).setVisible(false);
+    while (probe.width > maxWidth && fontSize > 12) {
+      fontSize -= 1;
+      probe.setStyle(style());
+    }
+    probe.destroy();
+
+    if (unlocked) {
+      this.add
+        .text(cx + 0.6, y - 1, text, { ...style(), color: '#fff3d6', stroke: undefined, strokeThickness: 0 })
+        .setOrigin(0.5)
+        .setAlpha(0.35);
+    }
+    this.add
+      .text(cx + 1, y + 1.5, text, { ...style(), color: strokeColor })
+      .setOrigin(0.5)
+      .setAlpha(0.9);
+    this.add.text(cx, y, text, style()).setOrigin(0.5);
   }
 
   drawLockIcon(x, y) {
