@@ -139,3 +139,18 @@ export async function showRewardedAdForLife() {
   addLives(1);
   return { granted: true, type: 'life', amount: 1 };
 }
+
+/**
+ * Same guaranteed-reward pattern as showRewardedAdForLife(), for
+ * BoardScene's out-of-Bomb/Shuffle purchase prompt (per chat) - always
+ * grants exactly 1 of the requested booster type, not a roll through
+ * REWARD_POOL. Player specifically asked for this one because they
+ * ran out mid-level, so (unlike the Home Hub Watch to Earn button) a
+ * random gems/life result instead would feel like a bait-and-switch.
+ */
+export async function showRewardedAdForBooster(type) {
+  const outcome = await playRewardedAdToCompletion();
+  if (!outcome.watched) return { granted: false, reason: outcome.reason, error: outcome.error };
+  addBooster(type);
+  return { granted: true, type, amount: 1 };
+}

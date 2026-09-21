@@ -15,11 +15,11 @@ import { WORD_SET } from '../data/wordlist.js';
 import { getLevel, getNextLevelId } from '../data/levels.js';
 import { generateGuaranteedBoard, SCRAMBLE_COUNT_BY_LENGTH } from '../utils/levelGenerator.js';
 import { completeLevel, levelIdFor, LEVELS_PER_WORLD } from '../utils/progressStore.js';
-import { addGems } from '../utils/currencyStore.js';
+import { addGems, getGems } from '../utils/currencyStore.js';
 import { syncLocalProgressToCloud } from '../utils/authStore.js';
 import { getLivesStatus, loseLife, MAX_LIVES } from '../utils/livesStore.js';
-import { showRewardedAdForLife } from '../utils/adsStore.js';
-import { getBoosters, spendBooster } from '../utils/boosterStore.js';
+import { showRewardedAdForLife, showRewardedAdForBooster } from '../utils/adsStore.js';
+import { getBoosters, addBooster, spendBooster } from '../utils/boosterStore.js';
 import { WORLD_FRAMES, getWorldFrame } from '../data/worldFrames.js';
 import { getWorld, WORLDS } from '../data/worlds.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
@@ -29,6 +29,11 @@ import { preloadBoardHud, computeHudLayout, createBoardHud } from '../utils/boar
 // Gems per successful round (per chat) - flat award regardless of level
 // type/score, same spot completeLevel() already fires from.
 const ROUND_WIN_GEMS = 10;
+
+// Gem cost to instantly buy 1 Bomb/Shuffle when out (per chat) - only
+// offered from the out-of-boosters purchase prompt below, not a
+// standing Shop price (there's no Shop yet).
+const BOOSTER_GEM_COST = { bomb: 100, shuffle: 50 };
 
 // Word-Swap mechanic:
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
@@ -421,7 +426,7 @@ export class BoardScene extends Phaser.Scene {
   onShufflePressed() {
     if (this.isBusy || this.levelOver || this.isPaused) return;
     if (!spendBooster('shuffle')) {
-      this.showWordToast('Out of Shuffles!', '#ff6b6b');
+      this.showBoosterPurchasePrompt('shuffle');
       return;
     }
     this.hud.refreshBoosters();
@@ -437,7 +442,7 @@ export class BoardScene extends Phaser.Scene {
   onBombPressed() {
     if (this.isBusy || this.levelOver || this.isPaused) return;
     if (getBoosters().bomb <= 0) {
-      this.showWordToast('Out of Bombs!', '#ff6b6b');
+      this.showBoosterPurchasePrompt('bomb');
       return;
     }
     if (!this.hud.bombArmed) {
@@ -450,6 +455,112 @@ export class BoardScene extends Phaser.Scene {
     this.hud.setBombArmed(false);
     spendBooster('bomb');
     this.restartLevel();
+  }
+
+  // Out-of-Bomb/Shuffle purchase prompt (per chat): buy 1 instantly for
+  // gems (BOOSTER_GEM_COST), or watch a guaranteed-reward ad
+  // (showRewardedAdForBooster) if short on gems. Either path grants
+  // exactly 1 via addBooster(), closes the popup, then re-fires the
+  // same press handler that opened this - which will now find a
+  // non-zero count and proceed with the actual shuffle/bomb action
+  // instead of duplicating that logic here.
+  showBoosterPurchasePrompt(type) {
+    const cost = BOOSTER_GEM_COST[type];
+    const label = type === 'bomb' ? 'Bomb' : 'Shuffle';
+    const gems = getGems();
+    const canAfford = gems >= cost;
+    const retry = () => (type === 'bomb' ? this.onBombPressed() : this.onShufflePressed());
+
+    const centerX = this.scale.width / 2;
+    const centerY = this.scale.height / 2;
+
+    const overlay = this.add
+      .rectangle(centerX, centerY, this.scale.width, this.scale.height, 0x000000, 0.6)
+      .setAlpha(0)
+      .setInteractive();
+
+    const buttonCount = canAfford ? 3 : 2;
+    const cardWidth = BOARD_PIXEL_SIZE.width - 60;
+    const cardHeight = 148 + buttonCount * 54;
+    const card = this.add.container(centerX, centerY).setAlpha(0).setScale(0.85);
+
+    const cardBg = this.add.graphics();
+    cardBg.fillStyle(0x2a1f47, 1);
+    cardBg.fillRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 22);
+    cardBg.lineStyle(2, 0xffffff, 0.15);
+    cardBg.strokeRoundedRect(-cardWidth / 2, -cardHeight / 2, cardWidth, cardHeight, 22);
+
+    const titleText = this.add
+      .text(0, -cardHeight / 2 + 44, `Out of ${label}s`, {
+        fontSize: '24px',
+        fontStyle: 'bold',
+        color: '#ff6b6b',
+        fontFamily: 'system-ui, sans-serif',
+      })
+      .setOrigin(0.5);
+
+    const messageText = this.add
+      .text(
+        0,
+        -cardHeight / 2 + 86,
+        canAfford ? `Buy 1 for ${cost} gems? You have ${gems}.` : `Need ${cost} gems for 1 \u2013 you have ${gems}.`,
+        {
+          fontSize: '15px',
+          color: '#cfc6e8',
+          fontFamily: 'system-ui, sans-serif',
+          align: 'center',
+          wordWrap: { width: cardWidth - 40 },
+        }
+      )
+      .setOrigin(0.5);
+
+    card.add([cardBg, titleText, messageText]);
+
+    const close = () => {
+      this.tweens.add({ targets: overlay, alpha: 0, duration: 150, onComplete: () => overlay.destroy() });
+      this.tweens.add({ targets: card, alpha: 0, scale: 0.85, duration: 150, onComplete: () => card.destroy() });
+    };
+
+    let y = -cardHeight / 2 + 134;
+
+    if (canAfford) {
+      card.add(
+        this.createPopupButton(0, y, `Buy for ${cost} Gems`, 0xffd93d, '#1b1030', () => {
+          addGems(-cost);
+          addBooster(type);
+          this.hud.refreshBoosters();
+          close();
+          retry();
+        })
+      );
+      y += 54;
+    }
+
+    const adButton = this.createPopupButton(0, y, `Watch Ad for a ${label}`, 0x2e7d32, '#ffffff', async () => {
+      const adLabelText = adButton.list[1];
+      adLabelText.setText('Loading ad\u2026');
+      const result = await showRewardedAdForBooster(type);
+      if (result.granted) {
+        this.hud.refreshBoosters();
+        close();
+        retry();
+      } else {
+        adLabelText.setText(`Watch Ad for a ${label}`);
+      }
+    });
+    card.add(adButton);
+    y += 54;
+
+    card.add(this.createPopupButton(0, y, 'Cancel', 0x3a2c5c, '#ffffff', close));
+
+    this.tweens.add({ targets: overlay, alpha: 1, duration: 220 });
+    this.tweens.add({
+      targets: card,
+      alpha: 1,
+      scale: 1,
+      duration: 260,
+      ease: 'Back.easeOut',
+    });
   }
 
   // Silent safety net: called after the board first appears and after every
