@@ -15,6 +15,7 @@ import { WORD_SET } from '../data/wordlist.js';
 import { getLevel, getNextLevelId } from '../data/levels.js';
 import { generateGuaranteedBoard, SCRAMBLE_COUNT_BY_LENGTH } from '../utils/levelGenerator.js';
 import { completeLevel, levelIdFor, LEVELS_PER_WORLD } from '../utils/progressStore.js';
+import { addGems } from '../utils/currencyStore.js';
 import { syncLocalProgressToCloud } from '../utils/authStore.js';
 import { getLivesStatus, loseLife, MAX_LIVES } from '../utils/livesStore.js';
 import { showRewardedAdForLife } from '../utils/adsStore.js';
@@ -24,6 +25,10 @@ import { getWorld, WORLDS } from '../data/worlds.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
 import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } from '../utils/settingsStore.js';
 import { preloadBoardHud, computeHudLayout, createBoardHud } from '../utils/boardHud.js';
+
+// Gems per successful round (per chat) - flat award regardless of level
+// type/score, same spot completeLevel() already fires from.
+const ROUND_WIN_GEMS = 10;
 
 // Word-Swap mechanic:
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
@@ -1079,6 +1084,7 @@ export class BoardScene extends Phaser.Scene {
     this.levelOver = true;
     this.deselectTile();
     if (this.worldId) completeLevel(this.level.id);
+    addGems(ROUND_WIN_GEMS);
     syncLocalProgressToCloud();
 
     const isBoss = this.worldId && this.levelNum === LEVELS_PER_WORLD;
