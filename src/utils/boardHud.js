@@ -137,10 +137,28 @@ function createAvatar(scene, x, y, d) {
     return;
   }
 
+  // Simple friendly cartoon face (per chat) - was a flat generic
+  // "person" silhouette icon that didn't match Home Hub's illustrated
+  // default avatar at all. Round head + simple hair cap + dot eyes +
+  // a curved smile, in the same skin/hair palette, gets this closer
+  // to that same warm look without needing a cut-out art asset (Home
+  // Hub's face is baked directly into its big top-bar image, not
+  // available as a standalone sprite this scene could just reuse).
   const person = scene.add.graphics().setDepth(HUD_DEPTH + 1);
-  person.fillStyle(0xf1c27d, 1);
-  person.fillCircle(x, y - r * 0.12, r * 0.27);
-  person.fillEllipse(x, y + r * 0.66, r * 1.05, r * 0.85);
+  const faceR = r * 0.62;
+  person.fillStyle(0xf1c27d, 1).fillCircle(x, y + r * 0.02, faceR);
+  person.fillStyle(0x4a2c14, 1);
+  person.beginPath();
+  person.arc(x, y - r * 0.05, faceR * 1.02, Math.PI * 1.02, Math.PI * 1.98, false);
+  person.closePath();
+  person.fillPath();
+  person.fillStyle(0x3a2410, 1);
+  person.fillCircle(x - faceR * 0.32, y - r * 0.02, faceR * 0.09);
+  person.fillCircle(x + faceR * 0.32, y - r * 0.02, faceR * 0.09);
+  person.lineStyle(faceR * 0.11, 0x8a4a1e, 1);
+  person.beginPath();
+  person.arc(x, y + faceR * 0.05, faceR * 0.42, Math.PI * 0.15, Math.PI * 0.85, false);
+  person.strokePath();
   person.setMask(mask);
 }
 
