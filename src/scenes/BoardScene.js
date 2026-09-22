@@ -1169,13 +1169,45 @@ export class BoardScene extends Phaser.Scene {
   //   'target' - wordsFound must include the specific target word.
   //   'free'   - score must reach scoreTarget (wordsFound is irrelevant
   //              here since ANY word contributes to the free-play score).
+  // The greedy tokenizer above (scanLineForWords/findWordMatches) always
+  // credits the LONGEST valid word starting at each position, then jumps
+  // past it - it never goes back to check whether a shorter word (like
+  // the target) was sitting inside what it just consumed as something
+  // longer (e.g. target CAT clearing as part of SCAT or CATS). That
+  // meant wordsFound only ever contained "SCAT", never "CAT" - the
+  // target's letters visibly cleared off the board without ever
+  // registering as the target being found (per chat - "hit CAT 2x and
+  // the target word didn't count it"). This checks every row/column for
+  // the exact target word as a contiguous substring (forward or
+  // reversed, matching scanLineForWords' own reversed-match rule),
+  // independent of whatever the tokenizer separately reported.
+  boardContainsTargetWord() {
+    if (!this.targetWord) return false;
+    const reversedTarget = this.targetWord.split('').reverse().join('');
+    const lineHasTarget = (letters) => {
+      const line = letters.join('');
+      return line.includes(this.targetWord) || line.includes(reversedTarget);
+    };
+    for (let row = 0; row < BOARD_SIZE; row++) {
+      const letters = [];
+      for (let col = 0; col < BOARD_SIZE; col++) letters.push(this.grid[row][col].letter);
+      if (lineHasTarget(letters)) return true;
+    }
+    for (let col = 0; col < BOARD_SIZE; col++) {
+      const letters = [];
+      for (let row = 0; row < BOARD_SIZE; row++) letters.push(this.grid[row][col].letter);
+      if (lineHasTarget(letters)) return true;
+    }
+    return false;
+  }
+
   checkWinCondition(wordsFound) {
     if (this.levelOver) return;
     if (this.level.type === 'free') {
       if (this.score >= this.scoreTarget) this.onLevelWon();
       return;
     }
-    if (wordsFound.includes(this.targetWord)) {
+    if (wordsFound.includes(this.targetWord) || this.boardContainsTargetWord()) {
       this.onLevelWon();
     }
   }
