@@ -45,6 +45,34 @@ const config = {
 
 window.game = new Phaser.Game(config);
 
+// Corrects the letterbox-strip flicker per chat: getCanvasSize() above
+// only ran once, at this module's very first execution, and that
+// reading can race against MainActivity.java's hideSystemBars() -
+// going immersive is an async native-side animation, not instant, so
+// window.innerHeight at that exact JS-boot instant may still reflect
+// the shorter pre-immersive viewport (nav bar still visible/
+// animating away). Whichever aspect ratio got measured at that moment
+// was then locked into the canvas forever, with nothing to
+// re-measure later - showing as the cream letterbox bars on launches
+// where JS happened to run first, and not on launches where the bars
+// had already finished hiding by then. Re-deriving the size and
+// pushing it into Phaser's own ScaleManager (which re-lays-out FIT
+// scaling for the new dimensions) whenever the real viewport changes
+// - or shortly after boot even with no explicit resize event, via the
+// double rAF below, since "wrong from frame one and nothing changes
+// again after" wouldn't otherwise fire a 'resize' at all - keeps the
+// canvas's ratio matched to the actual current viewport instead of
+// whatever transient size existed at construction.
+function syncCanvasSize() {
+  if (!window.game?.scale) return;
+  const size = getCanvasSize();
+  window.game.scale.resize(size.width, size.height);
+}
+
+window.requestAnimationFrame(() => window.requestAnimationFrame(syncCanvasSize));
+window.addEventListener('resize', syncCanvasSize);
+window.addEventListener('orientationchange', syncCanvasSize);
+
 // Fire-and-forget: picks up an existing session and starts listening
 // for sign-in/sign-out. Doesn't block game boot - Phaser starts
 // immediately with SplashScene regardless, since guest play never
