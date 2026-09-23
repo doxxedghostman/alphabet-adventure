@@ -14,7 +14,8 @@ import {
 import { WORD_SET } from '../data/wordlist.js';
 import { getLevel, getNextLevelId } from '../data/levels.js';
 import { generateGuaranteedBoard, SCRAMBLE_COUNT_BY_LENGTH } from '../utils/levelGenerator.js';
-import { completeLevel, levelIdFor, LEVELS_PER_WORLD } from '../utils/progressStore.js';
+import { completeLevel, levelIdFor, LEVELS_PER_WORLD, setLastPlayed } from '../utils/progressStore.js';
+import { saveSession, getSession, clearSession } from '../utils/sessionStore.js';
 import { addGems, getGems } from '../utils/currencyStore.js';
 import { syncLocalProgressToCloud } from '../utils/authStore.js';
 import { getLivesStatus, loseLife, MAX_LIVES } from '../utils/livesStore.js';
@@ -179,6 +180,9 @@ export class BoardScene extends Phaser.Scene {
     this.isPaused = false;
     this.score = 0;
     this.grid = [];
+    this.worldId = sceneData?.worldId ?? null;
+    this.levelNum = sceneData?.levelNum ?? null;
+    if (this.worldId) setLastPlayed(this.worldId, this.levelNum);
 
     // Hardware/gesture back button - same destination as the on-screen
     // Back label above. Registered up front (before the lives-gate
@@ -202,6 +206,13 @@ export class BoardScene extends Phaser.Scene {
     this.worldId = sceneData?.worldId ?? null;
     this.levelNum = sceneData?.levelNum ?? null;
     this.movesLeft = this.level.maxSwaps;
+    const savedSession = getSession();
+    const session = savedSession && savedSession.levelId === sceneData?.levelId
+      && savedSession.grid.length === BOARD_SIZE ? savedSession : null;
+    if (session) {
+      this.movesLeft = session.movesLeft;
+      this.score = session.score;
+    }
     this.targetWord = this.level.targetWord; // only set for type: 'target'
     this.scoreTarget = this.level.scoreTarget; // only set for type: 'free'
     this.levelOver = false;
@@ -218,9 +229,9 @@ export class BoardScene extends Phaser.Scene {
     this.createBoardFrame();
     this.createHud();
 
-    this.createInitialBoard();
+    this.createInitialBoard(session?.grid);
     this.setupInput();
-    this.ensureSolvable();
+    if (!session) this.ensureSolvable();
   }
 
   // ---------- board geometry (per-world tile size + centering) ----------
@@ -749,7 +760,11 @@ export class BoardScene extends Phaser.Scene {
 
   // ---------- board setup ----------
 
-  createInitialBoard() {
+  createInitialBoard(savedGrid) {
+    if (savedGrid) {
+      this.grid = savedGrid.map((row, r) => row.map((letter, c) => this.createTile(r, c, letter)));
+      return;
+    }
     // Target-word levels (every 5th level, per PLAN.md) use the
     // guaranteed generator: it builds the board backwards from a solved
     // state so targetWord is provably reachable within maxSwaps, instead
@@ -1159,6 +1174,16 @@ export class BoardScene extends Phaser.Scene {
     await this.ensureSolvable();
     this.checkLevelEnd();
     this.isBusy = false;
+    if (this.worldId && !this.levelOver) {
+      saveSession({
+        levelId: this.level.id,
+        worldId: this.worldId,
+        levelNum: this.levelNum,
+        grid: this.grid.map((row) => row.map((tile) => tile.letter)),
+        movesLeft: this.movesLeft,
+        score: this.score,
+      });
+    }
   }
 
   // ---------- level end conditions ----------
@@ -1230,6 +1255,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   onLevelWon() {
+    clearSession();
     this.levelOver = true;
     this.deselectTile();
     if (this.worldId) completeLevel(this.level.id);
@@ -1251,6 +1277,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   onLevelLost() {
+    clearSession();
     this.levelOver = true;
     this.deselectTile();
     loseLife();
@@ -1270,6 +1297,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   restartLevel() {
+    clearSession();
     this.scene.restart({ levelId: this.level.id, worldId: this.worldId, levelNum: this.levelNum });
   }
 

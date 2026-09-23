@@ -36,16 +36,16 @@ export const LEVELS_PER_WORLD = 20;
 function loadRaw() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { completedLevelIds: [] };
+    if (!raw) return { completedLevelIds: [], lastPlayed: null };
     const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed.completedLevelIds)) return { completedLevelIds: [] };
-    return parsed;
+    if (!Array.isArray(parsed?.completedLevelIds)) return { completedLevelIds: [], lastPlayed: null };
+    return { ...parsed, lastPlayed: validLastPlayed(parsed.lastPlayed) ? parsed.lastPlayed : null };
   } catch (err) {
     // Corrupt or inaccessible storage (private browsing, quota, bad JSON)
     // - fail safe to "nothing completed" rather than throwing, since a
     // progress-read should never be able to crash the game.
     console.warn('progressStore: failed to read localStorage, starting fresh', err);
-    return { completedLevelIds: [] };
+    return { completedLevelIds: [], lastPlayed: null };
   }
 }
 
@@ -75,6 +75,34 @@ export function getCompletedLevelIds() {
 
 export function isLevelComplete(levelId) {
   return getCompletedLevelIds().has(levelId);
+}
+
+export function completedCountForWorld(worldId, levelsPerWorld = LEVELS_PER_WORLD) {
+  const completed = getCompletedLevelIds();
+  let count = 0;
+  for (let n = 1; n <= levelsPerWorld; n += 1) {
+    if (completed.has(levelIdFor(worldId, n))) count += 1;
+  }
+  return count;
+}
+
+export function isWorldComplete(worldId) {
+  return completedCountForWorld(worldId) === LEVELS_PER_WORLD;
+}
+
+function validLastPlayed(value) {
+  return Number.isInteger(value?.worldId) && value.worldId > 0
+    && Number.isInteger(value.levelNum) && value.levelNum > 0
+    && value.levelNum <= LEVELS_PER_WORLD;
+}
+
+export function setLastPlayed(worldId, levelNum) {
+  if (!validLastPlayed({ worldId, levelNum })) return;
+  saveRaw({ ...loadRaw(), lastPlayed: { worldId, levelNum } });
+}
+
+export function getLastPlayed() {
+  return loadRaw().lastPlayed;
 }
 
 export function completeLevel(levelId) {
@@ -124,7 +152,7 @@ export function resetProgress() {
  * local and cloud agree after a sync), not by normal gameplay (which
  * should keep using completeLevel() one at a time). */
 export function setCompletedLevelIds(ids) {
-  saveRaw({ completedLevelIds: [...new Set(ids)] });
+  saveRaw({ ...loadRaw(), completedLevelIds: [...new Set(ids)] });
 }
 
 /** Count of worlds currently unlocked, out of WORLDS.length -- used for the

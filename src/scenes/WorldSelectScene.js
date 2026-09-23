@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import { APP_BG_COLOR_RGB } from '../config.js';
 import { WORLDS } from '../data/worlds.js';
-import { isWorldUnlocked } from '../utils/progressStore.js';
+import { isWorldUnlocked, completedCountForWorld, isWorldComplete, getLastPlayed, LEVELS_PER_WORLD } from '../utils/progressStore.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
 
 // World Map entry screen (PLAN.md §8.5).
@@ -160,6 +160,37 @@ export class WorldSelectScene extends Phaser.Scene {
       overlay.fillRoundedRect(x, y, this.tileWidth, this.tileHeight, 14);
       this.drawLockIcon(cx, y + this.tileHeight / 2);
       return;
+    }
+
+    const complete = isWorldComplete(world.id);
+    const continuing = !complete && getLastPlayed()?.worldId === world.id;
+    this.add.text(x + 10, y + 10, `${completedCountForWorld(world.id)}/${LEVELS_PER_WORLD}`, {
+      fontFamily: 'Arial', fontSize: '16px', fontStyle: 'bold',
+      color: '#fff3d6', backgroundColor: '#39230e', padding: { x: 7, y: 4 },
+    });
+
+    if (complete) {
+      const badgeX = x + this.tileWidth - 24;
+      const badgeY = y + 24;
+      this.add.circle(badgeX, badgeY, 16, 0xffd45a).setStrokeStyle(2, 0x8a5a1e);
+      // Draw the checkmark so the badge does not depend on font glyph support.
+      const check = this.add.graphics();
+      check.lineStyle(3, 0x54330b, 1);
+      check.beginPath();
+      check.moveTo(badgeX - 7, badgeY);
+      check.lineTo(badgeX - 2, badgeY + 5);
+      check.lineTo(badgeX + 8, badgeY - 6);
+      check.strokePath();
+    } else if (continuing) {
+      const glow = this.add.graphics();
+      glow.lineStyle(9, 0x7cffe1, 0.25);
+      glow.strokeRoundedRect(x, y, this.tileWidth, this.tileHeight, 14);
+      glow.lineStyle(3, 0x7cffe1, 1);
+      glow.strokeRoundedRect(x, y, this.tileWidth, this.tileHeight, 14);
+      this.add.text(cx, y + this.tileHeight - this.nameplateHeight / 2 - 8, 'CONTINUE HERE', {
+        fontFamily: 'Arial', fontSize: '12px', fontStyle: 'bold',
+        color: '#123c35', backgroundColor: '#7cffe1', padding: { x: 8, y: 4 },
+      }).setOrigin(0.5, 1);
     }
 
     const hitArea = this.add
