@@ -2190,3 +2190,28 @@ byte-for-byte:
   the HUD stars are a stand-in.
 - No game font is bundled; the HUD falls back to Arial Black.
 - Bomb / Shuffle passive regen still not built.
+
+### Milestone 54 — tools/trace_path_nodes.py: auto-place the 20 level nodes from real path art
+
+Per chat: `candy-garden-bg.jpg` (and all 10 worlds' -bg.jpg path art) is
+a 600x1700 mirror-tiled stretch of a shorter picture — visible as a
+blurry mirrored seam partway down (see chat for the screenshot). The
+20 node points in `levelPaths.js` were also hand-guessed (a sine wave
+eyeballed against the art), not measured from it.
+
+New `tools/trace_path_nodes.py`: given a world's path art and a path
+color (sampled by eye, or via its `--sample-help` grid-overlay mode),
+it finds the path by color, thins it to a 1px centerline, walks it
+end to end, and drops 20 points evenly spaced along its actual length
+(not evenly in y — a switchback bends more near the top than the
+bottom). Prints ready-to-paste JS for `levelPaths.js` and saves a
+preview image with the 20 numbered dots on the art, to check before
+pasting. Not yet run against real (non-mirrored) art — the current
+Candy Garden art isn't a fair test case since it's the flawed one this
+whole effort is replacing.
+
+**Still to do:** generate real, non-mirrored path art per world
+(ChatGPT image gen or similar — a tool with an "extend this image
+downward" feature will match sections better than independent
+generations), run this script against each, paste the results into
+`levelPaths.js`, and spot-check on device.
