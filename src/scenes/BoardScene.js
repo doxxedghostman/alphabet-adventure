@@ -35,6 +35,12 @@ const ROUND_WIN_GEMS = 10;
 // standing Shop price (there's no Shop yet).
 const BOOSTER_GEM_COST = { bomb: 100, shuffle: 50 };
 
+function wordLengthTier(word) {
+  if (word.length >= 5) return 3;
+  if (word.length === 4) return 2;
+  return 1;
+}
+
 // Word-Swap mechanic:
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
 //   diagonals) to swap them.
@@ -713,7 +719,7 @@ export class BoardScene extends Phaser.Scene {
       )
     );
 
-    if (!silent) this.showWordToast('Shuffled!', '#6bc9ef');
+    if (!silent) this.spawnCandyPop('Shuffled!', '#6bc9ef', { fontSize: '26px', y: this.toastY });
 
     // The retry loop above only guarantees a FUTURE swap could create a
     // word - it says nothing about whether the shuffle itself just handed
@@ -1116,7 +1122,7 @@ export class BoardScene extends Phaser.Scene {
       return;
     }
 
-    const points = wordsFound.reduce((sum, w) => sum + w.length * 20, 0);
+    const points = wordsFound.reduce((sum, w) => sum + w.length * 20 * wordLengthTier(w), 0);
     this.score += points;
     this.updateScoreText();
 
@@ -1496,7 +1502,7 @@ export class BoardScene extends Phaser.Scene {
     const { matchedCells, wordsFound } = this.findWordMatches();
     if (matchedCells.size === 0) return;
 
-    const points = wordsFound.reduce((sum, w) => sum + w.length * 10, 0) * chainLevel;
+    const points = wordsFound.reduce((sum, w) => sum + w.length * 10 * wordLengthTier(w), 0) * chainLevel;
     this.score += points;
     this.updateScoreText();
 
@@ -1511,7 +1517,17 @@ export class BoardScene extends Phaser.Scene {
   }
 
   showWordToast(word, color) {
-    this.spawnCandyPop(word, color, { fontSize: '26px', y: this.toastY });
+    const tier = wordLengthTier(word);
+    if (tier === 1) {
+      this.spawnCandyPop(word, color, { fontSize: '26px', y: this.toastY });
+      return;
+    }
+    const tierColor = tier === 3 ? '#ffd93d' : '#7ce0ff';
+    this.spawnCandyPop(`${word} \u00d7${tier}!`, tierColor, {
+      fontSize: tier === 3 ? '32px' : '28px',
+      y: this.toastY,
+      sparkle: true,
+    });
   }
 
   showComboText(chainLevel, wordsFound, labelOverride) {
@@ -1527,7 +1543,7 @@ export class BoardScene extends Phaser.Scene {
       fontSize: chainLevel > 1 ? '27px' : '22px',
       y: this.toastY + 10,
       wordWrap: BOARD_PIXEL_SIZE.width - 30,
-      sparkle: chainLevel > 1,
+      sparkle: chainLevel > 1 || wordsFound.some((word) => wordLengthTier(word) > 1),
     });
   }
 
