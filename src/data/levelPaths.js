@@ -33,28 +33,28 @@
 // per-world comments below. Retune any of these if the zigzag needs
 // to hug the art's actual path more closely.
 
-// Candy Garden - tight zigzag matching its narrow winding dirt path.
+// Candy Garden - color-traced, arc-length-spaced nodes on continuous 600x1700 art.
 const CANDY_GARDEN_PATH = [
-  { x: 300, y: 1650 }, // 1: Start, bottom of the path
-  { x: 396, y: 1571 },
-  { x: 405, y: 1492 },
-  { x: 319, y: 1413 },
-  { x: 215, y: 1334 },
-  { x: 189, y: 1255 },
-  { x: 263, y: 1176 },
-  { x: 371, y: 1097 },
-  { x: 415, y: 1018 },
-  { x: 355, y: 939 },
-  { x: 245, y: 861 },
-  { x: 185, y: 782 },
-  { x: 229, y: 703 },
-  { x: 337, y: 624 },
-  { x: 411, y: 545 },
-  { x: 385, y: 466 },
-  { x: 281, y: 387 },
-  { x: 195, y: 308 },
-  { x: 204, y: 229 },
-  { x: 300, y: 150 }, // 20: boss node, on the castle courtyard steps
+  { x: 263, y: 1542 }, // 1: Start, bottom of the path
+  { x: 356, y: 1483 },
+  { x: 332, y: 1384 },
+  { x: 253, y: 1309 },
+  { x: 311, y: 1228 },
+  { x: 403, y: 1175 },
+  { x: 460, y: 1095 },
+  { x: 385, y: 1019 },
+  { x: 338, y: 928 },
+  { x: 273, y: 838 },
+  { x: 315, y: 745 },
+  { x: 405, y: 681 },
+  { x: 372, y: 588 },
+  { x: 279, y: 533 },
+  { x: 336, y: 455 },
+  { x: 422, y: 397 },
+  { x: 336, y: 339 },
+  { x: 350, y: 269 },
+  { x: 430, y: 204 },
+  { x: 401, y: 130 }, // 20: boss
 ];
 
 // Jungle Jumble - fairly straight jungle trail, mild wobble.
