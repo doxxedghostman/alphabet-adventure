@@ -83,26 +83,26 @@ const JUNGLE_JUMBLE_PATH = [
 
 // Ocean Words - sandy sea-floor path curving toward the shipwreck.
 const OCEAN_WORDS_PATH = [
-  { x: 310, y: 1650 }, // 1: Start
-  { x: 346, y: 1573 },
-  { x: 376, y: 1495 },
-  { x: 395, y: 1418 },
-  { x: 400, y: 1341 },
-  { x: 389, y: 1263 },
-  { x: 365, y: 1186 },
-  { x: 332, y: 1108 },
-  { x: 295, y: 1031 },
-  { x: 261, y: 954 },
-  { x: 235, y: 876 },
-  { x: 221, y: 799 },
-  { x: 223, y: 722 },
-  { x: 239, y: 644 },
-  { x: 267, y: 567 },
-  { x: 303, y: 489 },
-  { x: 339, y: 412 },
-  { x: 371, y: 335 },
-  { x: 392, y: 257 },
-  { x: 400, y: 180 }, // 20: boss node, at the shipwreck
+  { x: 328, y: 1671 }, // 1: Start, bottom of the path
+  { x: 325, y: 1568 },
+  { x: 355, y: 1479 },
+  { x: 339, y: 1383 },
+  { x: 276, y: 1311 },
+  { x: 255, y: 1233 },
+  { x: 254, y: 1156 },
+  { x: 319, y: 1085 },
+  { x: 391, y: 1022 },
+  { x: 339, y: 941 },
+  { x: 261, y: 887 },
+  { x: 242, y: 806 },
+  { x: 310, y: 744 },
+  { x: 393, y: 695 },
+  { x: 400, y: 610 },
+  { x: 312, y: 568 },
+  { x: 258, y: 502 },
+  { x: 337, y: 447 },
+  { x: 429, y: 409 },
+  { x: 411, y: 340 }, // 20: boss
 ];
 
 // Dino Valley - riverside trail toward the volcano/dino skyline.
