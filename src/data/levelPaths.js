@@ -59,26 +59,26 @@ const CANDY_GARDEN_PATH = [
 
 // Jungle Jumble - fairly straight jungle trail, mild wobble.
 const JUNGLE_JUMBLE_PATH = [
-  { x: 300, y: 1650 }, // 1: Start
-  { x: 323, y: 1572 },
-  { x: 343, y: 1494 },
-  { x: 359, y: 1416 },
-  { x: 368, y: 1338 },
-  { x: 370, y: 1261 },
-  { x: 364, y: 1183 },
-  { x: 352, y: 1105 },
-  { x: 333, y: 1027 },
-  { x: 312, y: 949 },
-  { x: 288, y: 871 },
-  { x: 267, y: 793 },
-  { x: 248, y: 715 },
-  { x: 236, y: 637 },
-  { x: 230, y: 559 },
-  { x: 232, y: 482 },
-  { x: 241, y: 404 },
-  { x: 257, y: 326 },
-  { x: 277, y: 248 },
-  { x: 300, y: 170 }, // 20: boss node, near the temple bridge
+  { x: 294, y: 1678 }, // 1: Start, bottom of the path
+  { x: 303, y: 1584 },
+  { x: 217, y: 1532 },
+  { x: 263, y: 1456 },
+  { x: 329, y: 1382 },
+  { x: 318, y: 1303 },
+  { x: 273, y: 1234 },
+  { x: 313, y: 1149 },
+  { x: 387, y: 1091 },
+  { x: 369, y: 1001 },
+  { x: 306, y: 934 },
+  { x: 264, y: 857 },
+  { x: 311, y: 788 },
+  { x: 371, y: 714 },
+  { x: 313, y: 644 },
+  { x: 264, y: 569 },
+  { x: 349, y: 519 },
+  { x: 288, y: 458 },
+  { x: 214, y: 396 },
+  { x: 266, y: 348 }, // 20: boss
 ];
 
 // Ocean Words - sandy sea-floor path curving toward the shipwreck.
