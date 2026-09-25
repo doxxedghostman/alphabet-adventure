@@ -203,26 +203,26 @@ const SPACE_WORDS_PATH = [
 
 // Ancient Valley - desert path past the oasis toward the pyramids.
 const ANCIENT_VALLEY_PATH = [
-  { x: 300, y: 1650 }, // 1: Start
-  { x: 323, y: 1575 },
-  { x: 343, y: 1499 },
-  { x: 359, y: 1424 },
-  { x: 368, y: 1349 },
-  { x: 370, y: 1274 },
-  { x: 364, y: 1198 },
-  { x: 352, y: 1123 },
-  { x: 333, y: 1048 },
-  { x: 312, y: 973 },
-  { x: 288, y: 897 },
-  { x: 267, y: 822 },
-  { x: 248, y: 747 },
-  { x: 236, y: 672 },
-  { x: 230, y: 596 },
-  { x: 232, y: 521 },
-  { x: 241, y: 446 },
-  { x: 257, y: 371 },
-  { x: 277, y: 295 },
-  { x: 300, y: 220 }, // 20: boss node, at the pyramids/sphinx
+  { x: 250, y: 1619 }, // 1: Start, bottom of the path
+  { x: 311, y: 1555 },
+  { x: 299, y: 1454 },
+  { x: 352, y: 1366 },
+  { x: 305, y: 1277 },
+  { x: 250, y: 1189 },
+  { x: 213, y: 1096 },
+  { x: 298, y: 1026 },
+  { x: 381, y: 966 },
+  { x: 404, y: 869 },
+  { x: 316, y: 817 },
+  { x: 230, y: 763 },
+  { x: 189, y: 669 },
+  { x: 255, y: 596 },
+  { x: 361, y: 567 },
+  { x: 449, y: 510 },
+  { x: 383, y: 437 },
+  { x: 282, y: 403 },
+  { x: 299, y: 331 },
+  { x: 401, y: 294 }, // 20: boss
 ];
 
 // Magic Mountain - single sweeping stone stairway (fewer, wider bends
