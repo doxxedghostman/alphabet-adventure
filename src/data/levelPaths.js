@@ -131,26 +131,26 @@ const DINO_VALLEY_PATH = [
 
 // Cloud Kingdom - wide island-to-island sweep, gazebo to castle.
 const CLOUD_KINGDOM_PATH = [
-  { x: 280, y: 1650 }, // 1: Start, near the gazebo
-  { x: 342, y: 1573 },
-  { x: 389, y: 1495 },
-  { x: 410, y: 1418 },
-  { x: 399, y: 1341 },
-  { x: 360, y: 1263 },
-  { x: 301, y: 1186 },
-  { x: 238, y: 1108 },
-  { x: 184, y: 1031 },
-  { x: 154, y: 954 },
-  { x: 154, y: 876 },
-  { x: 184, y: 799 },
-  { x: 238, y: 722 },
-  { x: 301, y: 644 },
-  { x: 360, y: 567 },
-  { x: 399, y: 489 },
-  { x: 410, y: 412 },
-  { x: 389, y: 335 },
-  { x: 342, y: 257 },
-  { x: 280, y: 180 }, // 20: boss node, at the castle
+  { x: 447, y: 1615 }, // 1: Start, bottom of the path
+  { x: 353, y: 1547 },
+  { x: 270, y: 1474 },
+  { x: 279, y: 1386 },
+  { x: 348, y: 1290 },
+  { x: 254, y: 1222 },
+  { x: 205, y: 1123 },
+  { x: 301, y: 1062 },
+  { x: 397, y: 991 },
+  { x: 327, y: 900 },
+  { x: 222, y: 845 },
+  { x: 275, y: 766 },
+  { x: 375, y: 708 },
+  { x: 471, y: 635 },
+  { x: 375, y: 570 },
+  { x: 279, y: 501 },
+  { x: 215, y: 416 },
+  { x: 333, y: 387 },
+  { x: 411, y: 311 },
+  { x: 420, y: 235 }, // 20: boss
 ];
 
 // Crystal Forest - gentle trail past the glowing crystal grove.
