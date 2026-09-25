@@ -252,26 +252,26 @@ const MAGIC_MOUNTAIN_PATH = [
 
 // WordSwoop Kingdom - switchback courtyard path, fountain to castle.
 const WORDSWOOP_KINGDOM_PATH = [
-  { x: 300, y: 1650 }, // 1: Start, near the fountain
-  { x: 348, y: 1574 },
-  { x: 384, y: 1497 },
-  { x: 400, y: 1421 },
-  { x: 392, y: 1345 },
-  { x: 361, y: 1268 },
-  { x: 316, y: 1192 },
-  { x: 268, y: 1116 },
-  { x: 226, y: 1039 },
-  { x: 203, y: 963 },
-  { x: 203, y: 887 },
-  { x: 226, y: 811 },
-  { x: 268, y: 734 },
-  { x: 316, y: 658 },
-  { x: 361, y: 582 },
-  { x: 392, y: 505 },
-  { x: 400, y: 429 },
-  { x: 384, y: 353 },
-  { x: 348, y: 276 },
-  { x: 300, y: 200 }, // 20: boss node, at the castle
+  { x: 333, y: 1618 }, // 1: Start, bottom of the path
+  { x: 243, y: 1578 },
+  { x: 241, y: 1494 },
+  { x: 293, y: 1403 },
+  { x: 364, y: 1335 },
+  { x: 303, y: 1256 },
+  { x: 275, y: 1165 },
+  { x: 304, y: 1093 },
+  { x: 391, y: 1050 },
+  { x: 448, y: 975 },
+  { x: 388, y: 896 },
+  { x: 301, y: 851 },
+  { x: 289, y: 757 },
+  { x: 220, y: 692 },
+  { x: 252, y: 616 },
+  { x: 346, y: 578 },
+  { x: 429, y: 531 },
+  { x: 361, y: 466 },
+  { x: 309, y: 402 },
+  { x: 405, y: 363 }, // 20: boss
 ];
 
 const PATHS_BY_WORLD = {
