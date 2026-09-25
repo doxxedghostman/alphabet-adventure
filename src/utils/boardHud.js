@@ -10,7 +10,7 @@ import { getBoosters } from './boosterStore.js';
 //   1. wood top bar: profile avatar + level star, gem count, gear (pause)
 //   2. goal banner: 3 stars, goal text, progress bar, "Moves" tag
 //   3. (the board frame, centered in the space left over)
-//   4. wood bottom bar: big Bomb + Shuffle buttons with count badges
+//   4. wood bottom bar: big Bomb + Lens + Shuffle buttons with count badges
 // Deliberately NOT included (per chat): hearts/lives, paw coin, and the
 // mockup's right-hand Shuffle/Bomb pills (the bottom bar replaces them).
 //
@@ -36,6 +36,7 @@ export function preloadBoardHud(scene) {
     ['hudGem', 'assets/icon-gem.png'],
     ['hudGear', 'assets/icon-settings.png'],
     ['hudBoosterBomb', 'assets/booster-bomb.png'],
+    ['hudBoosterLens', 'assets/booster-lens.png'],
     ['hudBoosterShuffle', 'assets/booster-shuffle.png'],
   ];
   images.forEach(([key, path]) => {
@@ -74,7 +75,7 @@ export function computeHudLayout(width, height, boardSize) {
 
   const bottomBarH = 112 * s;
   const bottomBarCY = height - SAFE_BOTTOM - 8 * s - 56 * s;
-  const buttonD = 84 * s;
+  const buttonD = 76 * s;
   const buttonY = bottomBarCY + 2 * s;
   const boardBottom = buttonY - buttonD / 2 - 10 * s;
 
@@ -165,7 +166,7 @@ function createAvatar(scene, x, y, d) {
 export function createBoardHud(scene, layout, opts) {
   const { s, width } = layout;
   const cx = width / 2;
-  const { level, isFree, scoreTarget, goalLabel, moves, onPause, onBomb, onShuffle } = opts;
+  const { level, isFree, scoreTarget, goalLabel, moves, onPause, onBomb, onLens, onShuffle } = opts;
 
   // ---------- 1. top bar ----------
   const barX0 = 8;
@@ -297,7 +298,7 @@ export function createBoardHud(scene, layout, opts) {
     .setDepth(HUD_DEPTH + 2);
 
   // ---------- 4. bottom booster bar ----------
-  const bottomW = 310 * s;
+  const bottomW = 330 * s;
   addWoodPanel(scene, cx - bottomW / 2, layout.bottomBarCY, bottomW, layout.bottomBarH).objects.forEach((o) =>
     o.setDepth(HUD_DEPTH - 1)
   );
@@ -326,16 +327,11 @@ export function createBoardHud(scene, layout, opts) {
       .setOrigin(0.5)
       .setDepth(HUD_DEPTH + 2);
 
-    buttons[type] = { img, base, badge, badgeText, bx, by, badgeR, x, armedTween: null };
+    buttons[type] = { img, base, badge, badgeText, bx, by, badgeR, x };
   };
-  makeBooster('bomb', 'hudBoosterBomb', cx - 68 * s, onBomb);
-  makeBooster('shuffle', 'hudBoosterShuffle', cx + 68 * s, onShuffle);
-
-  const bombHint = scene.add
-    .text(buttons.bomb.x, layout.buttonY - layout.buttonD / 2 - 14 * s, 'Tap again to restart', textStyle(15 * s, '#fff3d6', '#2b1808', 5))
-    .setOrigin(0.5)
-    .setDepth(HUD_DEPTH + 5)
-    .setVisible(false);
+  makeBooster('bomb', 'hudBoosterBomb', cx - 90 * s, onBomb);
+  makeBooster('lens', 'hudBoosterLens', cx, onLens);
+  makeBooster('shuffle', 'hudBoosterShuffle', cx + 90 * s, onShuffle);
 
   const drawBadge = (btn, label, count) => {
     btn.badge.clear();
@@ -381,38 +377,13 @@ export function createBoardHud(scene, layout, opts) {
 
     refreshBoosters() {
       const counts = getBoosters();
-      ['bomb', 'shuffle'].forEach((type) => {
+      ['bomb', 'lens', 'shuffle'].forEach((type) => {
         const btn = buttons[type];
         const count = counts[type] ?? 0;
-        const armed = type === 'bomb' && hud.bombArmed;
-        drawBadge(btn, armed ? '!' : String(count), count);
+        drawBadge(btn, String(count), count);
         btn.img.setAlpha(count > 0 ? 1 : 0.55);
       });
     },
-
-    // Bomb needs a second tap to confirm (it restarts the level).
-    setBombArmed(armed) {
-      hud.bombArmed = armed;
-      const btn = buttons.bomb;
-      bombHint.setVisible(armed);
-      if (btn.armedTween) {
-        btn.armedTween.stop();
-        btn.armedTween = null;
-        btn.img.setScale(btn.base);
-      }
-      if (armed) {
-        btn.armedTween = scene.tweens.add({
-          targets: btn.img,
-          scale: btn.base * 1.08,
-          duration: 260,
-          yoyo: true,
-          repeat: -1,
-        });
-      }
-      hud.refreshBoosters();
-    },
-
-    bombArmed: false,
   };
 
   hud.setMoves(moves);

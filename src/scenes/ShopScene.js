@@ -3,14 +3,15 @@ import { bindHardwareBack } from '../utils/hardwareBack.js';
 import { addWoodPanel, preloadWoodPanel } from '../utils/woodPanel.js';
 import { getGems } from '../utils/currencyStore.js';
 import { getBoosters, MAX_BOOSTERS } from '../utils/boosterStore.js';
-import { DAILY_CAP, recordWatch, watchesRemaining } from '../utils/shopStore.js';
+import { OFFER_CAPS, recordWatch, watchesRemaining } from '../utils/shopStore.js';
 import { showRewardedAdForGems, showRewardedAdForBooster, showRewardedAdForBundle } from '../utils/adsStore.js';
 
 const OFFERS = [
   { key: 'gems', title: '+25 Gems', icons: ['gems'], watch: () => showRewardedAdForGems(25) },
   { key: 'bomb', title: '+1 Bomb', icons: ['bomb'], watch: () => showRewardedAdForBooster('bomb') },
   { key: 'shuffle', title: '+1 Shuffle', icons: ['shuffle'], watch: () => showRewardedAdForBooster('shuffle') },
-  { key: 'bundle', title: '+1 Bomb &\n+1 Shuffle', icons: ['bomb', 'shuffle'], watch: showRewardedAdForBundle },
+  { key: 'bundle', title: '+1 Bomb & +1 Shuffle', icons: ['bomb', 'shuffle'], watch: showRewardedAdForBundle },
+  { key: 'lens', title: '+1 Lens', icons: ['lens'], watch: () => showRewardedAdForBooster('lens') },
 ];
 const INK = '#3a2411';
 
@@ -23,7 +24,7 @@ export class ShopScene extends Phaser.Scene {
     preloadWoodPanel(this);
     this.load.image('utilityBg', 'assets/utility-bg.jpg');
     for (const [key, file] of Object.entries({
-      gems: 'icon-gem', bomb: 'icon-bomb', shuffle: 'icon-shuffle',
+      gems: 'icon-gem', bomb: 'icon-bomb', shuffle: 'icon-shuffle', lens: 'icon-lens',
       video: 'icon-video', back: 'icon-back',
     })) this.load.image(`shop-${key}`, `assets/${file}.png`);
   }
@@ -48,14 +49,21 @@ export class ShopScene extends Phaser.Scene {
       fontFamily: 'Arial', fontSize: '15px', fontStyle: 'bold', color: INK,
     }).setOrigin(0.5);
 
-    const gap = 18;
+    const gap = 14;
     const cardW = (width - 44 - gap) / 2;
-    const cardH = Math.min(330, (height - 290 - gap) / 2);
-    const top = 208 + Math.max(0, (height - 290 - gap - cardH * 2) / 2);
-    this.cards = OFFERS.map((offer, i) => this.createCard(
-      offer, 22 + (i % 2) * (cardW + gap), top + Math.floor(i / 2) * (cardH + gap), cardW, cardH,
-    ));
-    this.messageText = this.add.text(width / 2, height - 44, '5 watches per offer each day', {
+    const cardH = Math.min(230, (height - 286 - gap * 2) / 3);
+    const top = 202 + Math.max(0, (height - 286 - gap * 2 - cardH * 3) / 2);
+    this.cards = OFFERS.map((offer, i) => {
+      const isLast = i === OFFERS.length - 1;
+      return this.createCard(
+        offer,
+        isLast ? 22 : 22 + (i % 2) * (cardW + gap),
+        top + (isLast ? 2 : Math.floor(i / 2)) * (cardH + gap),
+        isLast ? width - 44 : cardW,
+        cardH,
+      );
+    });
+    this.messageText = this.add.text(width / 2, height - 38, 'Daily limits: Gems 1 • Boosters 3 • Bundle 5', {
       fontFamily: 'Arial', fontSize: '16px', color: INK, align: 'center',
       wordWrap: { width: width - 44 },
     }).setOrigin(0.5);
@@ -102,19 +110,20 @@ export class ShopScene extends Phaser.Scene {
         fontFamily: 'Arial', fontSize: '13px', fontStyle: 'bold', color: '#342047',
       }).setOrigin(0.5);
     }
-    const iconSize = Math.min(76, h * 0.25);
+    const iconSize = Math.min(60, h * 0.21);
     const icons = offer.icons.map((key, i) => {
-      const icon = this.add.image(cx + (i - (offer.icons.length - 1) / 2) * (iconSize + 8), y + h * 0.29, `shop-${key}`);
+      const iconY = y + h * (offer.key === 'bundle' ? 0.29 : 0.23);
+      const icon = this.add.image(cx + (i - (offer.icons.length - 1) / 2) * (iconSize + 8), iconY, `shop-${key}`);
       icon.setScale(iconSize / Math.max(icon.width, icon.height));
       return { key, icon };
     });
-    this.add.text(cx, y + h * 0.51, offer.title, {
-      fontFamily: 'Arial', fontSize: '22px', fontStyle: 'bold', color: '#fff3d6', align: 'center',
+    this.add.text(cx, y + h * 0.45, offer.title, {
+      fontFamily: 'Arial', fontSize: offer.key === 'bundle' ? '16px' : '19px', fontStyle: 'bold', color: '#fff3d6', align: 'center',
     }).setOrigin(0.5);
-    const detail = this.add.text(cx, y + h * 0.65, '', {
+    const detail = this.add.text(cx, y + h * 0.57, '', {
       fontFamily: 'Arial', fontSize: '12px', color: '#dfd4ed', align: 'center',
     }).setOrigin(0.5);
-    const buttonY = y + h - 61;
+    const buttonY = y + h - 49;
     const buttonW = w - 24;
     const buttonBg = this.add.graphics();
     const video = this.add.image(cx - 62, buttonY, 'shop-video');
@@ -122,10 +131,10 @@ export class ShopScene extends Phaser.Scene {
     const label = this.add.text(cx + 12, buttonY, '', {
       fontFamily: 'Arial', fontSize: '17px', fontStyle: 'bold', color: '#ffffff', align: 'center',
     }).setOrigin(0.5);
-    const hit = this.add.rectangle(cx, buttonY, buttonW, 46, 0xffffff, 0)
+    const hit = this.add.rectangle(cx, buttonY, buttonW, 42, 0xffffff, 0)
       .setInteractive({ useHandCursor: true });
     hit.on('pointerup', () => this.watchOffer(offer));
-    const remaining = this.add.text(cx, y + h - 22, '', {
+    const remaining = this.add.text(cx, y + h - 13, '', {
       fontFamily: 'Arial', fontSize: '13px', color: '#dfd4ed',
     }).setOrigin(0.5);
     return { offer, icons, detail, buttonBg, video, label, hit, remaining, cx, buttonY, buttonW };
@@ -138,7 +147,8 @@ export class ShopScene extends Phaser.Scene {
 
   refreshCards() {
     const boosters = getBoosters();
-    this.balanceText.setText(`Gems: ${getGems()}   Bombs: ${boosters.bomb}/${MAX_BOOSTERS.bomb}   Shuffles: ${boosters.shuffle}/${MAX_BOOSTERS.shuffle}`);
+    this.balanceText.setText(`Gems: ${getGems()}   Bombs: ${boosters.bomb}/${MAX_BOOSTERS.bomb}   Shuffles: ${boosters.shuffle}/${MAX_BOOSTERS.shuffle}   Lenses: ${boosters.lens}/${MAX_BOOSTERS.lens}`)
+      .setFontSize(13);
     for (const card of this.cards) {
       const remaining = watchesRemaining(card.offer.key);
       const full = this.isFull(card.offer, boosters);
@@ -147,11 +157,11 @@ export class ShopScene extends Phaser.Scene {
       const label = loading ? 'Loading Ad...' : remaining === 0 ? 'Come back tomorrow' : full ? 'MAX' : 'Watch Ad';
       card.hit.input.enabled = enabled;
       card.buttonBg.clear().fillStyle(enabled ? 0x2e7d32 : 0x696373)
-        .fillRoundedRect(card.cx - card.buttonW / 2, card.buttonY - 23, card.buttonW, 46, 12);
+        .fillRoundedRect(card.cx - card.buttonW / 2, card.buttonY - 21, card.buttonW, 42, 12);
       card.video.setVisible(enabled);
       card.label.setText(label).setFontSize(remaining === 0 && !loading ? 14 : 17)
         .setX(card.cx + (enabled ? 12 : 0));
-      card.remaining.setText(`${remaining}/${DAILY_CAP} today`);
+      card.remaining.setText(`${remaining}/${OFFER_CAPS[card.offer.key]} today`);
       for (const { key, icon } of card.icons) {
         icon.setAlpha(key !== 'gems' && boosters[key] >= MAX_BOOSTERS[key] ? 0.4 : 1);
       }

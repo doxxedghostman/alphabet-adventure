@@ -20,7 +20,7 @@ import { addGems, getGems } from '../utils/currencyStore.js';
 import { syncLocalProgressToCloud } from '../utils/authStore.js';
 import { getLivesStatus, loseLife, MAX_LIVES } from '../utils/livesStore.js';
 import { showRewardedAdForLife, showRewardedAdForBooster } from '../utils/adsStore.js';
-import { getBoosters, addBooster, spendBooster } from '../utils/boosterStore.js';
+import { addBooster, spendBooster } from '../utils/boosterStore.js';
 import { WORLD_FRAMES, getWorldFrame } from '../data/worldFrames.js';
 import { getWorld, WORLDS } from '../data/worlds.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
@@ -31,10 +31,9 @@ import { preloadBoardHud, computeHudLayout, createBoardHud } from '../utils/boar
 // type/score, same spot completeLevel() already fires from.
 const ROUND_WIN_GEMS = 10;
 
-// Gem cost to instantly buy 1 Bomb/Shuffle when out (per chat) - only
-// offered from the out-of-boosters purchase prompt below, not a
-// standing Shop price (there's no Shop yet).
-const BOOSTER_GEM_COST = { bomb: 100, shuffle: 50 };
+// Gem cost to instantly buy 1 booster when out. These prices only
+// appear in the board's out-of-booster fallback prompt.
+const BOOSTER_GEM_COST = { bomb: 100, shuffle: 50, lens: 75 };
 
 function wordLengthTier(word) {
   if (word.length >= 5) return 3;
@@ -223,6 +222,7 @@ export class BoardScene extends Phaser.Scene {
     this.pointerDownTile = null;
     this.pointerDownPos = null;
     this.swipeHandled = false;
+    this.lensHint = null;
 
     this.computeBoardGeometry();
     this.createBoardBackdrop();
@@ -335,6 +335,7 @@ export class BoardScene extends Phaser.Scene {
       moves: this.movesLeft,
       onPause: () => this.showPauseMenu(),
       onBomb: () => this.onBombPressed(),
+      onLens: () => this.onLensPressed(),
       onShuffle: () => this.onShufflePressed(),
     });
     this.hud.setProgress(this.score);
@@ -438,10 +439,11 @@ export class BoardScene extends Phaser.Scene {
     card.add([rowBg, labelText, track, knob, hit]);
   }
 
-  // ---------- shuffle / bomb boosters ----------
+  // ---------- board boosters ----------
 
   onShufflePressed() {
     if (this.isBusy || this.levelOver || this.isPaused) return;
+    this.clearLensHint();
     if (!spendBooster('shuffle')) {
       this.showBoosterPurchasePrompt('shuffle');
       return;
@@ -450,43 +452,110 @@ export class BoardScene extends Phaser.Scene {
     this.shuffleBoard(false);
   }
 
-  // Bomb: "clears/resets the current board for another attempt"
-  // (PLAN.md §14) - the simplest reliable way to do that is restarting
-  // the scene fresh (same init path as a normal level start), rather
-  // than trying to hand-reset moves/board/score mid-scene. Needs a
-  // confirm tap first (per §14's "avoid accidental taps" note) - tap
-  // once to arm (the button pulses + shows a hint), tap again to fire.
-  onBombPressed() {
+  // Bomb spends immediately and clears one connected 5-7 tile cluster.
+  // The regular clear/fall/cascade pipeline supplies the glass-shatter
+  // and refill animation without spending a move or scoring those tiles.
+  async onBombPressed() {
     if (this.isBusy || this.levelOver || this.isPaused) return;
-    if (getBoosters().bomb <= 0) {
+    this.clearLensHint();
+    if (!spendBooster('bomb')) {
       this.showBoosterPurchasePrompt('bomb');
       return;
     }
-    if (!this.hud.bombArmed) {
-      this.hud.setBombArmed(true);
-      this.time.delayedCall(2500, () => {
-        if (this.hud?.bombArmed) this.hud.setBombArmed(false);
-      });
-      return;
+    this.hud.refreshBoosters();
+    this.isBusy = true;
+    try {
+      await this.triggerBombClear();
+    } finally {
+      this.isBusy = false;
     }
-    this.hud.setBombArmed(false);
-    spendBooster('bomb');
-    this.restartLevel();
   }
 
-  // Out-of-Bomb/Shuffle purchase prompt (per chat): buy 1 instantly for
+  onLensPressed() {
+    if (this.isBusy || this.levelOver || this.isPaused) return;
+    this.clearLensHint();
+    this.deselectTile();
+    this.pointerDownTile = null;
+    if (!spendBooster('lens')) {
+      this.showBoosterPurchasePrompt('lens');
+      return;
+    }
+    this.hud.refreshBoosters();
+    const pair = this.findLensHintSwap();
+    if (pair) {
+      this.showLensHint(pair);
+    } else {
+      // The settled board should always be solvable, but never consume a
+      // Lens if external state leaves it without a hintable swap.
+      addBooster('lens');
+      this.hud.refreshBoosters();
+    }
+  }
+
+  async triggerBombClear() {
+    const filled = [];
+    for (let row = 0; row < BOARD_SIZE; row++) {
+      for (let col = 0; col < BOARD_SIZE; col++) {
+        if (this.grid[row][col]) filled.push({ row, col });
+      }
+    }
+    if (filled.length === 0) return;
+
+    const maxTiles = Math.min(7, filled.length);
+    const targetCount = Phaser.Math.Between(Math.min(5, maxTiles), maxTiles);
+    const start = Phaser.Utils.Array.GetRandom(filled);
+    const queue = [start];
+    const visited = new Set([`${start.row},${start.col}`]);
+    const cluster = new Set();
+
+    while (queue.length > 0 && cluster.size < targetCount) {
+      const cell = queue.shift();
+      cluster.add(`${cell.row},${cell.col}`);
+      const neighbors = [
+        { row: cell.row - 1, col: cell.col },
+        { row: cell.row + 1, col: cell.col },
+        { row: cell.row, col: cell.col - 1 },
+        { row: cell.row, col: cell.col + 1 },
+      ].filter(({ row, col }) => (
+        row >= 0 && row < BOARD_SIZE && col >= 0 && col < BOARD_SIZE && this.grid[row][col]
+      ));
+      this.shuffleArray(neighbors);
+      for (const neighbor of neighbors) {
+        const key = `${neighbor.row},${neighbor.col}`;
+        if (!visited.has(key)) {
+          visited.add(key);
+          queue.push(neighbor);
+        }
+      }
+    }
+
+    this.spawnCandyPop('Boom!', '#ffd93d', { fontSize: '30px', y: this.toastY, sparkle: true });
+    await this.clearTiles(cluster);
+    await this.collapseAndRefill();
+    if (this.levelOver) return;
+    this.ensureTargetLettersPresent();
+    await this.resolveAutoMatches(2);
+    if (this.levelOver) return;
+    await this.ensureSolvable();
+  }
+
+  // Out-of-booster purchase prompt: buy 1 instantly for
   // gems (BOOSTER_GEM_COST), or watch a guaranteed-reward ad
   // (showRewardedAdForBooster) if short on gems. Either path grants
   // exactly 1 via addBooster(), closes the popup, then re-fires the
   // same press handler that opened this - which will now find a
-  // non-zero count and proceed with the actual shuffle/bomb action
+  // non-zero count and proceed with the actual booster action
   // instead of duplicating that logic here.
   showBoosterPurchasePrompt(type) {
     const cost = BOOSTER_GEM_COST[type];
-    const label = type === 'bomb' ? 'Bomb' : 'Shuffle';
+    const label = { bomb: 'Bomb', shuffle: 'Shuffle', lens: 'Lens' }[type];
     const gems = getGems();
     const canAfford = gems >= cost;
-    const retry = () => (type === 'bomb' ? this.onBombPressed() : this.onShufflePressed());
+    const retry = () => ({
+      bomb: () => this.onBombPressed(),
+      shuffle: () => this.onShufflePressed(),
+      lens: () => this.onLensPressed(),
+    })[type]();
 
     const centerX = this.scale.width / 2;
     const centerY = this.scale.height / 2;
@@ -1015,6 +1084,7 @@ export class BoardScene extends Phaser.Scene {
     if (!cell) return;
     const tile = this.grid[cell.row][cell.col];
     if (!tile) return;
+    this.clearLensHint();
 
     this.pointerDownTile = tile;
     this.pointerDownPos = { x: pointer.x, y: pointer.y };
@@ -1089,6 +1159,84 @@ export class BoardScene extends Phaser.Scene {
       scale: on ? 1.08 : 1,
       duration: 120,
       ease: 'Sine.easeOut',
+    });
+  }
+
+  swapGridTiles(tileA, tileB) {
+    const aRow = tileA.row;
+    const aCol = tileA.col;
+    const bRow = tileB.row;
+    const bCol = tileB.col;
+    this.grid[aRow][aCol] = tileB;
+    this.grid[bRow][bCol] = tileA;
+    tileA.row = bRow;
+    tileA.col = bCol;
+    tileB.row = aRow;
+    tileB.col = aCol;
+  }
+
+  findLensHintSwap() {
+    for (let row = 0; row < BOARD_SIZE; row++) {
+      for (let col = 0; col < BOARD_SIZE; col++) {
+        const tileA = this.grid[row][col];
+        const candidates = [];
+        if (col + 1 < BOARD_SIZE) candidates.push(this.grid[row][col + 1]);
+        if (row + 1 < BOARD_SIZE) candidates.push(this.grid[row + 1][col]);
+        for (const tileB of candidates) {
+          this.swapGridTiles(tileA, tileB);
+          let createsMatch = false;
+          try {
+            createsMatch = this.findWordMatches().matchedCells.size > 0;
+          } finally {
+            this.swapGridTiles(tileA, tileB);
+          }
+          if (createsMatch) return { tileA, tileB };
+        }
+      }
+    }
+    return null;
+  }
+
+  showLensHint({ tileA, tileB }) {
+    this.clearLensHint();
+    const tiles = [tileA, tileB];
+    const glows = tiles.map((tile) => this.add
+      .rectangle(tile.container.x, tile.container.y, this.tileSize + 12, this.tileSize + 12, 0x67e8ff, 0.16)
+      .setStrokeStyle(5, 0xffe66d, 1)
+      .setDepth(22));
+    const glowTween = this.tweens.add({
+      targets: glows,
+      alpha: { from: 0.45, to: 1 },
+      scale: { from: 0.96, to: 1.12 },
+      duration: 420,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    const tileTween = this.tweens.add({
+      targets: tiles.map((tile) => tile.container),
+      scale: 1.08,
+      duration: 420,
+      yoyo: true,
+      repeat: -1,
+      ease: 'Sine.easeInOut',
+    });
+    const timer = this.time.delayedCall(2500, () => this.clearLensHint());
+    this.lensHint = { tiles, glows, glowTween, tileTween, timer };
+  }
+
+  clearLensHint() {
+    if (!this.lensHint) return;
+    const hint = this.lensHint;
+    this.lensHint = null;
+    hint.timer?.remove(false);
+    hint.glowTween?.stop();
+    hint.tileTween?.stop();
+    hint.glows.forEach((glow) => {
+      if (glow.active) glow.destroy();
+    });
+    hint.tiles.forEach((tile) => {
+      if (tile.container?.active) tile.container.setScale(1);
     });
   }
 

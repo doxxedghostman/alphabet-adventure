@@ -1,23 +1,24 @@
-// Booster inventory — per chat, Bomb and Shuffle are documented in
-// PLAN.md §14 as planned meta-systems but were never actually built:
-// there was no way to hold or spend one. Starting supply now matches
-// the hold caps below (both start full) - applied here now that both
-// are actually spendable (BoardScene) instead of just a count
-// Calendar could grant. Existing players who already have a stored
-// count (even 0, from a prior Calendar claim) keep it - these
-// defaults only apply to a install that's never touched this store.
+// Booster inventory for Bomb, Shuffle, and Lens.
+// PLAN.md §14 as planned meta-systems but were never actually built.
+// Lens now follows the same inventory pattern. Starting supply matches
+// the hold caps below; existing stored values are preserved, while a
+// newly introduced booster begins at its default cap.
 //
 // Same single-JSON-blob-in-localStorage pattern as the other stores.
 
 const STORAGE_KEY = 'wordswoop_boosters';
 
-export const BOOSTER_TYPES = ['bomb', 'shuffle'];
+export const BOOSTER_TYPES = ['bomb', 'shuffle', 'lens'];
 
-// Max held at once, per chat: 2 Bomb, 3 Shuffle. A reward that would
+// Max held at once: 2 Bomb, 3 Shuffle, 3 Lens. A reward that would
 // push past this (Calendar Day 7, Watch to Earn) is simply not
 // granted rather than banked past the cap - see addBooster() below.
-export const MAX_BOOSTERS = { bomb: 2, shuffle: 3 };
-const DEFAULTS = { bomb: MAX_BOOSTERS.bomb, shuffle: MAX_BOOSTERS.shuffle };
+export const MAX_BOOSTERS = { bomb: 2, shuffle: 3, lens: 3 };
+const DEFAULTS = {
+  bomb: MAX_BOOSTERS.bomb,
+  shuffle: MAX_BOOSTERS.shuffle,
+  lens: MAX_BOOSTERS.lens,
+};
 
 function loadRaw() {
   try {
@@ -27,6 +28,7 @@ function loadRaw() {
     return {
       bomb: typeof parsed.bomb === 'number' ? parsed.bomb : DEFAULTS.bomb,
       shuffle: typeof parsed.shuffle === 'number' ? parsed.shuffle : DEFAULTS.shuffle,
+      lens: typeof parsed.lens === 'number' ? parsed.lens : DEFAULTS.lens,
     };
   } catch (err) {
     console.warn('boosterStore: failed to read localStorage, starting fresh', err);
@@ -46,7 +48,7 @@ export function getBoosters() {
   return loadRaw();
 }
 
-/** Grants +1 of the given booster type ('bomb' | 'shuffle'), unless
+/** Grants +1 of the given booster type ('bomb' | 'shuffle' | 'lens'), unless
  * already at MAX_BOOSTERS for that type - in which case nothing
  * changes. Returns { value, granted } so callers (adsStore.js,
  * dailyRewardStore.js) can tell whether the reward actually landed or

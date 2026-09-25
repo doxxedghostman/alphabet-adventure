@@ -1,7 +1,13 @@
 // Per-offer limits reset on the player's local calendar day.
 const STORAGE_KEY = 'wordswoop_shop';
-const OFFER_KEYS = ['gems', 'bomb', 'shuffle', 'bundle'];
-export const DAILY_CAP = 5;
+export const OFFER_CAPS = Object.freeze({
+  gems: 1,
+  bomb: 3,
+  shuffle: 3,
+  lens: 3,
+  bundle: 5,
+});
+const OFFER_KEYS = Object.keys(OFFER_CAPS);
 
 function dateStr(date) {
   const y = date.getFullYear();
@@ -42,16 +48,17 @@ function saveRaw(data) {
 
 export function getWatchesToday(offerKey) {
   if (!OFFER_KEYS.includes(offerKey)) return 0;
-  return loadRaw().watches[offerKey] ?? 0;
+  return Math.min(loadRaw().watches[offerKey] ?? 0, OFFER_CAPS[offerKey]);
 }
 
 export function recordWatch(offerKey) {
   if (!OFFER_KEYS.includes(offerKey)) return;
   const data = loadRaw();
-  data.watches[offerKey] = (data.watches[offerKey] ?? 0) + 1;
+  data.watches[offerKey] = Math.min((data.watches[offerKey] ?? 0) + 1, OFFER_CAPS[offerKey]);
   saveRaw(data);
 }
 
 export function watchesRemaining(offerKey) {
-  return Math.max(0, DAILY_CAP - getWatchesToday(offerKey));
+  if (!OFFER_KEYS.includes(offerKey)) return 0;
+  return Math.max(0, OFFER_CAPS[offerKey] - getWatchesToday(offerKey));
 }
