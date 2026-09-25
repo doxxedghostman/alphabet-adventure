@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
+import { init as initSfx } from '../utils/sfx.js';
 
 const STUDIO_NAME = 'Wobblewing Studios';
 const GAME_TITLE = 'WordSwoop';
@@ -90,7 +91,10 @@ export class SplashScene extends Phaser.Scene {
 
     this.buildLoadingBar(width / 2, this.titleText.y + 48, width * 0.55);
 
-    this.input.once('pointerdown', () => this.skipToMenu());
+    this.input.once('pointerdown', () => {
+      initSfx();
+      this.skipToMenu();
+    });
 
     this.playSequence(logo, targetScale);
   }

@@ -5,6 +5,7 @@ import { getGems } from '../utils/currencyStore.js';
 import { getBoosters, MAX_BOOSTERS } from '../utils/boosterStore.js';
 import { OFFER_CAPS, recordWatch, watchesRemaining } from '../utils/shopStore.js';
 import { showRewardedAdForGems, showRewardedAdForBooster, showRewardedAdForBundle } from '../utils/adsStore.js';
+import { playAdReward } from '../utils/sfx.js';
 
 const OFFERS = [
   { key: 'gems', title: '+25 Gems', icons: ['gems'], watch: () => showRewardedAdForGems(25) },
@@ -190,6 +191,7 @@ export class ShopScene extends Phaser.Scene {
     if (this.visit !== visit) return;
     this.pendingOffer = null;
     if (result.granted) {
+      playAdReward();
       const reward = offer.key === 'bundle'
         ? [result.bomb && '+1 Bomb', result.shuffle && '+1 Shuffle'].filter(Boolean).join(' & ')
         : offer.title;

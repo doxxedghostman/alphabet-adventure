@@ -26,6 +26,19 @@ import { getWorld, WORLDS } from '../data/worlds.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
 import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } from '../utils/settingsStore.js';
 import { preloadBoardHud, computeHudLayout, createBoardHud } from '../utils/boardHud.js';
+import {
+  playMatchChime,
+  playShatterClear,
+  playInvalidSwap,
+  playCombo,
+  playBomb,
+  playShuffle,
+  playLensHint,
+  playLevelWin,
+  playLevelLose,
+  playGemCollect,
+  playBoosterEmpty,
+} from '../utils/sfx.js';
 
 // Gems per successful round (per chat) - flat award regardless of level
 // type/score, same spot completeLevel() already fires from.
@@ -529,6 +542,7 @@ export class BoardScene extends Phaser.Scene {
       }
     }
 
+    playBomb();
     this.spawnCandyPop('Boom!', '#ffd93d', { fontSize: '30px', y: this.toastY, sparkle: true });
     await this.clearTiles(cluster);
     await this.collapseAndRefill();
@@ -547,6 +561,7 @@ export class BoardScene extends Phaser.Scene {
   // non-zero count and proceed with the actual booster action
   // instead of duplicating that logic here.
   showBoosterPurchasePrompt(type) {
+    playBoosterEmpty();
     const cost = BOOSTER_GEM_COST[type];
     const label = { bomb: 'Bomb', shuffle: 'Shuffle', lens: 'Lens' }[type];
     const gems = getGems();
@@ -739,6 +754,7 @@ export class BoardScene extends Phaser.Scene {
     this.deselectTile();
     this.pointerDownTile = null;
     this.isBusy = true;
+    if (!silent) playShuffle();
 
     const tiles = [];
     for (let row = 0; row < BOARD_SIZE; row++) {
@@ -1199,6 +1215,7 @@ export class BoardScene extends Phaser.Scene {
 
   showLensHint({ tileA, tileB }) {
     this.clearLensHint();
+    playLensHint();
     const tiles = [tileA, tileB];
     const glows = tiles.map((tile) => this.add
       .rectangle(tile.container.x, tile.container.y, this.tileSize + 12, this.tileSize + 12, 0x67e8ff, 0.16)
@@ -1279,6 +1296,7 @@ export class BoardScene extends Phaser.Scene {
     if (matchedCells.size === 0) {
       // No word anywhere on the board as a result of this swap - bounce
       // back, classic invalid-swap feedback. Doesn't cost a move.
+      playInvalidSwap();
       const failColor = 0xff4757;
       await Promise.all(
         [tileA, tileB].map((tile) =>
@@ -1302,6 +1320,7 @@ export class BoardScene extends Phaser.Scene {
     if (wordsFound.length > 1) {
       this.showComboText(1, wordsFound, 'x2!');
     } else {
+      playMatchChime();
       this.showWordToast(wordsFound[0], '#7CFC9A');
     }
 
@@ -1418,6 +1437,8 @@ export class BoardScene extends Phaser.Scene {
     this.deselectTile();
     if (this.worldId) completeLevel(this.level.id);
     addGems(ROUND_WIN_GEMS);
+    playLevelWin();
+    playGemCollect();
     syncLocalProgressToCloud();
 
     const isBoss = this.worldId && this.levelNum === LEVELS_PER_WORLD;
@@ -1439,6 +1460,7 @@ export class BoardScene extends Phaser.Scene {
     this.levelOver = true;
     this.deselectTile();
     loseLife();
+    playLevelLose();
     const message = this.level.type === 'free'
       ? `Needed: ${this.scoreTarget} points (got ${this.score})`
       : `Needed: ${this.targetWord}`;
@@ -1717,6 +1739,8 @@ export class BoardScene extends Phaser.Scene {
   }
 
   showComboText(chainLevel, wordsFound, labelOverride) {
+    if (wordsFound.length > 1 || chainLevel > 1) playCombo(chainLevel);
+    else playMatchChime();
     const tierColors = ['#ffd93d', '#ff9f43', '#ff6b9d', '#b57bff'];
     const color = tierColors[Math.min(chainLevel - 1, tierColors.length - 1)];
     const text = labelOverride
@@ -1828,6 +1852,8 @@ export class BoardScene extends Phaser.Scene {
         this.grid[row][col] = null;
       }
     }
+
+    if (tiles.length > 0) playShatterClear();
 
     // Glass-shatter clear (all worlds, per chat) instead of a plain
     // scale/fade. Container destroyed immediately since the shards
