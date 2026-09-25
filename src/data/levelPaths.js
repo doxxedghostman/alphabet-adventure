@@ -179,26 +179,26 @@ const CRYSTAL_FOREST_PATH = [
 
 // Space Words - rocky trail from the crash site up toward the robot.
 const SPACE_WORDS_PATH = [
-  { x: 300, y: 1650 }, // 1: Start
-  { x: 323, y: 1577 },
-  { x: 343, y: 1504 },
-  { x: 359, y: 1431 },
-  { x: 368, y: 1357 },
-  { x: 370, y: 1284 },
-  { x: 364, y: 1211 },
-  { x: 352, y: 1138 },
-  { x: 333, y: 1065 },
-  { x: 312, y: 992 },
-  { x: 288, y: 918 },
-  { x: 267, y: 845 },
-  { x: 248, y: 772 },
-  { x: 236, y: 699 },
-  { x: 230, y: 626 },
-  { x: 232, y: 553 },
-  { x: 241, y: 479 },
-  { x: 257, y: 406 },
-  { x: 277, y: 333 },
-  { x: 300, y: 260 }, // 20: boss node, near the robot/ship
+  { x: 493, y: 1619 }, // 1: Start, bottom of the path
+  { x: 406, y: 1560 },
+  { x: 327, y: 1496 },
+  { x: 232, y: 1440 },
+  { x: 207, y: 1343 },
+  { x: 274, y: 1261 },
+  { x: 366, y: 1202 },
+  { x: 437, y: 1123 },
+  { x: 406, y: 1022 },
+  { x: 317, y: 966 },
+  { x: 223, y: 917 },
+  { x: 231, y: 820 },
+  { x: 326, y: 772 },
+  { x: 413, y: 711 },
+  { x: 385, y: 615 },
+  { x: 293, y: 567 },
+  { x: 195, y: 521 },
+  { x: 201, y: 428 },
+  { x: 307, y: 392 },
+  { x: 369, y: 331 }, // 20: boss
 ];
 
 // Ancient Valley - desert path past the oasis toward the pyramids.
