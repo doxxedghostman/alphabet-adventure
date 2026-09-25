@@ -928,34 +928,44 @@ export class BoardScene extends Phaser.Scene {
   // instead of just scaling/fading out. Cheap approximation - no
   // texture slicing, just a handful of small colored shard rectangles
   // spawned at the tile's position, flung outward with random angle/
-  // rotation, and faded over the same rough duration as the old tween
-  // so cascades don't feel slower. Shards are added directly to the
+  // rotation, and faded quickly so cascades stay snappy. Shards are added directly to the
   // scene (not the tile's container) so they can fly free of it while
   // the container itself is destroyed immediately.
   shatterTile(tile) {
     const { x, y } = tile.container;
     const color = tile.bg.fillColor;
-    const shardCount = 6;
+    const shardCount = 9;
     const promises = [];
 
     // Quick white flash to sell the "crack" moment before the shards
     // fly, per chat's "shatter" pick over a plain crush/pop.
-    const flash = this.add.rectangle(x, y, this.tileSize, this.tileSize, 0xffffff, 0.85);
-    flash.setDepth(5);
+    const flash = this.add.rectangle(x, y, this.tileSize, this.tileSize, 0xffffff, 0.95);
+    flash.setDepth(20).setScale(1.15);
     promises.push(
-      this.tweenPromise({ targets: flash, alpha: 0, duration: 90, ease: 'Sine.easeIn' }).then(() =>
+      this.tweenPromise({
+        targets: flash,
+        alpha: 0,
+        scale: 1.35,
+        duration: 125,
+        ease: 'Cubic.easeOut',
+      }).then(() =>
         flash.destroy()
       )
     );
 
     for (let i = 0; i < shardCount; i++) {
-      const shardSize = this.tileSize * Phaser.Math.FloatBetween(0.22, 0.4);
-      const shard = this.add.rectangle(x, y, shardSize, shardSize * 0.7, color);
+      const shardSize = this.tileSize * Phaser.Math.FloatBetween(0.2, 0.38);
+      const shardColor = i % 3 === 0 ? 0xffffff : color;
+      const shard = this.add.rectangle(x, y, shardSize, shardSize * Phaser.Math.FloatBetween(0.45, 0.85), shardColor);
       shard.setAngle(Phaser.Math.Between(0, 360));
-      shard.setDepth(4);
+      shard.setAlpha(shardColor === 0xffffff ? 0.95 : 1);
+      shard.setDepth(21);
 
       const angle = Phaser.Math.FloatBetween(0, Math.PI * 2);
-      const distance = Phaser.Math.FloatBetween(this.tileSize * 0.6, this.tileSize * 1.1);
+      const distance = Phaser.Math.FloatBetween(this.tileSize * 0.85, this.tileSize * 1.6);
+      const startX = x + Math.cos(angle) * this.tileSize * 0.08;
+      const startY = y + Math.sin(angle) * this.tileSize * 0.08;
+      shard.setPosition(startX, startY);
       const targetX = x + Math.cos(angle) * distance;
       const targetY = y + Math.sin(angle) * distance;
 
@@ -964,10 +974,10 @@ export class BoardScene extends Phaser.Scene {
           targets: shard,
           x: targetX,
           y: targetY,
-          angle: shard.angle + Phaser.Math.Between(-180, 180),
+          angle: shard.angle + Phaser.Math.Between(-300, 300),
           scale: 0,
           alpha: 0,
-          duration: 220,
+          duration: 300,
           ease: 'Cubic.easeOut',
         }).then(() => shard.destroy())
       );
