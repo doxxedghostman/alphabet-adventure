@@ -155,26 +155,26 @@ const CLOUD_KINGDOM_PATH = [
 
 // Crystal Forest - gentle trail past the glowing crystal grove.
 const CRYSTAL_FOREST_PATH = [
-  { x: 300, y: 1650 }, // 1: Start
-  { x: 323, y: 1577 },
-  { x: 343, y: 1504 },
-  { x: 359, y: 1431 },
-  { x: 368, y: 1357 },
-  { x: 370, y: 1284 },
-  { x: 364, y: 1211 },
-  { x: 352, y: 1138 },
-  { x: 333, y: 1065 },
-  { x: 312, y: 992 },
-  { x: 288, y: 918 },
-  { x: 267, y: 845 },
-  { x: 248, y: 772 },
-  { x: 236, y: 699 },
-  { x: 230, y: 626 },
-  { x: 232, y: 553 },
-  { x: 241, y: 479 },
-  { x: 257, y: 406 },
-  { x: 277, y: 333 },
-  { x: 300, y: 260 }, // 20: boss node, at the crystal peaks
+  { x: 372, y: 1616 }, // 1: Start, bottom of the path
+  { x: 307, y: 1551 },
+  { x: 294, y: 1464 },
+  { x: 322, y: 1385 },
+  { x: 372, y: 1323 },
+  { x: 389, y: 1233 },
+  { x: 395, y: 1147 },
+  { x: 326, y: 1091 },
+  { x: 268, y: 1024 },
+  { x: 237, y: 951 },
+  { x: 297, y: 882 },
+  { x: 384, y: 847 },
+  { x: 458, y: 802 },
+  { x: 401, y: 738 },
+  { x: 331, y: 690 },
+  { x: 257, y: 639 },
+  { x: 225, y: 579 },
+  { x: 309, y: 538 },
+  { x: 392, y: 497 },
+  { x: 431, y: 422 }, // 20: boss
 ];
 
 // Space Words - rocky trail from the crash site up toward the robot.
