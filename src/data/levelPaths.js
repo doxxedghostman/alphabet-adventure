@@ -107,26 +107,26 @@ const OCEAN_WORDS_PATH = [
 
 // Dino Valley - riverside trail toward the volcano/dino skyline.
 const DINO_VALLEY_PATH = [
-  { x: 300, y: 1650 }, // 1: Start
-  { x: 323, y: 1573 },
-  { x: 343, y: 1495 },
-  { x: 359, y: 1418 },
-  { x: 368, y: 1341 },
-  { x: 370, y: 1263 },
-  { x: 364, y: 1186 },
-  { x: 352, y: 1108 },
-  { x: 333, y: 1031 },
-  { x: 312, y: 954 },
-  { x: 288, y: 876 },
-  { x: 267, y: 799 },
-  { x: 248, y: 722 },
-  { x: 236, y: 644 },
-  { x: 230, y: 567 },
-  { x: 232, y: 489 },
-  { x: 241, y: 412 },
-  { x: 257, y: 335 },
-  { x: 277, y: 257 },
-  { x: 300, y: 180 }, // 20: boss node, near the volcano
+  { x: 291, y: 1601 }, // 1: Start, bottom of the path
+  { x: 347, y: 1524 },
+  { x: 383, y: 1431 },
+  { x: 346, y: 1334 },
+  { x: 274, y: 1276 },
+  { x: 218, y: 1192 },
+  { x: 264, y: 1108 },
+  { x: 345, y: 1058 },
+  { x: 424, y: 1003 },
+  { x: 429, y: 911 },
+  { x: 348, y: 859 },
+  { x: 268, y: 800 },
+  { x: 264, y: 715 },
+  { x: 351, y: 665 },
+  { x: 391, y: 591 },
+  { x: 314, y: 531 },
+  { x: 218, y: 496 },
+  { x: 207, y: 427 },
+  { x: 307, y: 397 },
+  { x: 303, y: 343 }, // 20: boss
 ];
 
 // Cloud Kingdom - wide island-to-island sweep, gazebo to castle.
