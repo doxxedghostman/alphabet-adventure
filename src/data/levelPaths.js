@@ -228,26 +228,26 @@ const ANCIENT_VALLEY_PATH = [
 // Magic Mountain - single sweeping stone stairway (fewer, wider bends
 // than the others, matching the actual art - see chat).
 const MAGIC_MOUNTAIN_PATH = [
-  { x: 300, y: 1650 }, // 1: Start, bottom of the stairway
-  { x: 360, y: 1570 },
-  { x: 401, y: 1490 },
-  { x: 408, y: 1410 },
-  { x: 381, y: 1330 },
-  { x: 327, y: 1250 },
-  { x: 264, y: 1170 },
-  { x: 213, y: 1090 },
-  { x: 190, y: 1010 },
-  { x: 203, y: 930 },
-  { x: 248, y: 850 },
-  { x: 309, y: 770 },
-  { x: 368, y: 690 },
-  { x: 404, y: 610 },
-  { x: 407, y: 530 },
-  { x: 375, y: 450 },
-  { x: 318, y: 370 },
-  { x: 256, y: 290 },
-  { x: 208, y: 210 },
-  { x: 190, y: 130 }, // 20: boss node, at the castle gate
+  { x: 293, y: 1617 }, // 1: Start, bottom of the path
+  { x: 292, y: 1516 },
+  { x: 321, y: 1415 },
+  { x: 336, y: 1320 },
+  { x: 263, y: 1251 },
+  { x: 317, y: 1173 },
+  { x: 364, y: 1089 },
+  { x: 297, y: 1021 },
+  { x: 217, y: 966 },
+  { x: 264, y: 892 },
+  { x: 348, y: 837 },
+  { x: 315, y: 758 },
+  { x: 220, y: 717 },
+  { x: 228, y: 646 },
+  { x: 312, y: 594 },
+  { x: 367, y: 534 },
+  { x: 347, y: 467 },
+  { x: 438, y: 419 },
+  { x: 374, y: 346 },
+  { x: 429, y: 300 }, // 20: boss
 ];
 
 // WordSwoop Kingdom - switchback courtyard path, fountain to castle.
