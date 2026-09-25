@@ -154,3 +154,20 @@ export async function showRewardedAdForBooster(type) {
   addBooster(type);
   return { granted: true, type, amount: 1 };
 }
+
+/** Shop offers: a completed ad always grants the advertised reward. */
+export async function showRewardedAdForGems(amount) {
+  const outcome = await playRewardedAdToCompletion();
+  if (!outcome.watched) return { granted: false, reason: outcome.reason, error: outcome.error };
+  addGems(amount);
+  return { granted: true, type: 'gems', amount };
+}
+
+/** One ad for both boosters; a full inventory only skips that half. */
+export async function showRewardedAdForBundle() {
+  const outcome = await playRewardedAdToCompletion();
+  if (!outcome.watched) return { granted: false, reason: outcome.reason, error: outcome.error };
+  const bomb = addBooster('bomb');
+  const shuffle = addBooster('shuffle');
+  return { granted: true, type: 'bundle', bomb: bomb.granted, shuffle: shuffle.granted };
+}

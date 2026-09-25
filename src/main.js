@@ -8,6 +8,7 @@ import { BoardScene } from './scenes/BoardScene.js';
 import { SettingsScene } from './scenes/SettingsScene.js';
 import { CalendarScene } from './scenes/CalendarScene.js';
 import { LeaderboardScene } from './scenes/LeaderboardScene.js';
+import { ShopScene } from './scenes/ShopScene.js';
 import { getCanvasSize, LETTERBOX_BG_HEX } from './config.js';
 import { initAuth } from './utils/authStore.js';
 import { initAds } from './utils/adsStore.js';
@@ -20,7 +21,7 @@ const config = {
   width: CANVAS_SIZE.width,
   height: CANVAS_SIZE.height,
   backgroundColor: LETTERBOX_BG_HEX,
-  scene: [SplashScene, MainMenuScene, HomeHubScene, WorldSelectScene, LevelPathScene, BoardScene, SettingsScene, CalendarScene, LeaderboardScene],
+  scene: [SplashScene, MainMenuScene, HomeHubScene, WorldSelectScene, LevelPathScene, BoardScene, SettingsScene, CalendarScene, LeaderboardScene, ShopScene],
   render: {
     antialias: true,
   },

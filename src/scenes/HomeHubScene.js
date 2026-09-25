@@ -340,7 +340,7 @@ export class HomeHubScene extends Phaser.Scene {
     // top-row/bottom-row within each column) so the relocation doesn't
     // scramble which icon someone expects to find near which other one.
     const icons = [
-      { key: 'iconShop', label: 'Shop \u2013 coming soon' },
+      { key: 'iconShop', label: 'Shop', action: () => this.scene.start('ShopScene') },
       { key: 'iconCalendar', label: 'Daily Rewards', action: () => this.scene.start('CalendarScene') },
       { key: 'iconLeaderboard', label: 'Leaderboard', action: () => this.scene.start('LeaderboardScene') },
       { key: 'iconVideo', label: 'Watch to Earn', action: () => this.handleWatchToEarn() },
