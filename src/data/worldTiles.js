@@ -8,10 +8,9 @@
 // frame/progress rules that currently treat only level 20 as a boss remain
 // unchanged.
 //
-// All ten worlds have a row from the start so adding art stays data-only.
-// Null paths mean that world is not commissioned yet; BoardScene gracefully
-// keeps the original colored rectangle for that world rather than attempting
-// to load or render a missing texture.
+// All ten worlds have a row so the scene stays data-driven. BoardScene still
+// treats null paths or an unloaded texture as a signal to use the original
+// colored rectangle, keeping the fallback safe if an asset is ever removed.
 
 export const WORLD_TILES = {
   1: {
@@ -20,15 +19,60 @@ export const WORLD_TILES = {
     bossTileKey: 'tile-candy-garden-boss',
     bossTilePath: 'assets/tile-candy-garden-boss.png',
   },
-  2: { tileKey: null, tilePath: null, bossTileKey: null, bossTilePath: null }, // Jungle Jumble
-  3: { tileKey: null, tilePath: null, bossTileKey: null, bossTilePath: null }, // Ocean Words
-  4: { tileKey: null, tilePath: null, bossTileKey: null, bossTilePath: null }, // Dino Valley
-  5: { tileKey: null, tilePath: null, bossTileKey: null, bossTilePath: null }, // Cloud Kingdom
-  6: { tileKey: null, tilePath: null, bossTileKey: null, bossTilePath: null }, // Crystal Forest
-  7: { tileKey: null, tilePath: null, bossTileKey: null, bossTilePath: null }, // Magic Mountain
-  8: { tileKey: null, tilePath: null, bossTileKey: null, bossTilePath: null }, // Space Words
-  9: { tileKey: null, tilePath: null, bossTileKey: null, bossTilePath: null }, // Ancient Valley
-  10: { tileKey: null, tilePath: null, bossTileKey: null, bossTilePath: null }, // WordSwoop Kingdom
+  2: {
+    tileKey: 'tile-jungle-jumble',
+    tilePath: 'assets/tile-jungle-jumble.png',
+    bossTileKey: 'tile-jungle-jumble-boss',
+    bossTilePath: 'assets/tile-jungle-jumble-boss.png',
+  },
+  3: {
+    tileKey: 'tile-ocean-words',
+    tilePath: 'assets/tile-ocean-words.png',
+    bossTileKey: 'tile-ocean-words-boss',
+    bossTilePath: 'assets/tile-ocean-words-boss.png',
+  },
+  4: {
+    tileKey: 'tile-dino-valley',
+    tilePath: 'assets/tile-dino-valley.png',
+    bossTileKey: 'tile-dino-valley-boss',
+    bossTilePath: 'assets/tile-dino-valley-boss.png',
+  },
+  5: {
+    tileKey: 'tile-cloud-kingdom',
+    tilePath: 'assets/tile-cloud-kingdom.png',
+    bossTileKey: 'tile-cloud-kingdom-boss',
+    bossTilePath: 'assets/tile-cloud-kingdom-boss.png',
+  },
+  6: {
+    tileKey: 'tile-crystal-forest',
+    tilePath: 'assets/tile-crystal-forest.png',
+    bossTileKey: 'tile-crystal-forest-boss',
+    bossTilePath: 'assets/tile-crystal-forest-boss.png',
+  },
+  7: {
+    tileKey: 'tile-magic-mountain',
+    tilePath: 'assets/tile-magic-mountain.png',
+    bossTileKey: 'tile-magic-mountain-boss',
+    bossTilePath: 'assets/tile-magic-mountain-boss.png',
+  },
+  8: {
+    tileKey: 'tile-space-words',
+    tilePath: 'assets/tile-space-words.png',
+    bossTileKey: 'tile-space-words-boss',
+    bossTilePath: 'assets/tile-space-words-boss.png',
+  },
+  9: {
+    tileKey: 'tile-ancient-valley',
+    tilePath: 'assets/tile-ancient-valley.png',
+    bossTileKey: 'tile-ancient-valley-boss',
+    bossTilePath: 'assets/tile-ancient-valley-boss.png',
+  },
+  10: {
+    tileKey: 'tile-wordswoop-kingdom',
+    tilePath: 'assets/tile-wordswoop-kingdom.png',
+    bossTileKey: 'tile-wordswoop-kingdom-boss',
+    bossTilePath: 'assets/tile-wordswoop-kingdom-boss.png',
+  },
 };
 
 export function getWorldTile(worldId) {
