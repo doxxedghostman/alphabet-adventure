@@ -376,6 +376,20 @@ export class HomeHubScene extends Phaser.Scene {
     // No backing card - icons sit directly on the forest background.
     const icon = this.add.image(cx, cy, textureKey);
     icon.setDisplaySize(displaySize, displaySize);
+    // Keep the caption anchored to the grid while the artwork bobs. Its
+    // high-contrast, flat style stays readable over the forest without
+    // competing with the ornate gold display text elsewhere in the hub.
+    this.add
+      .text(cx, cy + displaySize / 2 + 8, label, {
+        fontFamily: 'Arial',
+        fontSize: '15px',
+        fontStyle: 'bold',
+        color: '#f8fbff',
+        stroke: '#18251d',
+        strokeThickness: 3,
+        shadow: { offsetX: 0, offsetY: 2, color: '#000000', blur: 2, fill: true },
+      })
+      .setOrigin(0.5, 0);
     // setDisplaySize gives this image a non-1 base scale. The tap-bounce
     // tween below must scale *relative to that*, not set scale to a
     // literal value - see the same note on the old createColumnIcon
