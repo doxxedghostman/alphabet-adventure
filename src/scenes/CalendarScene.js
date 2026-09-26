@@ -3,6 +3,7 @@ import { APP_BG_COLOR } from '../config.js';
 import { getStatus, claimToday, REWARD_SCHEDULE } from '../utils/dailyRewardStore.js';
 import { syncLocalProgressToCloud } from '../utils/authStore.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
+import { showRewardPopup } from '../utils/rewardPopup.js';
 
 // Calendar / Daily Rewards — Home Hub's Calendar icon used to just
 // show a "coming soon" toast; this is the real screen. Per chat: a
@@ -38,6 +39,10 @@ export class CalendarScene extends Phaser.Scene {
     this.load.image('calGemIcon', 'assets/icon-gem.png');
     this.load.image('calBackIcon', 'assets/icon-back.png');
     this.load.image('calClaimButton', 'assets/icon-claim-button.png');
+    this.load.image('rewardPopupGem', 'assets/icon-gem.png');
+    this.load.image('rewardPopupBomb', 'assets/booster-bomb.png');
+    this.load.image('rewardPopupShuffle', 'assets/booster-shuffle.png');
+    this.load.image('rewardPopupLife', 'assets/icon-life.png');
     // Procedural warm-parchment vignette (radial gradient + subtle paper
     // grain, generated - not a photo), per chat: this screen shouldn't
     // be flat solid color, but per this file's own header comment above
@@ -275,11 +280,15 @@ export class CalendarScene extends Phaser.Scene {
           targets: button,
           scale: baseScale,
           duration: 100,
-          onComplete: () => {
+          onComplete: async () => {
             const result = claimToday();
             if (result) {
               syncLocalProgressToCloud();
-              this.scene.restart();
+              const dismissed = await showRewardPopup(this, {
+                type: result.reward.boosterType || result.reward.type,
+                amount: result.reward.amount,
+              });
+              if (dismissed && this.sys.isActive()) this.scene.restart();
             }
           },
         });

@@ -5,6 +5,7 @@ import { getLivesStatus, MAX_LIVES } from '../utils/livesStore.js';
 import { showRewardedAd } from '../utils/adsStore.js';
 import { syncLocalProgressToCloud, getAvatarUrl, isSignedIn } from '../utils/authStore.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
+import { showRewardPopup } from '../utils/rewardPopup.js';
 
 // Home Hub (per chat): sits between the splash/logo Main Menu and the
 // World Map. Modeled on the reference mockup image the user provided -
@@ -83,6 +84,10 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('iconCalendar', 'assets/icon-calendar.png');
     this.load.image('iconVideo', 'assets/icon-video.png');
     this.load.image('hubBackIcon', 'assets/icon-back.png');
+    this.load.image('rewardPopupGem', 'assets/icon-gem.png');
+    this.load.image('rewardPopupBomb', 'assets/booster-bomb.png');
+    this.load.image('rewardPopupShuffle', 'assets/booster-shuffle.png');
+    this.load.image('rewardPopupLife', 'assets/icon-life.png');
 
     // Real profile photo (Google avatar) to overlay on the baked-in
     // avatar badge when signed in - same pattern as Settings' signed-in
@@ -435,16 +440,16 @@ export class HomeHubScene extends Phaser.Scene {
     const result = await showRewardedAd();
 
     if (result.granted) {
-      const rewardLabel = result.fullInventory
-        ? `${result.fullInventory === 'bomb' ? 'Bomb' : 'Shuffle'} full \u2013 +${result.amount} Gems instead!`
-        : {
-            gems: `+${result.amount} Gems!`,
-            bomb: 'You won a Bomb!',
-            shuffle: 'You won a Shuffle!',
-            life: '+1 Life!',
-          }[result.type] || 'Reward earned!';
       syncLocalProgressToCloud();
-      this.scene.restart({ toastMessage: rewardLabel });
+      const fallbackLabel = result.fullInventory
+        ? `${result.fullInventory === 'bomb' ? 'Bomb' : 'Shuffle'} full \u2013 +${result.amount} Gems instead!`
+        : undefined;
+      const dismissed = await showRewardPopup(this, {
+        type: result.type,
+        amount: result.amount,
+        label: fallbackLabel,
+      });
+      if (dismissed && this.sys.isActive()) this.scene.restart();
       return;
     }
 

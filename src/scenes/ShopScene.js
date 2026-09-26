@@ -6,6 +6,7 @@ import { getBoosters, MAX_BOOSTERS } from '../utils/boosterStore.js';
 import { OFFER_CAPS, recordWatch, watchesRemaining } from '../utils/shopStore.js';
 import { showRewardedAdForGems, showRewardedAdForBooster, showRewardedAdForBundle } from '../utils/adsStore.js';
 import { playAdReward } from '../utils/sfx.js';
+import { showRewardPopup } from '../utils/rewardPopup.js';
 
 const OFFERS = [
   { key: 'gems', title: '+25 Gems', icons: ['gems'], watch: () => showRewardedAdForGems(25) },
@@ -28,6 +29,10 @@ export class ShopScene extends Phaser.Scene {
       gems: 'icon-gem', bomb: 'icon-bomb', shuffle: 'icon-shuffle', lens: 'icon-lens',
       video: 'icon-video', back: 'icon-back',
     })) this.load.image(`shop-${key}`, `assets/${file}.png`);
+    this.load.image('rewardPopupGem', 'assets/icon-gem.png');
+    this.load.image('rewardPopupBomb', 'assets/booster-bomb.png');
+    this.load.image('rewardPopupShuffle', 'assets/booster-shuffle.png');
+    this.load.image('rewardPopupLife', 'assets/icon-life.png');
   }
 
   create() {
@@ -192,10 +197,19 @@ export class ShopScene extends Phaser.Scene {
     this.pendingOffer = null;
     if (result.granted) {
       playAdReward();
-      const reward = offer.key === 'bundle'
-        ? [result.bomb && '+1 Bomb', result.shuffle && '+1 Shuffle'].filter(Boolean).join(' & ')
-        : offer.title;
-      this.messageText.setText(`${reward || 'Reward'} collected!`);
+      if (result.type === 'bundle') {
+        const grantedTypes = [result.bomb && 'bomb', result.shuffle && 'shuffle'].filter(Boolean);
+        showRewardPopup(this, {
+          type: grantedTypes[0],
+          amount: grantedTypes.length,
+          label: grantedTypes.length === 2
+            ? 'Bomb & Shuffle!'
+            : grantedTypes[0] === 'bomb' ? 'Bomb!' : 'Shuffle!',
+        });
+      } else {
+        showRewardPopup(this, { type: result.type, amount: result.amount });
+      }
+      this.messageText.setText('Choose another offer or come back tomorrow.');
     } else {
       this.messageText.setText({
         'not-native': 'Rewarded ads are available in the mobile app.',
