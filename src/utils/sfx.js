@@ -12,6 +12,7 @@ export function ensureContext() {
   if (sharedContext.state === 'suspended') {
     sharedContext.resume().catch(() => {});
   }
+  preloadRealSfx(sharedContext);
   return sharedContext;
 }
 
@@ -52,9 +53,20 @@ const REAL_SFX = {
   adReward: 'assets/sfx/sfx-ad-reward.wav',
 };
 
+function preloadRealSfx(ctx) {
+  Object.values(REAL_SFX).forEach((url) => loadBuffer(ctx, url));
+}
+
 function playBuffer(ctx, url, volume) {
   const cached = bufferCache.get(url);
-  if (!(cached instanceof AudioBuffer)) return false; // not loaded (yet) or failed
+  if (!(cached instanceof AudioBuffer)) {
+    // init() normally starts every download on the first splash tap, but
+    // the splash can also finish without being tapped. Start a missing
+    // file on demand so that path cannot leave real SFX permanently stuck
+    // on their synthesized fallbacks.
+    if (cached === undefined) loadBuffer(ctx, url);
+    return false;
+  }
   const source = ctx.createBufferSource();
   const gain = ctx.createGain();
   source.buffer = cached;
@@ -65,11 +77,7 @@ function playBuffer(ctx, url, volume) {
 }
 
 export function init() {
-  const ctx = ensureContext();
-  if (ctx) {
-    Object.values(REAL_SFX).forEach((url) => loadBuffer(ctx, url));
-  }
-  return ctx;
+  return ensureContext();
 }
 
 function addTone(ctx, frequency, start, duration, options = {}) {

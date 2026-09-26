@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { App } from '@capacitor/app';
 import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
+import { init as initSfx } from '../utils/sfx.js';
 
 // Landing screen after the splash. Per chat: this now shows nothing but
 // the full forest-adventure poster art (logo + two scout characters +
@@ -100,6 +101,10 @@ export class MainMenuScene extends Phaser.Scene {
     const baseScale = button.scale;
 
     button.on('pointerdown', () => {
+      // The splash can finish without a tap, so the Play button is the
+      // guaranteed user gesture where Web Audio can be unlocked and the
+      // real-file SFX preload can begin before gameplay.
+      initSfx();
       this.tweens.add({ targets: button, scale: baseScale * 0.94, duration: 80, ease: 'Sine.easeOut' });
     });
     button.on('pointerup', () => {
