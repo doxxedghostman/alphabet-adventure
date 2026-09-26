@@ -22,6 +22,7 @@ import { getLivesStatus, loseLife, MAX_LIVES } from '../utils/livesStore.js';
 import { showRewardedAdForLife, showRewardedAdForBooster } from '../utils/adsStore.js';
 import { addBooster, spendBooster } from '../utils/boosterStore.js';
 import { WORLD_FRAMES, getWorldFrame } from '../data/worldFrames.js';
+import { WORLD_TILES, getWorldTile } from '../data/worldTiles.js';
 import { getWorld, WORLDS } from '../data/worlds.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
 import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } from '../utils/settingsStore.js';
@@ -86,6 +87,13 @@ export class BoardScene extends Phaser.Scene {
     Object.values(WORLD_FRAMES).forEach(({ frameKey, framePath, bossFrameKey, bossFramePath }) => {
       this.load.image(frameKey, framePath);
       if (bossFrameKey) this.load.image(bossFrameKey, bossFramePath);
+    });
+    // Neutral per-world tile sprites are tinted per letter at runtime.
+    // Rows without commissioned art contain null paths and are skipped,
+    // leaving BoardScene's original rectangle fallback in place.
+    Object.values(WORLD_TILES).forEach(({ tileKey, tilePath, bossTileKey, bossTilePath }) => {
+      if (tileKey && tilePath) this.load.image(tileKey, tilePath);
+      if (bossTileKey && bossTilePath) this.load.image(bossTileKey, bossTilePath);
     });
     // Same reasoning, same unconditional-load pattern - per-world board
     // backdrop (blurred/dimmed crop of that world's own bgPath art, see
@@ -263,8 +271,13 @@ export class BoardScene extends Phaser.Scene {
   computeBoardGeometry() {
     const worldFrame = getWorldFrame(this.worldId);
     const isBoss = this.worldId && this.levelNum === LEVELS_PER_WORLD;
+    const worldTile = getWorldTile(this.worldId);
+    const isTileBossLevel = Boolean(this.levelNum && this.levelNum % 5 === 0);
     this.worldFrame = worldFrame;
+    this.worldTile = worldTile;
     this.isBossFrame = Boolean(worldFrame?.bossFrameKey && isBoss);
+    this.isBossTile = Boolean(worldTile?.bossTileKey && isTileBossLevel);
+    this.tileTextureKey = this.isBossTile ? worldTile?.bossTileKey : worldTile?.tileKey;
     this.tileSize = this.isBossFrame ? worldFrame.bossTileSize : worldFrame ? worldFrame.tileSize : TILE_SIZE;
     this.tileGap = this.isBossFrame ? worldFrame.bossTileGap : worldFrame ? worldFrame.tileGap : TILE_GAP;
     this.tileFontSize = this.isBossFrame ? worldFrame.bossTileFontSize : worldFrame ? worldFrame.tileFontSize : 30;
@@ -799,7 +812,7 @@ export class BoardScene extends Phaser.Scene {
           ease: 'Sine.easeIn',
           onComplete: () => {
             tile.text.setText(candidate[i]);
-            tile.bg.setFillStyle(LETTER_COLORS[candidate[i]] ?? 0xffffff);
+            this.setTileColor(tile, candidate[i]);
           },
         })
       )
@@ -913,7 +926,7 @@ export class BoardScene extends Phaser.Scene {
       if (!tile) return;
       tile.letter = letter;
       tile.text.setText(letter);
-      tile.bg.setFillStyle(LETTER_COLORS[letter] ?? 0xffffff);
+      this.setTileColor(tile, letter);
     });
   }
 
@@ -965,8 +978,10 @@ export class BoardScene extends Phaser.Scene {
     const container = this.add.container(x, spawnAbove ? spawnY : y);
 
     const color = LETTER_COLORS[letter] ?? 0xffffff;
-    const bg = this.add.rectangle(0, 0, this.tileSize, this.tileSize, color);
-    bg.setStrokeStyle(3, 0x1b1030, 0.35);
+    const usesTileArt = Boolean(this.tileTextureKey && this.textures.exists(this.tileTextureKey));
+    const bg = usesTileArt
+      ? this.add.image(0, 0, this.tileTextureKey).setDisplaySize(this.tileSize, this.tileSize).setTint(color)
+      : this.add.rectangle(0, 0, this.tileSize, this.tileSize, color).setStrokeStyle(3, 0x1b1030, 0.35);
 
     const text = this.add
       .text(0, 0, letter, {
@@ -977,19 +992,12 @@ export class BoardScene extends Phaser.Scene {
       })
       .setOrigin(0.5);
 
-    container.add([bg, text]);
+    container.add(bg);
 
-    // Glass-tile look (extended to all worlds, per chat), applied on
-    // top of the plain color rect (bg) rather than replacing it, since
-    // bg still needs its fill/stroke swapped around by
-    // setFillStyle/setTileHighlight elsewhere (solvability re-rolls,
-    // tap-to-select) - it's a static decoration, not per-letter state,
-    // so it never needs to be touched again after creation. Diagonal
-    // white-to-transparent sheen (top-left corner brightest) plus a
-    // faint dark wash in the bottom-right corner approximates a
-    // beveled glass surface; a soft white rim stroke on top of that
-    // sells the edge highlight.
-    {
+    // Commissioned tile art already contains its own bevel/highlight, so
+    // the generic square glass overlay would obscure the themed silhouette.
+    // Keep that overlay only on the legacy rectangle fallback.
+    if (!usesTileArt) {
       const half = this.tileSize / 2;
       const glass = this.add.graphics();
       glass.fillGradientStyle(0xffffff, 0xffffff, 0x000000, 0x000000, 0.55, 0.12, 0.1, 0.3);
@@ -998,13 +1006,24 @@ export class BoardScene extends Phaser.Scene {
       glass.strokeRoundedRect(-half, -half, this.tileSize, this.tileSize, 8);
       container.add(glass);
       container.moveTo(glass, 1); // above bg, below text
-      container.bringToTop(text);
     }
+
+    // Art-backed tiles cannot use Rectangle.setStrokeStyle(), so selection
+    // gets its own lightweight outline. It stays empty until selected.
+    const selectionOutline = usesTileArt ? this.add.graphics() : null;
+    if (selectionOutline) container.add(selectionOutline);
+    container.add(text);
 
     container.setSize(this.tileSize, this.tileSize);
 
-    const tile = { row, col, letter, container, bg, text };
+    const tile = { row, col, letter, container, bg, text, usesTileArt, selectionOutline };
     return tile;
+  }
+
+  setTileColor(tile, letter = tile.letter) {
+    const color = LETTER_COLORS[letter] ?? 0xffffff;
+    if (tile.usesTileArt) tile.bg.setTint(color);
+    else tile.bg.setFillStyle(color);
   }
 
   // ---------- glass-shatter clear effect ----------
@@ -1018,7 +1037,7 @@ export class BoardScene extends Phaser.Scene {
   // the container itself is destroyed immediately.
   shatterTile(tile) {
     const { x, y } = tile.container;
-    const color = tile.bg.fillColor;
+    const color = LETTER_COLORS[tile.letter] ?? 0xffffff;
     const shardCount = 9;
     const promises = [];
 
@@ -1169,7 +1188,22 @@ export class BoardScene extends Phaser.Scene {
   }
 
   setTileHighlight(tile, on) {
-    tile.bg.setStrokeStyle(on ? 5 : 3, on ? 0xffffff : 0x1b1030, on ? 1 : 0.35);
+    if (tile.usesTileArt) {
+      const half = this.tileSize / 2;
+      tile.selectionOutline.clear();
+      if (on) {
+        tile.selectionOutline.lineStyle(4, 0xffffff, 1);
+        tile.selectionOutline.strokeRoundedRect(
+          -half + 2,
+          -half + 2,
+          this.tileSize - 4,
+          this.tileSize - 4,
+          9
+        );
+      }
+    } else {
+      tile.bg.setStrokeStyle(on ? 5 : 3, on ? 0xffffff : 0x1b1030, on ? 1 : 0.35);
+    }
     this.tweens.add({
       targets: tile.container,
       scale: on ? 1.08 : 1,
@@ -1299,14 +1333,23 @@ export class BoardScene extends Phaser.Scene {
       playInvalidSwap();
       const failColor = 0xff4757;
       await Promise.all(
-        [tileA, tileB].map((tile) =>
-          this.tweenPromise({
+        [tileA, tileB].map((tile) => {
+          if (!tile.usesTileArt) {
+            return this.tweenPromise({
+              targets: tile.bg,
+              fillColor: failColor,
+              duration: 90,
+              yoyo: true,
+            });
+          }
+          tile.bg.setTint(failColor);
+          return this.tweenPromise({
             targets: tile.bg,
-            fillColor: failColor,
+            alpha: 0.6,
             duration: 90,
             yoyo: true,
-          })
-        )
+          }).then(() => this.setTileColor(tile));
+        })
       );
       await this.animateSwap(tileA, tileB);
       this.isBusy = false;
@@ -1860,7 +1903,7 @@ export class BoardScene extends Phaser.Scene {
     // (spawned at its position) fly independently of it.
     await Promise.all(
       tiles.map((tile) => {
-        // shatterTile reads container.x/y and bg.fillColor
+        // shatterTile reads container.x/y and the tile's letter color
         // synchronously before it awaits anything, so it's safe to
         // destroy the (now-visually-replaced) container right after
         // calling it rather than waiting on it.
