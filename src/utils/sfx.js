@@ -15,8 +15,61 @@ export function ensureContext() {
   return sharedContext;
 }
 
+// ---------- real audio-file playback (licensed SFX, Mixkit free license) ----------
+//
+// A handful of events use real recorded clips instead of synthesis, once
+// available. Buffers are fetched/decoded once and cached; play calls made
+// before decoding finishes are silently skipped for that one call rather
+// than blocking or queuing, so a slow first load never stalls gameplay -
+// the caller's synthesized fallback (passed as `fallback`) covers that gap.
+const bufferCache = new Map(); // url -> AudioBuffer | Promise<AudioBuffer> | null (failed)
+
+function loadBuffer(ctx, url) {
+  if (bufferCache.has(url)) return bufferCache.get(url);
+  const promise = fetch(url)
+    .then((res) => res.arrayBuffer())
+    .then((data) => ctx.decodeAudioData(data))
+    .then((buffer) => {
+      bufferCache.set(url, buffer);
+      return buffer;
+    })
+    .catch((err) => {
+      console.warn(`sfx: failed to load ${url}, falling back to synth`, err);
+      bufferCache.set(url, null);
+      return null;
+    });
+  bufferCache.set(url, promise);
+  return promise;
+}
+
+// Real files to preload eagerly once the context is available, so they're
+// ready by the time their trigger event actually fires in normal play.
+const REAL_SFX = {
+  gemCollect: 'assets/sfx/sfx-gem-collect.wav',
+  combo: 'assets/sfx/sfx-combo-cluster.wav',
+  shuffle: 'assets/sfx/sfx-shuffle-swoosh.wav',
+  levelWin: 'assets/sfx/sfx-level-win.wav',
+  adReward: 'assets/sfx/sfx-ad-reward.wav',
+};
+
+function playBuffer(ctx, url, volume) {
+  const cached = bufferCache.get(url);
+  if (!(cached instanceof AudioBuffer)) return false; // not loaded (yet) or failed
+  const source = ctx.createBufferSource();
+  const gain = ctx.createGain();
+  source.buffer = cached;
+  gain.gain.value = volume;
+  source.connect(gain).connect(ctx.destination);
+  source.start(ctx.currentTime);
+  return true;
+}
+
 export function init() {
-  return ensureContext();
+  const ctx = ensureContext();
+  if (ctx) {
+    Object.values(REAL_SFX).forEach((url) => loadBuffer(ctx, url));
+  }
+  return ctx;
 }
 
 function addTone(ctx, frequency, start, duration, options = {}) {
@@ -116,6 +169,7 @@ export function playCombo(chainLevel = 1) {
   if (!isSfxOn()) return;
   const ctx = ensureContext();
   if (!ctx) return;
+  if (playBuffer(ctx, REAL_SFX.combo, 0.5)) return;
   const semitones = Math.min(Math.max(chainLevel - 1, 0), 7);
   const shift = 2 ** (semitones / 12);
   addTriad(ctx, ctx.currentTime, [523.25 * shift, 659.25 * shift, 783.99 * shift], 0.075);
@@ -134,6 +188,7 @@ export function playShuffle() {
   if (!isSfxOn()) return;
   const ctx = ensureContext();
   if (!ctx) return;
+  if (playBuffer(ctx, REAL_SFX.shuffle, 0.5)) return;
   const now = ctx.currentTime;
   const oscillator = ctx.createOscillator();
   const gain = ctx.createGain();
@@ -163,6 +218,7 @@ export function playLevelWin() {
   if (!isSfxOn()) return;
   const ctx = ensureContext();
   if (!ctx) return;
+  if (playBuffer(ctx, REAL_SFX.levelWin, 0.55)) return;
   const now = ctx.currentTime;
   [523.25, 659.25, 783.99, 1046.5, 1318.51].forEach((frequency, index) => {
     addTone(ctx, frequency, now + index * 0.065, 0.15, { type: 'triangle', volume: 0.065 });
@@ -183,6 +239,7 @@ export function playGemCollect() {
   if (!isSfxOn()) return;
   const ctx = ensureContext();
   if (!ctx) return;
+  if (playBuffer(ctx, REAL_SFX.gemCollect, 0.5)) return;
   addTone(ctx, 1174.66, ctx.currentTime, 0.16, {
     type: 'sine', volume: 0.06, endFrequency: 1567.98,
   });
@@ -192,6 +249,7 @@ export function playAdReward() {
   if (!isSfxOn()) return;
   const ctx = ensureContext();
   if (!ctx) return;
+  if (playBuffer(ctx, REAL_SFX.adReward, 0.5)) return;
   const now = ctx.currentTime;
   [659.25, 783.99, 987.77, 1318.51].forEach((frequency, index) => {
     addTone(ctx, frequency, now + index * 0.075, 0.15, { type: 'triangle', volume: 0.06 });
