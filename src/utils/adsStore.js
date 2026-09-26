@@ -19,15 +19,11 @@
 // ad watch on nothing - the player watched the whole thing, they get
 // *something* real either way, just not banked past the cap.
 //
-// @capacitor-community/admob's web implementation is a no-op stub
-// that always resolves with { amount: 0 } (see its web.js) - that's
-// exactly the signal used below to mean "no real ad watched, don't
-// grant anything" on both a genuinely-dismissed-without-reward native
-// ad AND on web/dev preview, so no platform-specific gem-skipping
-// logic is needed here - just checking the resolved amount handles
-// both cases via the same code path.
+// Rewarded and Dismissed are separate native events: Rewarded tells us
+// whether the player earned the reward, while Dismissed tells us the
+// fullscreen ad is actually gone and it is safe to show game UI again.
 
-import { AdMob } from '@capacitor-community/admob';
+import { AdMob, RewardAdPluginEvents } from '@capacitor-community/admob';
 import { Capacitor } from '@capacitor/core';
 import { addGems } from './currencyStore.js';
 import { addBooster } from './boosterStore.js';
@@ -99,14 +95,59 @@ export async function initAds() {
  * showRewardedAdForLife() (guaranteed life) below. */
 async function playRewardedAdToCompletion() {
   if (!Capacitor.isNativePlatform()) return { watched: false, reason: 'not-native' };
+
+  let rewardedListener;
+  let dismissedListener;
+  let failedToShowListener;
+
   try {
     await AdMob.prepareRewardVideoAd({ adId: AD_UNIT_ID });
-    const result = await AdMob.showRewardVideoAd();
-    if (result && result.amount > 0) return { watched: true };
-    return { watched: false, reason: 'dismissed' };
+
+    let rewarded = false;
+    let finish;
+    const finished = new Promise((resolve) => {
+      let settled = false;
+      finish = (result) => {
+        if (settled) return;
+        settled = true;
+        resolve(result);
+      };
+    });
+
+    rewardedListener = await AdMob.addListener(RewardAdPluginEvents.Rewarded, () => {
+      rewarded = true;
+    });
+    dismissedListener = await AdMob.addListener(RewardAdPluginEvents.Dismissed, () => {
+      finish({ reason: 'dismissed' });
+    });
+    failedToShowListener = await AdMob.addListener(RewardAdPluginEvents.FailedToShow, (error) => {
+      finish({ reason: 'error', error });
+    });
+
+    // In this plugin version the show promise resolves at Rewarded, which
+    // can be before the native fullscreen view closes. It may also remain
+    // pending when the player dismisses without earning a reward, so the
+    // terminal event promise above—not this promise—controls completion.
+    AdMob.showRewardVideoAd()
+      .then((reward) => {
+        // The Rewarded event is authoritative, but keep the resolved reward
+        // as a guard against an unexpected event-delivery ordering change.
+        if (reward && reward.amount > 0) rewarded = true;
+      })
+      .catch((error) => finish({ reason: 'error', error }));
+
+    const terminal = await finished;
+    if (terminal.reason === 'error') {
+      console.warn('playRewardedAdToCompletion: failed to show ad', terminal.error);
+      return { watched: false, reason: 'error', error: terminal.error };
+    }
+    return rewarded ? { watched: true } : { watched: false, reason: 'dismissed' };
   } catch (err) {
     console.warn('playRewardedAdToCompletion: failed to load/show ad', err);
     return { watched: false, reason: 'error', error: err };
+  } finally {
+    const listeners = [rewardedListener, dismissedListener, failedToShowListener].filter(Boolean);
+    await Promise.allSettled(listeners.map((listener) => listener.remove()));
   }
 }
 

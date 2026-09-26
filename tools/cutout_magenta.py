@@ -23,7 +23,7 @@ from PIL import Image
 from scipy import ndimage as ndi
 
 
-def cutout(path):
+def cutout(path, remove_enclosed_key=False):
     rgb = np.array(Image.open(path).convert('RGB')).astype(np.float32)
     h, w, _ = rgb.shape
     border = np.concatenate([rgb[0], rgb[-1], rgb[:, 0], rgb[:, -1]])
@@ -32,6 +32,13 @@ def cutout(path):
     lab, _ = ndi.label(dist < 90, structure=np.ones((3, 3)))
     edge = set(np.unique(np.concatenate([lab[0], lab[-1], lab[:, 0], lab[:, -1]]))) - {0}
     outside = np.isin(lab, list(edge))
+    # Closed shapes such as UI frames can surround a key-coloured center,
+    # so the normal border flood-fill intentionally leaves that center
+    # opaque. Opt in to treating enclosed key-adjacent pixels as background
+    # for those assets. This is intentionally a separate, stronger mode for
+    # frames whose empty center and glow both touch the generated key colour.
+    if remove_enclosed_key:
+        outside |= dist < 150
     inside = ~outside
     core = ndi.binary_erosion(inside, iterations=2)
     band = ndi.binary_dilation(inside, iterations=2) & ~core
@@ -67,8 +74,10 @@ def main():
     ap.add_argument('input')
     ap.add_argument('output')
     ap.add_argument('--size', type=int, default=256)
+    ap.add_argument('--remove-enclosed-key', action='store_true',
+                    help='also remove key-adjacent colour enclosed by closed artwork, such as frames')
     args = ap.parse_args()
-    im, pockets = cutout(args.input)
+    im, pockets = cutout(args.input, args.remove_enclosed_key)
     arr = np.array(im).astype(np.float32)
     arr[..., :3] *= arr[..., 3:4] / 255  # premultiply before resizing
     small = Image.fromarray(arr.astype(np.uint8), 'RGBA').resize((args.size, args.size), Image.LANCZOS)
