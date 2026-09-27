@@ -4,9 +4,8 @@
 // different things (a "reset progress" action should never touch a
 // person's audio preference, and vice versa).
 //
-// Music and SFX are consumed by their respective audio utilities;
-// haptics remains a persisted preference for the future Capacitor
-// integration.
+// Music, SFX, and native haptics are consumed by their respective
+// utilities; web calls remain harmless no-ops.
 
 const STORAGE_KEY = 'wordswoop_settings';
 

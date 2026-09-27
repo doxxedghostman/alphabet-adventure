@@ -4,7 +4,7 @@ import { addWoodPanel, preloadWoodPanel } from '../utils/woodPanel.js';
 import { getGems } from '../utils/currencyStore.js';
 import { getBoosters, MAX_BOOSTERS } from '../utils/boosterStore.js';
 import { OFFER_CAPS, recordWatch, watchesRemaining } from '../utils/shopStore.js';
-import { showRewardedAdForGems, showRewardedAdForBooster, showRewardedAdForBundle } from '../utils/adsStore.js';
+import { formatAdError, showRewardedAdForGems, showRewardedAdForBooster, showRewardedAdForBundle } from '../utils/adsStore.js';
 import { playAdReward } from '../utils/sfx.js';
 import { showRewardPopup } from '../utils/rewardPopup.js';
 import { playGroup } from '../utils/music.js';
@@ -192,7 +192,7 @@ export class ShopScene extends Phaser.Scene {
       result = await offer.watch();
     } catch (error) {
       console.warn('ShopScene: rewarded ad failed', error);
-      result = { granted: false, reason: 'error' };
+      result = { granted: false, reason: 'error', error };
     }
     if (result.granted) recordWatch(offer.key);
     if (this.visit !== visit) return;
@@ -216,7 +216,7 @@ export class ShopScene extends Phaser.Scene {
       this.messageText.setText({
         'not-native': 'Rewarded ads are available in the mobile app.',
         dismissed: 'Ad not completed. No watch used.',
-        error: 'No ad available right now. Please try again.',
+        error: `No ad available (${formatAdError(result.error)})`,
       }[result.reason] || 'No reward earned. Please try again.');
     }
     this.refreshCards();

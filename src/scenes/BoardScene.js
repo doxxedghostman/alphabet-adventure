@@ -27,6 +27,7 @@ import { getWorld, WORLDS } from '../data/worlds.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
 import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } from '../utils/settingsStore.js';
 import { playGroup, setMusicEnabled } from '../utils/music.js';
+import { hapticLight, hapticMedium, hapticSuccess, hapticError } from '../utils/haptics.js';
 import { preloadBoardHud, computeHudLayout, createBoardHud } from '../utils/boardHud.js';
 import {
   playMatchChime,
@@ -361,7 +362,10 @@ export class BoardScene extends Phaser.Scene {
       scoreTarget: this.scoreTarget,
       goalLabel: isFree ? `Reach ${this.scoreTarget} points` : `Find: ${this.targetWord}`,
       moves: this.movesLeft,
-      onPause: () => this.showPauseMenu(),
+      onPause: () => {
+        hapticLight();
+        this.showPauseMenu();
+      },
       onBomb: () => this.onBombPressed(),
       onLens: () => this.onLensPressed(),
       onShuffle: () => this.onShufflePressed(),
@@ -463,6 +467,7 @@ export class BoardScene extends Phaser.Scene {
     hit.on('pointerup', () => {
       value = !value;
       onChange(value);
+      hapticLight();
       track.setFillStyle(value ? onColor : offColor);
       this.tweens.add({ targets: knob, x: trackX + (value ? knobOffset : -knobOffset), duration: 120, ease: 'Sine.easeOut' });
     });
@@ -561,6 +566,7 @@ export class BoardScene extends Phaser.Scene {
     }
 
     playBomb();
+    hapticError();
     this.spawnCandyPop('Boom!', '#ffd93d', { fontSize: '30px', y: this.toastY, sparkle: true });
     await this.clearTiles(cluster);
     await this.collapseAndRefill();
@@ -580,6 +586,7 @@ export class BoardScene extends Phaser.Scene {
   // instead of duplicating that logic here.
   showBoosterPurchasePrompt(type) {
     playBoosterEmpty();
+    hapticError();
     const cost = BOOSTER_GEM_COST[type];
     const label = { bomb: 'Bomb', shuffle: 'Shuffle', lens: 'Lens' }[type];
     const gems = getGems();
@@ -772,7 +779,10 @@ export class BoardScene extends Phaser.Scene {
     this.deselectTile();
     this.pointerDownTile = null;
     this.isBusy = true;
-    if (!silent) playShuffle();
+    if (!silent) {
+      playShuffle();
+      hapticMedium();
+    }
 
     const tiles = [];
     for (let row = 0; row < BOARD_SIZE; row++) {
@@ -1193,6 +1203,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   setTileHighlight(tile, on) {
+    if (on) hapticLight();
     if (tile.usesTileArt) {
       const half = this.tileSize / 2;
       tile.selectionOutline.clear();
@@ -1255,6 +1266,7 @@ export class BoardScene extends Phaser.Scene {
   showLensHint({ tileA, tileB }) {
     this.clearLensHint();
     playLensHint();
+    hapticMedium();
     const tiles = [tileA, tileB];
     const glows = tiles.map((tile) => this.add
       .rectangle(tile.container.x, tile.container.y, this.tileSize + 12, this.tileSize + 12, 0x67e8ff, 0.16)
@@ -1336,6 +1348,7 @@ export class BoardScene extends Phaser.Scene {
       // No word anywhere on the board as a result of this swap - bounce
       // back, classic invalid-swap feedback. Doesn't cost a move.
       playInvalidSwap();
+      hapticError();
       const failColor = 0xff4757;
       await Promise.all(
         [tileA, tileB].map((tile) => {
@@ -1369,6 +1382,7 @@ export class BoardScene extends Phaser.Scene {
       this.showComboText(1, wordsFound, 'x2!');
     } else {
       playMatchChime();
+      hapticMedium();
       this.showWordToast(wordsFound[0], '#7CFC9A');
     }
 
@@ -1487,6 +1501,7 @@ export class BoardScene extends Phaser.Scene {
     addGems(ROUND_WIN_GEMS);
     playLevelWin();
     playGemCollect();
+    hapticSuccess();
     syncLocalProgressToCloud();
 
     const isBoss = this.worldId && this.levelNum === LEVELS_PER_WORLD;
@@ -1509,6 +1524,7 @@ export class BoardScene extends Phaser.Scene {
     this.deselectTile();
     loseLife();
     playLevelLose();
+    hapticError();
     const message = this.level.type === 'free'
       ? `Needed: ${this.scoreTarget} points (got ${this.score})`
       : `Needed: ${this.targetWord}`;
@@ -1666,6 +1682,7 @@ export class BoardScene extends Phaser.Scene {
       this.tweens.add({ targets: button, scale: 0.94, duration: 80 });
     });
     button.on('pointerup', () => {
+      hapticLight();
       this.tweens.add({
         targets: button,
         scale: 1,
@@ -1787,8 +1804,13 @@ export class BoardScene extends Phaser.Scene {
   }
 
   showComboText(chainLevel, wordsFound, labelOverride) {
-    if (wordsFound.length > 1 || chainLevel > 1) playCombo(chainLevel);
-    else playMatchChime();
+    if (wordsFound.length > 1 || chainLevel > 1) {
+      playCombo(chainLevel);
+      hapticSuccess();
+    } else {
+      playMatchChime();
+      hapticMedium();
+    }
     const tierColors = ['#ffd93d', '#ff9f43', '#ff6b9d', '#b57bff'];
     const color = tierColors[Math.min(chainLevel - 1, tierColors.length - 1)];
     const text = labelOverride

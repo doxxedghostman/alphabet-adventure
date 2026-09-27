@@ -12,6 +12,9 @@ import { ShopScene } from './scenes/ShopScene.js';
 import { getCanvasSize, LETTERBOX_BG_HEX } from './config.js';
 import { initAuth } from './utils/authStore.js';
 import { initAds } from './utils/adsStore.js';
+import { App } from '@capacitor/app';
+import { isMusicOn, isSfxOn } from './utils/settingsStore.js';
+import { suspendContext, resumeContext } from './utils/sfx.js';
 
 const CANVAS_SIZE = getCanvasSize();
 
@@ -84,3 +87,13 @@ initAuth();
 // a no-op on web (see adsStore.js), so this is safe to call
 // unconditionally rather than checking platform here too.
 initAds();
+
+// Music and SFX share this one AudioContext, so app lifecycle suspension
+// silences both while preserving the current looping track and position.
+App.addListener('appStateChange', ({ isActive }) => {
+  if (isActive) {
+    resumeContext(isMusicOn() || isSfxOn());
+  } else {
+    suspendContext();
+  }
+});

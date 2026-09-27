@@ -2,7 +2,7 @@ import Phaser from 'phaser';
 import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
 import { getGems } from '../utils/currencyStore.js';
 import { getLivesStatus, MAX_LIVES } from '../utils/livesStore.js';
-import { showRewardedAd } from '../utils/adsStore.js';
+import { showRewardedAd, formatAdError } from '../utils/adsStore.js';
 import { syncLocalProgressToCloud, getAvatarUrl, isSignedIn } from '../utils/authStore.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
 import { showRewardPopup } from '../utils/rewardPopup.js';
@@ -458,7 +458,7 @@ export class HomeHubScene extends Phaser.Scene {
     const message = {
       'not-native': 'Ads only work in the installed app, not this preview.',
       dismissed: 'Ad closed early \u2013 watch the whole thing to earn gems!',
-      error: 'No ad available right now \u2013 try again soon.',
+      error: `No ad available (${formatAdError(result.error)})`,
     }[result.reason] || 'No ad available right now \u2013 try again soon.';
 
     this.showComingSoonToast(message);
@@ -479,6 +479,8 @@ export class HomeHubScene extends Phaser.Scene {
         fontSize: '16px',
         fontStyle: 'bold',
         color: '#ffffff',
+        align: 'center',
+        wordWrap: { width: width - 64 },
       })
       .setOrigin(0.5)
       .setDepth(1)
@@ -497,7 +499,8 @@ export class HomeHubScene extends Phaser.Scene {
       alpha: 1,
       duration: 120,
       onComplete: () => {
-        this.time.delayedCall(1100, () => {
+        const holdMs = text.startsWith('No ad available (') ? 5000 : 1100;
+        this.time.delayedCall(holdMs, () => {
           this.tweens.add({
             targets: [bg, label],
             alpha: 0,

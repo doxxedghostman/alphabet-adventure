@@ -32,6 +32,22 @@ import { addLives } from './livesStore.js';
 const AD_UNIT_ID = 'ca-app-pub-2830006716687955/8286704574';
 const GEM_REWARD_AMOUNT = 10;
 
+// Kept separate from ad control flow so native load/show failures can be
+// surfaced verbatim in debug UI without changing reward/dismissal behavior.
+export function formatAdError(error) {
+  const message = error?.message ? String(error.message) : '';
+  const code = error?.code != null ? String(error.code) : '';
+  if (code && message && !message.includes(code)) return `${code}: ${message}`;
+  if (message) return message;
+  if (code) return code;
+  if (typeof error === 'string') return error;
+  try {
+    const serialized = JSON.stringify(error);
+    if (serialized && serialized !== '{}') return serialized;
+  } catch {}
+  return 'unknown';
+}
+
 // Weighted reward pool, per chat: mostly gems, with Bomb/Shuffle/Life
 // deliberately rare ("hard to earn") rather than an even split - gems
 // are the safe, always-useful default; the others are a nice surprise

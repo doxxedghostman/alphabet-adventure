@@ -6,6 +6,7 @@ import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } f
 import { isSignedIn, getDisplayName, getAvatarUrl, signInWithGoogle, signOut, onAuthChange } from '../utils/authStore.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
 import { playGroup, setMusicEnabled } from '../utils/music.js';
+import { hapticLight } from '../utils/haptics.js';
 
 // Settings — was a small fixed-height popup inside HomeHubScene with
 // exactly two buttons (Reset Progress, Close). That doesn't scale to a
@@ -68,13 +69,11 @@ const INK_DISABLED = '#a89880';
 const LINK_ACCENT = '#a8460f';
 //
 // Audio toggles (per chat): Music/SFX/Vibration are persisted switches
-// (see settingsStore.js). Music and SFX are wired to their audio
-// utilities; vibration remains stored for the future Capacitor haptics
-// integration.
+// (see settingsStore.js) wired to their audio/haptics utilities.
 //
 // Status per section (update as each lands):
 //   Account         - real: Sign in with Google / guest+synced messaging / Sign Out
-//   Audio           - music/SFX wired; vibration persisted for future haptics support
+//   Audio           - music, SFX, and native vibration wired
 //   Notifications   - placeholder (explicitly deferred per chat)
 //   Support & Legal - Privacy/Terms/Contact real (placeholder destinations); Rate/Restore still placeholder
 //   Data            - Reset Progress and Sign Out are both real
@@ -415,6 +414,7 @@ export class SettingsScene extends Phaser.Scene {
       if (this.wasDrag()) return;
       value = !value;
       onChange(value);
+      hapticLight();
       track.setFillStyle(value ? onColor : offColor);
       this.tweens.add({
         targets: knob,

@@ -2,6 +2,7 @@ import { isSfxOn } from './settingsStore.js';
 
 let sharedContext = null;
 let sharedNoiseBuffer = null;
+let suspendedForBackground = false;
 
 export function ensureContext() {
   if (!sharedContext) {
@@ -9,11 +10,23 @@ export function ensureContext() {
     if (!AudioContextClass) return null;
     sharedContext = new AudioContextClass();
   }
-  if (sharedContext.state === 'suspended') {
+  if (sharedContext.state === 'suspended' && !suspendedForBackground) {
     sharedContext.resume().catch(() => {});
   }
   preloadRealSfx(sharedContext);
   return sharedContext;
+}
+
+export function suspendContext() {
+  suspendedForBackground = true;
+  if (!sharedContext || sharedContext.state !== 'running') return Promise.resolve();
+  return sharedContext.suspend().catch(() => {});
+}
+
+export function resumeContext(shouldResume = true) {
+  suspendedForBackground = false;
+  if (!shouldResume || !sharedContext || sharedContext.state !== 'suspended') return Promise.resolve();
+  return sharedContext.resume().catch(() => {});
 }
 
 // ---------- real audio-file playback (licensed SFX, Mixkit free license) ----------
