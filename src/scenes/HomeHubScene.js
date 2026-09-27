@@ -6,6 +6,7 @@ import { showRewardedAd } from '../utils/adsStore.js';
 import { syncLocalProgressToCloud, getAvatarUrl, isSignedIn } from '../utils/authStore.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
 import { showRewardPopup } from '../utils/rewardPopup.js';
+import { playGroup } from '../utils/music.js';
 
 // Home Hub (per chat): sits between the splash/logo Main Menu and the
 // World Map. Modeled on the reference mockup image the user provided -
@@ -100,6 +101,7 @@ export class HomeHubScene extends Phaser.Scene {
   }
 
   create(sceneData) {
+    playGroup('menu');
     const { width, height } = this.scale;
 
     this.createBackground(width, height);

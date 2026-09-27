@@ -3,6 +3,7 @@ import { getStatus, claimToday, REWARD_SCHEDULE } from '../utils/dailyRewardStor
 import { syncLocalProgressToCloud } from '../utils/authStore.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
 import { showRewardPopup } from '../utils/rewardPopup.js';
+import { playGroup } from '../utils/music.js';
 
 // Calendar / Daily Rewards has its own fantasy-castle identity. Reward
 // timing, streak resets, claim eligibility, and payouts still live wholly
@@ -32,6 +33,7 @@ export class CalendarScene extends Phaser.Scene {
   }
 
   create() {
+    playGroup('menu');
     const { width, height } = this.scale;
 
     const bg = this.add.image(width / 2, height / 2, 'calendarBg');

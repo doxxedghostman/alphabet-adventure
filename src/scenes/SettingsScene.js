@@ -5,6 +5,7 @@ import { resetProgress } from '../utils/progressStore.js';
 import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } from '../utils/settingsStore.js';
 import { isSignedIn, getDisplayName, getAvatarUrl, signInWithGoogle, signOut, onAuthChange } from '../utils/authStore.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
+import { playGroup, setMusicEnabled } from '../utils/music.js';
 
 // Settings — was a small fixed-height popup inside HomeHubScene with
 // exactly two buttons (Reset Progress, Close). That doesn't scale to a
@@ -66,17 +67,14 @@ const INK_MUTED = '#8a6a4a';
 const INK_DISABLED = '#a89880';
 const LINK_ACCENT = '#a8460f';
 //
-// Audio toggles (per chat): Music/SFX/Vibration are real, persisted
-// switches now (see settingsStore.js) — but there is still no audio
-// system in the codebase (no this.sound usage anywhere) and no
-// @capacitor/haptics dependency installed, so flipping these currently
-// changes only the stored preference, not any actual sound/vibration.
-// Whatever adds real audio/haptics later just needs to check
-// isMusicOn()/isSfxOn()/isHapticsOn() before playing anything.
+// Audio toggles (per chat): Music/SFX/Vibration are persisted switches
+// (see settingsStore.js). Music and SFX are wired to their audio
+// utilities; vibration remains stored for the future Capacitor haptics
+// integration.
 //
 // Status per section (update as each lands):
 //   Account         - real: Sign in with Google / guest+synced messaging / Sign Out
-//   Audio           - real toggles, persisted, not yet wired to actual sound/haptics (none exist)
+//   Audio           - music/SFX wired; vibration persisted for future haptics support
 //   Notifications   - placeholder (explicitly deferred per chat)
 //   Support & Legal - Privacy/Terms/Contact real (placeholder destinations); Rate/Restore still placeholder
 //   Data            - Reset Progress and Sign Out are both real
@@ -110,6 +108,7 @@ export class SettingsScene extends Phaser.Scene {
   }
 
   create() {
+    playGroup('menu');
     const { width, height } = this.scale;
     this.add.image(width / 2, height / 2, 'utilityBg').setDisplaySize(width, height);
     this.hudHeight = 56;
@@ -136,7 +135,10 @@ export class SettingsScene extends Phaser.Scene {
     y = this.addCollapsibleSection(y, 'account', 'Account', (y) => this.addAccountRows(y));
 
     y = this.addCollapsibleSection(y, 'audio', 'Audio', (y) => {
-      y = this.addToggleRow(y, 'Music', isMusicOn(), (value) => setMusicOn(value));
+      y = this.addToggleRow(y, 'Music', isMusicOn(), (value) => {
+        setMusicOn(value);
+        setMusicEnabled(value);
+      });
       y = this.addToggleRow(y, 'Sound effects', isSfxOn(), (value) => setSfxOn(value));
       y = this.addToggleRow(y, 'Vibration', isHapticsOn(), (value) => setHapticsOn(value));
       return y;

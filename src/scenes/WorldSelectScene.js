@@ -3,6 +3,7 @@ import { APP_BG_COLOR_RGB } from '../config.js';
 import { WORLDS } from '../data/worlds.js';
 import { isWorldUnlocked, completedCountForWorld, isWorldComplete, getLastPlayed, LEVELS_PER_WORLD } from '../utils/progressStore.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
+import { playGroup } from '../utils/music.js';
 
 // World Map entry screen (PLAN.md §8.5).
 //
@@ -41,6 +42,7 @@ export class WorldSelectScene extends Phaser.Scene {
   }
 
   create() {
+    playGroup('menu');
     const { width, height } = this.scale;
     this.hudHeight = 64;
 

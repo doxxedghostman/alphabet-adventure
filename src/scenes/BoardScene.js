@@ -26,6 +26,7 @@ import { WORLD_TILES, getWorldTile } from '../data/worldTiles.js';
 import { getWorld, WORLDS } from '../data/worlds.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
 import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } from '../utils/settingsStore.js';
+import { playGroup, setMusicEnabled } from '../utils/music.js';
 import { preloadBoardHud, computeHudLayout, createBoardHud } from '../utils/boardHud.js';
 import {
   playMatchChime,
@@ -196,6 +197,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   create(sceneData) {
+    playGroup('gameplay');
     this.isBusy = false;
     this.isPaused = false;
     this.score = 0;
@@ -417,7 +419,10 @@ export class BoardScene extends Phaser.Scene {
 
     // Same saved switches as the Settings page (utils/settingsStore.js),
     // so flipping one here changes it there too.
-    this.addPauseToggle(card, cardWidth, -82, 'Music', isMusicOn(), setMusicOn);
+    this.addPauseToggle(card, cardWidth, -82, 'Music', isMusicOn(), (value) => {
+      setMusicOn(value);
+      setMusicEnabled(value);
+    });
     this.addPauseToggle(card, cardWidth, -36, 'Sound effects', isSfxOn(), setSfxOn);
     this.addPauseToggle(card, cardWidth, 10, 'Vibration', isHapticsOn(), setHapticsOn);
 

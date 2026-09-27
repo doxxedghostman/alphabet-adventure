@@ -4,13 +4,9 @@
 // different things (a "reset progress" action should never touch a
 // person's audio preference, and vice versa).
 //
-// NOTE: musicOn/sfxOn/hapticsOn are wired up to the Settings screen
-// toggle rows, but nothing in the game actually reads them yet — there
-// is no audio system (no this.sound usage anywhere) and no
-// @capacitor/haptics dependency installed. The toggles persist a
-// preference now so the UI is real and the value survives a reload;
-// whatever adds music/SFX/haptics later just needs to check these
-// getters before playing anything.
+// Music and SFX are consumed by their respective audio utilities;
+// haptics remains a persisted preference for the future Capacitor
+// integration.
 
 const STORAGE_KEY = 'wordswoop_settings';
 

@@ -7,6 +7,7 @@ import { OFFER_CAPS, recordWatch, watchesRemaining } from '../utils/shopStore.js
 import { showRewardedAdForGems, showRewardedAdForBooster, showRewardedAdForBundle } from '../utils/adsStore.js';
 import { playAdReward } from '../utils/sfx.js';
 import { showRewardPopup } from '../utils/rewardPopup.js';
+import { playGroup } from '../utils/music.js';
 
 const OFFERS = [
   { key: 'gems', title: '+25 Gems', icons: ['gems'], watch: () => showRewardedAdForGems(25) },
@@ -36,6 +37,7 @@ export class ShopScene extends Phaser.Scene {
   }
 
   create() {
+    playGroup('menu');
     const { width, height } = this.scale;
     this.hudHeight = 56;
     this.pendingOffer = null;

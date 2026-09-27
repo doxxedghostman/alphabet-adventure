@@ -4,6 +4,7 @@ import { getWorld } from '../data/worlds.js';
 import { getPathNodes } from '../data/levelPaths.js';
 import { levelIdFor, isLevelUnlocked, isLevelComplete, LEVELS_PER_WORLD } from '../utils/progressStore.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
+import { playGroup } from '../utils/music.js';
 
 // Per-world node path (PLAN.md §8.5): a scrollable background with 20
 // code-drawn nodes (lock icon / number / star depending on progress),
@@ -48,6 +49,7 @@ export class LevelPathScene extends Phaser.Scene {
   }
 
   create() {
+    playGroup('menu');
     const { width, height } = this.scale;
 
     const bg = this.add.image(0, 0, this.world.bgKey).setOrigin(0);

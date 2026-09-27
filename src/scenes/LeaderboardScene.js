@@ -3,6 +3,7 @@ import { APP_BG_COLOR } from '../config.js';
 import { supabase } from '../utils/supabaseClient.js';
 import { isSignedIn } from '../utils/authStore.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
+import { playGroup } from '../utils/music.js';
 
 // Leaderboard — Home Hub's Leaderboard icon used to just show a
 // "coming soon" toast; this is the real screen. Ranks players by
@@ -49,6 +50,7 @@ export class LeaderboardScene extends Phaser.Scene {
   }
 
   create() {
+    playGroup('menu');
     const { width, height } = this.scale;
     this.hudHeight = 56;
 
