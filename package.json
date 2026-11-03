@@ -21,7 +21,7 @@
     "phaser": "^3.80.1"
   },
   "devDependencies": {
-    "vite": "^6.4.3"
+    "vite": "^6.4.5"
   },
   "overrides": {
     "uuid": "^14.0.2"
