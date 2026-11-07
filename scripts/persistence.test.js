@@ -71,6 +71,8 @@ function board() {
   const Scene = runInNewContext(`${source}\nBoardScene`, {
     Phaser: { Scene: class {} }, BOARD_SIZE: 5, ...progress, ...sessions,
     bindHardwareBack() {}, getLivesStatus: () => ({ lives: 5 }),
+    playGroup() {}, playLevelWin() {}, playGemCollect() {}, playLevelLose() {},
+    playMatchChime() {}, hapticMedium() {}, hapticSuccess() {}, hapticError() {},
     getLevel: (id) => ({ id, maxSwaps: 15, type: 'free', scoreTarget: 10000 }),
     getNextLevelId: () => 5, addGems() {}, syncLocalProgressToCloud() {}, loseLife() {},
   });

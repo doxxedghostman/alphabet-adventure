@@ -7,7 +7,8 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "node --test scripts/gameplay.test.js scripts/persistence.test.js && node scripts/test_symbolicBoard.mjs"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.1.0",

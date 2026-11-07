@@ -9,7 +9,6 @@
 // Magic Mountain) before committing: both come out ~21-23% bigger per tile
 // at the same edge-to-edge fill they already have today. See worldFrames.js
 // for the resulting per-world tileSize/tileGap/tileFontSize recalculation.
-import Phaser from 'phaser';
 
 export const BOARD_SIZE = 5;
 export const MIN_WORD_LENGTH = 3;
@@ -89,7 +88,7 @@ export function getCanvasSize() {
   // without a window), rather than dividing by zero.
   const hasWindow = typeof window !== 'undefined' && window.innerWidth > 0 && window.innerHeight > 0;
   const deviceRatio = hasWindow ? window.innerHeight / window.innerWidth : 19.5 / 9;
-  const ratio = Phaser.Math.Clamp(deviceRatio, MIN_HEIGHT_RATIO, MAX_HEIGHT_RATIO);
+  const ratio = Math.max(MIN_HEIGHT_RATIO, Math.min(MAX_HEIGHT_RATIO, deviceRatio));
 
   return {
     width,

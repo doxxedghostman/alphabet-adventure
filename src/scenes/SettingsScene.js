@@ -22,17 +22,13 @@ import { hapticLight } from '../utils/haptics.js';
 // visibly-disabled "Coming soon" row rather than being omitted, so
 // nothing looks missing while it's still pending.
 //
-// Support & Legal links (per chat): Privacy Policy / Terms of Service
-// point at placeholder URLs — nothing real published yet, swap
-// PLACEHOLDER_PRIVACY_URL / PLACEHOLDER_TERMS_URL once they exist.
+// Privacy Policy / Terms of Service stay disabled until real pages exist.
 // Contact Support opens a mailto: to wordswoop@gmail.com — per chat
 // this should really be a studio-level address rather than a
 // per-game one, but that hasn't been created yet, so this is a
 // placeholder to swap once it is. Rate the App and Restore Purchases
 // stay as "Coming soon" placeholders (no store listing yet, no IAP
 // wired up yet) rather than half-real links to nothing.
-const PLACEHOLDER_PRIVACY_URL = 'https://example.com/wordswoop/privacy';
-const PLACEHOLDER_TERMS_URL = 'https://example.com/wordswoop/terms';
 const SUPPORT_EMAIL = 'wordswoop@gmail.com';
 //
 // Section collapse state (per chat): each section (Account, Audio,
@@ -151,8 +147,8 @@ export class SettingsScene extends Phaser.Scene {
     });
 
     y = this.addCollapsibleSection(y, 'support', 'Support & Legal', (y) => {
-      y = this.addLinkRow(y, 'Privacy Policy', PLACEHOLDER_PRIVACY_URL);
-      y = this.addLinkRow(y, 'Terms of Service', PLACEHOLDER_TERMS_URL);
+      y = this.addPlaceholderRow(y, 'Privacy Policy', 'Coming soon');
+      y = this.addPlaceholderRow(y, 'Terms of Service', 'Coming soon');
       y = this.addLinkRow(y, 'Contact Support', `mailto:${SUPPORT_EMAIL}`);
       y = this.addPlaceholderRow(y, 'Rate the App', 'Coming soon');
       y = this.addPlaceholderRow(y, 'Restore Purchases', 'Coming soon');

@@ -10,9 +10,8 @@ const STORAGE_KEY = 'wordswoop_boosters';
 
 export const BOOSTER_TYPES = ['bomb', 'shuffle', 'lens'];
 
-// Max held at once: 2 Bomb, 3 Shuffle, 3 Lens. A reward that would
-// push past this (Calendar Day 7, Watch to Earn) is simply not
-// granted rather than banked past the cap - see addBooster() below.
+// Max held at once: 2 Bomb, 3 Shuffle, 3 Lens. Callers handle full
+// inventory by offering an alternate reward where appropriate.
 export const MAX_BOOSTERS = { bomb: 2, shuffle: 3, lens: 3 };
 const DEFAULTS = {
   bomb: MAX_BOOSTERS.bomb,

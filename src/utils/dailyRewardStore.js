@@ -11,7 +11,7 @@
 // a rolling 24h window.
 
 import { addGems } from './currencyStore.js';
-import { addBooster, randomBoosterType } from './boosterStore.js';
+import { addBooster, getBoosters, MAX_BOOSTERS, BOOSTER_TYPES } from './boosterStore.js';
 
 const STORAGE_KEY = 'wordswoop_daily_reward';
 
@@ -113,9 +113,16 @@ export function claimToday() {
     addGems(schedule.amount);
     reward = { type: 'gems', amount: schedule.amount };
   } else {
-    const boosterType = randomBoosterType();
-    addBooster(boosterType);
-    reward = { type: 'booster', boosterType, amount: schedule.amount };
+    const inventory = getBoosters();
+    const available = BOOSTER_TYPES.filter((type) => inventory[type] < MAX_BOOSTERS[type]);
+    if (available.length > 0) {
+      const boosterType = available[Math.floor(Math.random() * available.length)];
+      addBooster(boosterType);
+      reward = { type: 'booster', boosterType, amount: schedule.amount };
+    } else {
+      addGems(5);
+      reward = { type: 'gems', amount: 5 };
+    }
   }
 
   saveRaw({ streakDay: day, lastClaimDate: todayStr() });

@@ -13,7 +13,8 @@ import {
 } from '../config.js';
 import { WORD_SET } from '../data/wordlist.js';
 import { getLevel, getNextLevelId } from '../data/levels.js';
-import { generateGuaranteedBoard, SCRAMBLE_COUNT_BY_LENGTH } from '../utils/levelGenerator.js';
+import { generateGuaranteedBoard } from '../utils/levelGenerator.js';
+import { fillTargetLetterDeficits } from '../utils/targetLetters.js';
 import { completeLevel, levelIdFor, LEVELS_PER_WORLD, setLastPlayed } from '../utils/progressStore.js';
 import { saveSession, getSession, clearSession } from '../utils/sessionStore.js';
 import { addGems, getGems } from '../utils/currencyStore.js';
@@ -792,20 +793,9 @@ export class BoardScene extends Phaser.Scene {
     }
     const originalLetters = tiles.map((t) => t.letter);
 
-    // A shuffle only rearranges the existing letter multiset - it can never
-    // introduce a letter the board doesn't already have. If a target letter
-    // has drifted out entirely, inject it here before shuffling (the later
-    // resolveAutoMatches(1) call below won't help with this: it only runs
-    // ensureTargetLettersPresent() when a cascade actually happens).
+    // Restore any missing target-letter copies before shuffling.
     // Free-play levels have no target word, so nothing to preserve here.
-    if (this.targetWord) {
-      for (const letter of new Set(this.targetWord.split(''))) {
-        if (!originalLetters.includes(letter)) {
-          const idx = Math.floor(Math.random() * originalLetters.length);
-          originalLetters[idx] = letter;
-        }
-      }
-    }
+    if (this.targetWord) originalLetters.splice(0, originalLetters.length, ...fillTargetLetterDeficits(originalLetters, this.targetWord));
 
     let candidate = [...originalLetters];
     let attempts = 0;
@@ -879,16 +869,10 @@ export class BoardScene extends Phaser.Scene {
       return;
     }
     // Target-word levels (every 5th level, per PLAN.md) use the
-    // guaranteed generator: it builds the board backwards from a solved
-    // state so targetWord is provably reachable within maxSwaps, instead
-    // of the old "fill randomly, hope the letters happen to line up"
-    // approach. Free-play levels don't have a fixed word to guarantee, so
-    // they keep the original random fill.
+    // generator with a verified one-swap target solution. Free-play levels
+    // have no fixed word and keep the random fill.
     if (this.level.type === 'target') {
-      const scrambleCount = this.level.scrambleCount
-        ?? SCRAMBLE_COUNT_BY_LENGTH[this.targetWord.length]
-        ?? 10;
-      const { grid: letterGrid } = generateGuaranteedBoard(this.targetWord, scrambleCount);
+      const { grid: letterGrid } = generateGuaranteedBoard(this.targetWord);
       for (let row = 0; row < BOARD_SIZE; row++) {
         this.grid.push([]);
         for (let col = 0; col < BOARD_SIZE; col++) {
@@ -908,37 +892,22 @@ export class BoardScene extends Phaser.Scene {
     this.ensureTargetLettersPresent();
   }
 
-  // Necessary-but-not-sufficient guarantee for target-word solvability
-  // (full in-order/adjacency reachability-within-moves is still an open
-  // problem - see PLAN.md): makes sure every distinct letter the target
-  // word needs actually exists SOMEWHERE on the board. Without this, a
-  // level's target can be flat-out impossible from the deal alone (e.g.
-  // "BAG" with zero B tiles anywhere) - low-frequency letters like B, Q,
-  // X, Z are common enough that this isn't rare bad luck, it happens
-  // routinely with a ~2% per-tile chance for a letter like B.
+  // Maintain the full target-letter multiset after random refills, including
+  // repeated letters such as the two E tiles needed for BEE.
   //
   // Called after the initial deal AND after every refill (new tiles are
   // random too, so a needed letter can vanish again once its last copy on
   // the board gets cleared as part of scoring some other word).
   ensureTargetLettersPresent() {
     if (!this.targetWord) return; // free-play levels have no target word to guarantee
-    const needed = [...new Set(this.targetWord.split(''))].filter((letter) => !this.boardHasLetter(letter));
-    if (needed.length === 0) return;
-
-    // Sample DISTINCT tiles for the missing letters (not just independent
-    // random picks) - otherwise two missing letters can land on the same
-    // tile and overwrite each other, silently undoing the guarantee for
-    // whichever one got placed first.
-    const cells = [];
+    const tiles = [];
     for (let row = 0; row < BOARD_SIZE; row++) {
-      for (let col = 0; col < BOARD_SIZE; col++) cells.push([row, col]);
+      for (let col = 0; col < BOARD_SIZE; col++) tiles.push(this.grid[row][col]);
     }
-    this.shuffleArray(cells);
-
-    needed.forEach((letter, i) => {
-      const [row, col] = cells[i];
-      const tile = this.grid[row]?.[col];
-      if (!tile) return;
+    const letters = fillTargetLetterDeficits(tiles.map((tile) => tile.letter), this.targetWord);
+    tiles.forEach((tile, i) => {
+      const letter = letters[i];
+      if (tile.letter === letter) return;
       tile.letter = letter;
       tile.text.setText(letter);
       this.setTileColor(tile, letter);

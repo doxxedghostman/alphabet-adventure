@@ -27,7 +27,7 @@ import { AdMob, RewardAdPluginEvents } from '@capacitor-community/admob';
 import { Capacitor } from '@capacitor/core';
 import { addGems } from './currencyStore.js';
 import { addBooster } from './boosterStore.js';
-import { addLives } from './livesStore.js';
+import { addLives, getLivesStatus, MAX_LIVES } from './livesStore.js';
 
 const AD_UNIT_ID = 'ca-app-pub-2830006716687955/8286704574';
 const GEM_REWARD_AMOUNT = 10;
@@ -69,19 +69,29 @@ function pickReward() {
   return 'gems'; // unreachable in practice, just a safe fallback
 }
 
-function grantReward(type) {
+export function grantReward(type) {
   switch (type) {
     case 'bomb': {
       const result = addBooster('bomb');
-      if (!result.granted) return { type: 'gems', amount: GEM_REWARD_AMOUNT, fullInventory: 'bomb' };
+      if (!result.granted) {
+        addGems(GEM_REWARD_AMOUNT);
+        return { type: 'gems', amount: GEM_REWARD_AMOUNT, fullInventory: 'bomb' };
+      }
       return { type: 'bomb', amount: 1 };
     }
     case 'shuffle': {
       const result = addBooster('shuffle');
-      if (!result.granted) return { type: 'gems', amount: GEM_REWARD_AMOUNT, fullInventory: 'shuffle' };
+      if (!result.granted) {
+        addGems(GEM_REWARD_AMOUNT);
+        return { type: 'gems', amount: GEM_REWARD_AMOUNT, fullInventory: 'shuffle' };
+      }
       return { type: 'shuffle', amount: 1 };
     }
     case 'life':
+      if (getLivesStatus().lives >= MAX_LIVES) {
+        addGems(GEM_REWARD_AMOUNT);
+        return { type: 'gems', amount: GEM_REWARD_AMOUNT, fullInventory: 'life' };
+      }
       addLives(1);
       return { type: 'life', amount: 1 };
     case 'gems':
