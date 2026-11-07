@@ -2215,3 +2215,44 @@ whole effort is replacing.
 downward" feature will match sections better than independent
 generations), run this script against each, paste the results into
 `levelPaths.js`, and spot-check on device.
+
+
+### Milestone 55 — Forward words, shuffle consistency, booster persistence and cloud reconciliation
+
+2026-11-08. Words now read left-to-right or top-to-bottom only. Shared
+`wordRules.js` drives matching, validity checks, generators and the symbolic
+simulator. Target detection no longer reverses the target. Existing unlocked
+world/level behaviour and the one-swap target-board guarantee are preserved.
+
+Fixed Shuffle's lost completion callback: internal letters, visible labels
+and colours now update together. Bomb and Shuffle save their settled attempt.
+Restored attempts are checked for legal moves under the new direction rule.
+Bounded shuffle failure now creates a playable board rather than endlessly
+reshuffling an unusable letter pool. Purchase prompts block board/gear input,
+prevent duplicate purchase/ad taps and ignore stale scene callbacks. Lens
+rewards have their own icon/label in Shop, Calendar and Home Hub.
+
+Cloud uploads now send JSON completion arrays and union local/cloud progress.
+Gems restore on startup/sign-in; persistent per-device operation streams and
+receipts in `wordswoop_profiles.settings._gemReceipts` make retries idempotent.
+Writes compare the existing `updated_at` and gem balance, re-reading on
+conflict. Rewards/spends during an in-flight sync remain pending. Wallets
+are kept separately when changing accounts. Modern guest balances transfer
+once; legacy absolute balances use the higher local/cloud value on migration
+to avoid double-crediting an already-uploaded balance. No schema changes or
+service-role keys are involved. Visible balances update after reconciliation;
+Settings no longer labels a failed sync as successful. Offline changes retry
+on reconnect, app resume or the next reward/spend.
+
+Updated vulnerable build/CLI dependencies within their existing version ranges.
+Validation: 28 automated tests, symbolic smoke checks and four browser checks
+(two phone sizes plus word/Lens and restored-login coverage) passed.
+Tests cover word directions, initial and target boards, shuffle display,
+booster saving, modal input, cloud restore, offline/retry/concurrent-write and
+account-switch cases. See `npm test` and `npm run test:browser` for the checks.
+
+Release verification: production web build and Capacitor Android sync checked.
+Native AdMob/Google OAuth and the live cloud profile still require a signed
+Android device check. The connected database accounts in this session did
+not include `kaeiaiesavwsebyhkgig`; cloud conflict/retry behaviour was tested
+with controlled responses. Play Store signing/listing is a later step.

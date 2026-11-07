@@ -2,13 +2,14 @@
   "name": "alphabet-adventure",
   "version": "0.1.0",
   "private": true,
-  "description": "Phase 1 prototype: 7x7 letter-tile match-3 board (swap, match, clear, fall, score).",
+  "description": "WordSwoop: 5x5 word-swap puzzle adventure.",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "node --test scripts/gameplay.test.js scripts/persistence.test.js && node scripts/test_symbolicBoard.mjs"
+    "test": "node --test scripts/gameplay.test.js scripts/persistence.test.js scripts/wordRules.test.js scripts/cloudProgress.test.js && node scripts/test_symbolicBoard.mjs",
+    "test:browser": "node --test scripts/browser.test.mjs"
   },
   "dependencies": {
     "@capacitor-community/admob": "^8.1.0",
@@ -18,11 +19,12 @@
     "@capacitor/cli": "^8.5.2",
     "@capacitor/core": "^8.5.2",
     "@capacitor/haptics": "^8.0.2",
-    "@supabase/supabase-js": "^2.116.0",
+    "@supabase/supabase-js": "2.116.0",
     "phaser": "^3.80.1"
   },
   "devDependencies": {
-    "vite": "^6.4.3"
+    "playwright": "^1.65.0",
+    "vite": "^6.4.5"
   },
   "overrides": {
     "uuid": "^14.0.2"

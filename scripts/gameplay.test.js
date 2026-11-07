@@ -19,9 +19,8 @@ beforeEach(() => {
 });
 
 function containsWord(grid, word) {
-  const reversed = [...word].reverse().join('');
   const lines = [...grid, ...grid[0].map((_, col) => grid.map((row) => row[col]))];
-  return lines.some((line) => line.join('').includes(word) || line.join('').includes(reversed));
+  return lines.some((line) => line.join('').includes(word));
 }
 
 test('every target level starts match-free and has a legal winning swap', () => {

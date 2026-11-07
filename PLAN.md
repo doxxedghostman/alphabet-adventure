@@ -19,8 +19,23 @@ Next.js if a web/PWA build is wanted later. Backend: Supabase, reusing
 Kid Number Adventure's existing project (`wordswoop_`-prefixed tables)
 rather than a separate one — see section 8.6 for the account model.
 
-> **Status:** Phase 1 prototype, live on `main`. See `update.md` for the
-> detailed progress log — this file is the design doc, not the changelog.
+> **Current implementation (2026-11-08):** 5x5 Word-Swap; words read
+> **left-to-right or top-to-bottom only**. Ten worlds / 200 level definitions,
+> local progress and unfinished-attempt resume, lives, Bomb/Shuffle/Lens,
+> daily check-in rewards, rewarded-ad Shop and Google sign-in are implemented.
+> Cloud progress is union-merged as JSON arrays. Gems use per-device receipts
+> in the existing profile settings JSON and optimistic concurrency on
+> `updated_at`, so retries do not duplicate rewards or overwrite another
+> device's changes. Existing legacy gem balances migrate using the higher
+> local/cloud balance, rather than adding potentially duplicated balances.
+> No database schema migration is required. Live cloud/device verification is
+> still required on the configured Supabase project before release.
+>
+> Real saved stars/best scores, obstacles, special word-created tiles, daily
+> puzzles, achievements and distinctive boss challenges remain planned.
+> All worlds/levels stay unlocked by explicit design choice. Sections below
+> include historical build phases; this status takes precedence over old
+> descriptions of placeholders. `update.md` records implementation history.
 
 ---
 
@@ -59,7 +74,7 @@ Player starts at World 1, Level 1.
 - Player taps or swipes two orthogonally-adjacent tiles to swap them —
   classic Candy Crush swap input, not a multi-tile drag.
 - After the swap, the whole board is scanned for any 3-5 letter
-  straight-line word (row or column, either reading direction) that the
+  straight-line word (rows left-to-right, columns top-to-bottom) that the
   swap created. A single swap can complete more than one word at once
   (e.g. it finishes a word in its row and a different word in its
   column simultaneously) — both clear.
@@ -129,11 +144,11 @@ Top to bottom (all sized for the fixed 516px-wide canvas):
    3 or fewer moves.
 4. **The board frame**, centered in the space between the banner and
    the booster bar (slightly above the exact middle).
-5. **Wood bottom bar** — big round Bomb and Shuffle buttons with count
+5. **Wood bottom bar** — big round Bomb, Shuffle and Lens buttons with count
    badges (red when in stock, grey at 0 and the button dims).
 6. **Pause card** (gear): Music / Sound effects / Vibration toggles
    (the same saved settings as the Settings page) + Resume + Leave
-   Level. No Restart on purpose - Restart is what Bomb costs. Settings
+   Level. Bomb clears a connected cluster; it does not restart the level. Settings
    itself cannot be reused here: it is a full scene that would end the
    level and always returns to the Home Hub.
 
@@ -368,16 +383,11 @@ tile's frame/nameplate/gem drawn in code rather than baked into one
 image - keeps the ornate-ish look while staying responsive to any
 screen size, same as `HomeHubScene`'s icon grid.
 
-**Not done:** hand-placed node paths for worlds 2-10 (deferred until
-each is reachable/authored); the full 200-level content list is now 20
-of 200 (see levels.js's own note and update.md Milestone 39) so most
-level nodes past Candy Garden's first 20 currently load placeholder
-content via `getLevel()`'s fallback rather than unique target
-words/score targets - a content-authoring gap, not a World Map code
-gap. Also open: a pixel-accurate (transparent-background, not cropped)
-ornate frame/nameplate asset, if the code-drawn version's look isn't
-close enough to the mockup - see update.md Milestone 42 for how it'd
-slot in.
+**Remaining presentation work:** replace the mirrored/blurred path art and
+measure the per-world node paths against the new art. All 200 levels now
+have their own definitions; nodes no longer depend on placeholder level-one
+fallbacks. A reusable ornate frame/nameplate asset is another optional
+presentation improvement.
 
 ## 8.6 Home Hub — implementation notes
 
@@ -427,14 +437,10 @@ icon, gem icon, and a newer transparent-background logo swapped in
 per Milestone 26) - full detail and the several rounds of
 animation-effects-added-then-stripped-back-out is in `update.md`
 (Milestones 18-20), not repeated here since it's implementation
-history rather than design intent. Design intent that *is* still
-true: shop/gallery/trophy/leaderboard/coin-shop/calendar/video are all
-placeholders with no real system behind any of them yet (tap just
-bounces, does nothing) - section 14 below is the plan for what most of
-them eventually become. Avatar/currency/name are also placeholders
-pending the Google sign-in work (Supabase schema is live — see
-update.md Milestone 25 — but the client-side auth flow isn't wired up
-yet).
+history rather than design intent. Current Home Hub: Shop, Leaderboard, Calendar and Watch to Earn are
+functional. Guest progress and currency persist locally; signed-in players
+can sync completed levels, gems and preferences through their cloud profile.
+
 
 **Account / sign-in model (decided AND built, see update.md Milestones
 25 + 29):** guest play is never blocked — Home Hub, World Map, and
@@ -456,21 +462,17 @@ identity pool by deliberate choice rather than a dedicated
 WordSwoop-only client.
 
 **Calendar (daily rewards) is real now** (`src/scenes/CalendarScene.js`
-— see update.md Milestone 31): a 7-day check-in cycle, local-only
-(localStorage, same pattern as progress/settings — does not yet sync
-to `wordswoop_profiles.gems`). Days 1-3 pay 3 gems, days 4-6 pay 5
-gems, day 7 pays a random booster (Bomb or Shuffle — see §14, first
-time either has existed as a real, grantable thing, via the new
-minimal `boosterStore.js`; still not spendable on the board yet).
+— see update.md Milestone 31): a 7-day check-in cycle. Claims persist locally and gem changes sync to
+`wordswoop_profiles.gems` for signed-in players. Days 1-3 pay 3 gems, days 4-6 pay 5
+gems, day 7 grants a random available Bomb, Shuffle or Lens. If all stock is
+full, it grants 5 gems instead. All boosters are spendable on the board.
 Missing a day resets the streak to Day 1. The Home Hub currency
 display now reads this real gem balance (`currencyStore.js`) instead
 of the old hardcoded 0.
 
-**Not done:** Shop icon is still a stub; account delete/data delete
-(needs a Supabase Edge Function, not a direct client call, to use the
-service-role key safely); display-name editing and a custom avatar
-picker (currently shows Google's own name/photo only); booster
-inventory has no way to be spent in a level yet.
+**Not done:** account delete/data delete, display-name editing and a
+custom avatar picker. Shop and all three booster actions are implemented.
+
 
 **Leaderboard is real now** (`src/scenes/LeaderboardScene.js` — see
 update.md Milestone 32): top 10 players by gems, read from a new
@@ -513,8 +515,7 @@ Total stays at **200 levels**. Of those, every 5th level (**40 total**)
 is a `type: 'target'` level with a specific word to find; the rest are
 free-play. Target-word difficulty should climb with world/level number
 — early worlds use short common words (CAT, BAG), later worlds use
-longer, less obvious ones (BRAVE, and eventually the harder 6-letter
-words the board already supports, e.g. GARDEN-length). See §16 Phase 6
+longer, less obvious ones (BRAVE, up to the current five-letter board limit). See §16 Phase 6
 and the solvability section below for how target levels are generated.
 
 **Level 200** is a planned capstone ("Ultimate Word Challenge" per the
@@ -549,9 +550,8 @@ level once content production gets there.
 
 - One special puzzle per day (e.g. "Today's word: VOLCANO").
 - Rewards: coins, gems, boosters. Consider a weekly challenge too.
-- Daily login reward cycle (planned, not built): a 7-day repeating
-  cycle of small rewards (coins, a Shuffle, a Bomb, building to a
-  bigger reward on day 7), main-menu-only — doesn't touch the board.
+- Daily login rewards are built: 7-day gem/booster cycle, separate from the
+  still-planned daily puzzle. See section 8.6 for the current rewards.
 
 ## 13. Achievements
 
@@ -563,29 +563,25 @@ touch board logic.
 
 ## 14. Meta / main-menu systems
 
-Lives, Bomb, and the Shuffle economy are built now (see update.md
-Milestone 34) — the rest below is still planned, not built.
+Lives and Bomb/Shuffle/Lens inventories are built; the additional systems
+marked planned below remain future work.
 
 - **Lives** — built: 5 max, lose 1 on a failed level, regenerate +1
   every 30 min (`src/utils/livesStore.js`), refillable via a
   guaranteed-reward rewarded ad on the "Out of Lives" wall
   (`BoardScene.showOutOfLivesWall`). Home Hub's top bar shows the
   current count with real art (`icon-life.png`, Milestone 35).
-- **Bomb** — built: starts at 2, capped at a max hold of 2 (a Calendar/
-  Watch-to-Earn reward rolled while already full is simply not
-  granted — Watch to Earn specifically falls back to gems instead so a
-  full ad watch isn't wasted; Calendar's Day 7 has no such fallback
-  yet), resets the current level for a fresh attempt (simplest
-  reliable implementation: restarts the scene), needs a tap-then-
-  confirm before it fires (first tap arms it - the button pulses, shows
-  a "!" badge and a "Tap again to restart" hint for 2.5s; second tap
-  fires). Its button is now the big round art in the board's bottom
-  booster bar (`booster-bomb.png`, Milestone 50; the old small
-  `icon-bomb.png` is no longer used). Passive regen over time
-  is not built — right now the only ways to gain more are Calendar's
-  Day 7 reward and Watch to Earn's reward pool.
+- **Bomb** — built: starts/caps at 2, clears one connected cluster of
+  5-7 tiles without spending a move or awarding direct clear points, then
+  runs the usual fall/cascade pipeline. It does not restart the level.
+  The settled attempt is saved immediately after the action. Calendar Day 7,
+  rewarded ads and the in-level gem purchase prompt can replenish stock.
+  Passive regeneration is not built.
+- **Lens** — built: starts/caps at 3. Highlights one legal forward-word swap;
+  hints follow exactly the same direction rule as gameplay. A missing hint
+  refunds the Lens. Calendar/Shop/in-level purchases can replenish stock.
 - **Shuffle economy** — built: starts at 3, capped at a max hold of 3
-  (same cap/fallback behavior as Bomb above), the existing manual
+  (full-inventory ad rewards fall back to gems), the existing manual
   Shuffle button spends one and shows the remaining count as a badge
   on its big round button in the bottom booster bar
   (`booster-shuffle.png`, Milestone 50; the old small `icon-shuffle.png`
@@ -701,51 +697,31 @@ Stars: 10000 / 15000 / 20000
 
 This is what makes generating hundreds of levels tractable.
 
-## Solvability — resolved for free-play, resolved for target-word levels
+## Solvability and word direction — current rules
 
-Under the Word-Swap mechanic, the board must always have at least one
-adjacent swap that would create a word — otherwise the player has no
-legal action at all.
+All gameplay paths use `src/utils/wordRules.js`: words are 3-5 letters,
+read left-to-right in rows and top-to-bottom in columns. GOAT counts;
+TAOG does not count as GOAT. A sequence can still score if it independently
+spells another dictionary word in the permitted direction.
 
-**Resolved (Phase 1):** `hasValidSwap()` in `BoardScene.js` checks
-every adjacent tile pair on the board and simulates the swap
-(`wouldSwapCreateWord()`) to see if it would produce a 3-5 letter word
-in the row(s)/column(s) it touches. This replaced an earlier
-`hasValidWord()` check that only asked "does a word already exist on
-the board" — the wrong question for a swap mechanic, since completed
-words normally auto-clear immediately anyway. It runs after the
-initial deal and after every cascade settles; if nothing is found, the
-board silently reshuffles itself before the player would notice. A
-manual Shuffle button lets the player trigger the same reshuffle on
-demand. Shuffle itself had a bug where it could hand out an
-already-completed word without clearing it (only verified a *future*
-swap was possible, not that the shuffle result was itself clean) — now
-fixed by running the same clear/cascade pass after shuffling that runs
-after every other board change. Spot-checked with 500 random 6x6
-boards using the full alphabet and the 3-6 word range: 0 came back
-stuck.
+`hasValidSwap()`, Lens hints, cascade detection, initial-board generation,
+target detection and the offline symbolic simulator follow that same rule.
+Free-play initial boards avoid completed forward words. Target generation
+(`levelGenerator.js`) starts match-free and exposes one adjacent winning
+swap; all 40 target definitions are checked. This guarantees an initial
+solution, not a multi-move solution after arbitrary unrelated clears.
 
-**Resolved (target-word levels):** a live solver proving "targetWord is
-reachable within N swaps" was ruled out as expensive and unreliable
-(search over swap sequences, cascades complicate it further). Instead,
-`generateGuaranteedBoard()` (`src/utils/levelGenerator.js`) builds the
-board backwards from a solved state: place targetWord correctly in a
-straight line, fill the rest of the board normally, then apply
-`scrambleCount` random adjacent-tile swaps. Since the scramble path is
-known, the board is provably solvable in at most `scrambleCount` swaps —
-no search needed. `maxSwaps` per level just needs to be >= scrambleCount
-(a buffer on top, via `recommendedMaxSwaps()`, gives the player slack
-since they won't necessarily find the exact reverse path). Wired into
-`BoardScene.createInitialBoard()` for any level with `type: 'target'`.
-Placeholder scramble counts by word length live in
-`SCRAMBLE_COUNT_BY_LENGTH` (3-letter: 6, 4: 9, 5: 12 — the old 6-letter
-entry was removed as dead code once MAX_WORD_LENGTH dropped to 5, see
-update.md Milestone 47) — the sweet spot per length (too few scrambles = word looks near-complete and
-easy; too many = eats most of the swap budget resetting the board) still
-needs playtesting and tuning, this is just a starting point. Obstacles/
-wildcards aren't accounted for yet since they don't exist in the game
-yet (Phase 3) — revisit this generator once they're built, since they
-could block the scrambled swap path.
+After settling, a board with no legal swap reshuffles for free. Shuffle
+retries are bounded; if the existing letter pool still has no playable
+arrangement, a match-free board with a legal swap is generated instead.
+Both manual and automatic shuffles update visible text/colour along with
+internal letters. Bomb and Shuffle save their settled grid/score/moves;
+booster inventory remains separately persisted so it cannot be restored by
+resuming an old attempt. Out-of-stock prompts block board input until closed.
+
+The old reverse-scramble guarantee and backward-word acceptance are retired.
+Difficulty tuning beyond the current one-swap target guarantee remains future
+content work.
 
 ## Game loop
 

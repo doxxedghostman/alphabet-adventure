@@ -1,53 +1,73 @@
-// Currency store — gems. Per chat: HomeHubScene has been showing a
-// hardcoded "0" since it was built (PLAN.md: "currency/economy is
-// display-only, no real economy system yet"). This is the first real
-// balance, added specifically so dailyRewardStore.js has somewhere to
-// actually deposit its gem payouts — Shop/spending still don't exist,
-// so this only grows for now.
-//
-// Same single-JSON-blob-in-localStorage pattern as progressStore.js /
-// settingsStore.js, kept as its own key/file since gems are neither
-// level progress nor a preference.
-//
-// NOTE: this is local-only, same as progressStore.js — it does not
-// sync to `wordswoop_profiles.gems` in Supabase for signed-in users.
-// That table already has a `gems` column (see update.md Milestone 25)
-// but nothing client-side reads/writes it yet; wiring real cloud sync
-// for currency (with the same guest-merge care progressStore's
-// completedLevelIds gets) is separate follow-up work, not bundled in
-// here.
-
+// Local balance plus a persistent operation stream for retry-safe cloud sync.
+// A stream's cumulative delta is acknowledged in the cloud profile settings.
 const STORAGE_KEY = 'wordswoop_currency';
+const listeners = new Set();
+const validGems = (value) => Number.isSafeInteger(value) && value >= 0;
+const streamId = () => globalThis.crypto?.randomUUID?.() || `${Date.now()}-${Math.random().toString(36).slice(2)}`;
+const fresh = (ownerId = null) => ({ gems: 0, ownerId, streamId: streamId(), delta: 0, legacyGems: null });
 
-function loadRaw() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (!raw) return { gems: 0 };
-    const parsed = JSON.parse(raw);
-    if (typeof parsed.gems !== 'number' || Number.isNaN(parsed.gems)) return { gems: 0 };
-    return parsed;
-  } catch (err) {
-    console.warn('currencyStore: failed to read localStorage, starting fresh', err);
-    return { gems: 0 };
-  }
+function read(key) {
+  try { return JSON.parse(localStorage.getItem(key)); } catch { return null; }
 }
-
+function write(key, data) {
+  try { localStorage.setItem(key, JSON.stringify(data)); } catch (error) { console.warn('currencyStore: storage unavailable', error); }
+}
 function saveRaw(data) {
-  try {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-  } catch (err) {
-    console.warn('currencyStore: failed to write localStorage', err);
-  }
+  write(STORAGE_KEY, data);
+  if (data.ownerId) write(`${STORAGE_KEY}:${data.ownerId}`, data);
 }
-
-export function getGems() {
-  return loadRaw().gems;
-}
-
-/** Adds (or, with a negative amount, removes) gems. Never goes below 0. */
-export function addGems(amount) {
-  const data = loadRaw();
-  data.gems = Math.max(0, data.gems + amount);
+function loadRaw() {
+  const stored = read(STORAGE_KEY);
+  if (validGems(stored?.gems) && typeof stored.streamId === 'string' && Number.isSafeInteger(stored.delta)) return stored;
+  const data = fresh();
+  // Older versions uploaded an absolute balance. Keep the higher legacy/cloud
+  // balance on first migration rather than counting those same gems twice.
+  if (validGems(stored?.gems)) data.gems = data.legacyGems = stored.gems;
   saveRaw(data);
+  return data;
+}
+function notify(kind) { listeners.forEach((listener) => listener(kind)); }
+export function onGemsChanged(listener) { listeners.add(listener); return () => listeners.delete(listener); }
+export function getGems() { return loadRaw().gems; }
+
+export function addGems(amount) {
+  if (!Number.isSafeInteger(amount)) throw new Error('Gem amounts must be whole numbers');
+  const data = loadRaw();
+  const next = Math.max(0, data.gems + amount);
+  data.delta += next - data.gems;
+  data.gems = next;
+  saveRaw(data);
+  notify('local');
   return data.gems;
+}
+
+// Keep account balances separate on shared devices. A guest's unspent balance
+// transfers once; signing out starts a fresh guest wallet.
+export function setGemAccount(ownerId) {
+  const current = loadRaw();
+  if (current.ownerId === ownerId) return;
+  if (current.ownerId) write(`${STORAGE_KEY}:${current.ownerId}`, current);
+  const saved = ownerId ? read(`${STORAGE_KEY}:${ownerId}`) : null;
+  let next = saved?.ownerId === ownerId && validGems(saved.gems) ? saved : fresh(ownerId);
+  if (ownerId && !current.ownerId) {
+    if (!saved) next = { ...current, ownerId };
+    else { next.gems += current.gems; next.delta += current.gems; }
+  }
+  saveRaw(next);
+  notify('account');
+}
+
+export function getGemSyncSnapshot(ownerId) {
+  const data = loadRaw();
+  return data.ownerId === ownerId ? { ...data } : null;
+}
+
+export function applyGemSync(snapshot, cloudGems) {
+  const data = loadRaw();
+  if (data.ownerId !== snapshot.ownerId || data.streamId !== snapshot.streamId) return;
+  // Preserve rewards/spending made while the network request was in flight.
+  data.gems = Math.max(0, cloudGems + data.delta - snapshot.delta);
+  data.legacyGems = null;
+  saveRaw(data);
+  notify('sync');
 }

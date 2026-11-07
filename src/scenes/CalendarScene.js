@@ -30,6 +30,7 @@ export class CalendarScene extends Phaser.Scene {
     this.load.image('rewardPopupBomb', 'assets/booster-bomb.png');
     this.load.image('rewardPopupShuffle', 'assets/booster-shuffle.png');
     this.load.image('rewardPopupLife', 'assets/icon-life.png');
+    this.load.image('rewardPopupLens', 'assets/icon-lens.png');
   }
 
   create() {

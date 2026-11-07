@@ -12,6 +12,7 @@ import {
   randomLetter,
 } from '../config.js';
 import { WORD_SET } from '../data/wordlist.js';
+import { scanWordLine, lineHasWord } from '../utils/wordRules.js';
 import { getLevel, getNextLevelId } from '../data/levels.js';
 import { generateGuaranteedBoard } from '../utils/levelGenerator.js';
 import { fillTargetLetterDeficits } from '../utils/targetLetters.js';
@@ -62,7 +63,7 @@ function wordLengthTier(word) {
 // - Tap/swipe two orthogonally-adjacent tiles (up/down/left/right, no
 //   diagonals) to swap them.
 // - After the swap, the WHOLE board is scanned (every row + every column)
-//   for any 3-6 letter straight-line word. A single swap can create more
+//   for any 3-5 letter word read left-to-right or top-to-bottom. A single swap can create more
 //   than one word at once (e.g. finishes a word in its row AND a
 //   different word in its column) - both clear.
 // - If the swap creates no word anywhere on the board, it reverts -
@@ -193,6 +194,7 @@ export class BoardScene extends Phaser.Scene {
   // whichever create() path ran before this is ever invoked, so it's
   // safe to read lazily here.
   goBack() {
+    if (this.boosterPromptOpen) return;
     this.worldId
       ? this.scene.start('LevelPathScene', { worldId: this.worldId })
       : this.scene.start('MainMenuScene');
@@ -202,6 +204,9 @@ export class BoardScene extends Phaser.Scene {
     playGroup('gameplay');
     this.isBusy = false;
     this.isPaused = false;
+    this.boosterPromptOpen = false;
+    this.boardVisit = {};
+    this.events.once('shutdown', () => { this.boardVisit = null; });
     this.score = 0;
     this.grid = [];
     this.worldId = sceneData?.worldId ?? null;
@@ -256,7 +261,7 @@ export class BoardScene extends Phaser.Scene {
 
     this.createInitialBoard(session?.grid);
     this.setupInput();
-    if (!session) this.ensureSolvable();
+    this.ensureSolvable();
   }
 
   // ---------- board geometry (per-world tile size + centering) ----------
@@ -379,10 +384,9 @@ export class BoardScene extends Phaser.Scene {
     return this.gridTopY - 6;
   }
 
-  // Gear button: pauses input and shows Resume / Leave. No Restart here
-  // on purpose - Restart is what the Bomb booster costs.
+  // Gear button: pauses input and shows Resume / Leave.
   showPauseMenu() {
-    if (this.isPaused || this.levelOver) return;
+    if (this.isPaused || this.levelOver || this.isBusy || this.boosterPromptOpen) return;
     this.isPaused = true;
     this.deselectTile();
 
@@ -479,7 +483,7 @@ export class BoardScene extends Phaser.Scene {
   // ---------- board boosters ----------
 
   onShufflePressed() {
-    if (this.isBusy || this.levelOver || this.isPaused) return;
+    if (this.isBusy || this.levelOver || this.isPaused || this.boosterPromptOpen) return;
     this.clearLensHint();
     if (!spendBooster('shuffle')) {
       this.showBoosterPurchasePrompt('shuffle');
@@ -493,7 +497,7 @@ export class BoardScene extends Phaser.Scene {
   // The regular clear/fall/cascade pipeline supplies the glass-shatter
   // and refill animation without spending a move or scoring those tiles.
   async onBombPressed() {
-    if (this.isBusy || this.levelOver || this.isPaused) return;
+    if (this.isBusy || this.levelOver || this.isPaused || this.boosterPromptOpen) return;
     this.clearLensHint();
     if (!spendBooster('bomb')) {
       this.showBoosterPurchasePrompt('bomb');
@@ -509,7 +513,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   onLensPressed() {
-    if (this.isBusy || this.levelOver || this.isPaused) return;
+    if (this.isBusy || this.levelOver || this.isPaused || this.boosterPromptOpen) return;
     this.clearLensHint();
     this.deselectTile();
     this.pointerDownTile = null;
@@ -576,6 +580,7 @@ export class BoardScene extends Phaser.Scene {
     await this.resolveAutoMatches(2);
     if (this.levelOver) return;
     await this.ensureSolvable();
+    this.saveAttempt();
   }
 
   // Out-of-booster purchase prompt: buy 1 instantly for
@@ -586,6 +591,13 @@ export class BoardScene extends Phaser.Scene {
   // non-zero count and proceed with the actual booster action
   // instead of duplicating that logic here.
   showBoosterPurchasePrompt(type) {
+    if (this.boosterPromptOpen || this.levelOver) return;
+    this.boosterPromptOpen = true;
+    this.deselectTile();
+    this.pointerDownTile = null;
+    const visit = this.boardVisit;
+    let pending = false;
+    let closed = false;
     playBoosterEmpty();
     hapticError();
     const cost = BOOSTER_GEM_COST[type];
@@ -604,12 +616,13 @@ export class BoardScene extends Phaser.Scene {
     const overlay = this.add
       .rectangle(centerX, centerY, this.scale.width, this.scale.height, 0x000000, 0.6)
       .setAlpha(0)
+      .setDepth(2000)
       .setInteractive();
 
     const buttonCount = canAfford ? 3 : 2;
     const cardWidth = BOARD_PIXEL_SIZE.width - 60;
     const cardHeight = 148 + buttonCount * 54;
-    const card = this.add.container(centerX, centerY).setAlpha(0).setScale(0.85);
+    const card = this.add.container(centerX, centerY).setDepth(2001).setAlpha(0).setScale(0.85);
 
     const cardBg = this.add.graphics();
     cardBg.fillStyle(0x2a1f47, 1);
@@ -643,9 +656,17 @@ export class BoardScene extends Phaser.Scene {
 
     card.add([cardBg, titleText, messageText]);
 
-    const close = () => {
-      this.tweens.add({ targets: overlay, alpha: 0, duration: 150, onComplete: () => overlay.destroy() });
-      this.tweens.add({ targets: card, alpha: 0, scale: 0.85, duration: 150, onComplete: () => card.destroy() });
+    const close = (afterClose) => {
+      if (closed || this.boardVisit !== visit) return;
+      closed = true;
+      this.tweens.add({ targets: overlay, alpha: 0, duration: 150 });
+      this.tweens.add({ targets: card, alpha: 0, scale: 0.85, duration: 150, onComplete: () => {
+        overlay.destroy();
+        card.destroy();
+        if (this.boardVisit !== visit) return;
+        this.boosterPromptOpen = false;
+        afterClose?.();
+      } });
     };
 
     let y = -cardHeight / 2 + 134;
@@ -653,24 +674,29 @@ export class BoardScene extends Phaser.Scene {
     if (canAfford) {
       card.add(
         this.createPopupButton(0, y, `Buy for ${cost} Gems`, 0xffd93d, '#1b1030', () => {
+          if (pending || closed || this.boardVisit !== visit || getGems() < cost) return;
+          pending = true;
           addGems(-cost);
+          syncLocalProgressToCloud();
           addBooster(type);
           this.hud.refreshBoosters();
-          close();
-          retry();
+          close(retry);
         })
       );
       y += 54;
     }
 
     const adButton = this.createPopupButton(0, y, `Watch Ad for a ${label}`, 0x2e7d32, '#ffffff', async () => {
+      if (pending || closed || this.boardVisit !== visit) return;
+      pending = true;
       const adLabelText = adButton.list[1];
       adLabelText.setText('Loading ad\u2026');
       const result = await showRewardedAdForBooster(type);
+      if (this.boardVisit !== visit) return;
+      pending = false;
       if (result.granted) {
         this.hud.refreshBoosters();
-        close();
-        retry();
+        close(retry);
       } else {
         adLabelText.setText(`Watch Ad for a ${label}`);
       }
@@ -678,7 +704,7 @@ export class BoardScene extends Phaser.Scene {
     card.add(adButton);
     y += 54;
 
-    card.add(this.createPopupButton(0, y, 'Cancel', 0x3a2c5c, '#ffffff', close));
+    card.add(this.createPopupButton(0, y, 'Cancel', 0x3a2c5c, '#ffffff', () => { if (!pending) close(); }));
 
     this.tweens.add({ targets: overlay, alpha: 1, duration: 220 });
     this.tweens.add({
@@ -702,16 +728,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   lineHasWord(letters) {
-    for (let i = 0; i < letters.length; i++) {
-      const maxLen = Math.min(MAX_WORD_LENGTH, letters.length - i);
-      for (let len = MIN_WORD_LENGTH; len <= maxLen; len++) {
-        const forward = letters.slice(i, i + len).join('');
-        if (WORD_SET.has(forward)) return true;
-        const backward = forward.split('').reverse().join('');
-        if (WORD_SET.has(backward)) return true;
-      }
-    }
-    return false;
+    return lineHasWord(letters);
   }
 
   // True if there exists at least one adjacent pair on the board that,
@@ -808,6 +825,12 @@ export class BoardScene extends Phaser.Scene {
       attempts += 1;
     } while (!this.hasValidSwap() && attempts < 50);
 
+    if (!this.hasValidSwap()) {
+      const { grid } = generateGuaranteedBoard(this.targetWord || 'CAT');
+      candidate = grid.flat();
+      tiles.forEach((tile, i) => { tile.letter = candidate[i]; });
+    }
+
     await Promise.all(
       tiles.map((tile, i) =>
         this.tweenPromise({
@@ -841,8 +864,9 @@ export class BoardScene extends Phaser.Scene {
     // follows every other board change so an accidental word never just
     // sits there unclaimed (see attemptSwap/collapseAndRefill).
     await this.resolveAutoMatches(1);
-    await this.ensureSolvable();
+    if (!this.levelOver) await this.ensureSolvable();
     this.isBusy = false;
+    this.saveAttempt();
   }
 
   // ---------- geometry ----------
@@ -1098,7 +1122,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   handlePointerDown(pointer) {
-    if (this.isBusy || this.levelOver || this.isPaused) return;
+    if (this.isBusy || this.levelOver || this.isPaused || this.boosterPromptOpen) return;
     const cell = this.cellFromPixel(pointer.x, pointer.y);
     if (!cell) return;
     const tile = this.grid[cell.row][cell.col];
@@ -1135,7 +1159,7 @@ export class BoardScene extends Phaser.Scene {
   }
 
   handlePointerMove(pointer) {
-    if (this.isBusy || this.levelOver || this.isPaused || this.swipeHandled || !this.pointerDownTile) return;
+    if (this.isBusy || this.levelOver || this.isPaused || this.boosterPromptOpen || this.swipeHandled || !this.pointerDownTile) return;
 
     const dx = pointer.x - this.pointerDownPos.x;
     const dy = pointer.y - this.pointerDownPos.y;
@@ -1382,16 +1406,16 @@ export class BoardScene extends Phaser.Scene {
     await this.ensureSolvable();
     this.checkLevelEnd();
     this.isBusy = false;
-    if (this.worldId && !this.levelOver) {
-      saveSession({
-        levelId: this.level.id,
-        worldId: this.worldId,
-        levelNum: this.levelNum,
-        grid: this.grid.map((row) => row.map((tile) => tile.letter)),
-        movesLeft: this.movesLeft,
-        score: this.score,
-      });
-    }
+    this.saveAttempt();
+  }
+
+  saveAttempt() {
+    if (!this.worldId || this.levelOver) return;
+    saveSession({
+      levelId: this.level.id, worldId: this.worldId, levelNum: this.levelNum,
+      grid: this.grid.map((row) => row.map((tile) => tile.letter)),
+      movesLeft: this.movesLeft, score: this.score,
+    });
   }
 
   // ---------- level end conditions ----------
@@ -1417,15 +1441,13 @@ export class BoardScene extends Phaser.Scene {
   // target's letters visibly cleared off the board without ever
   // registering as the target being found (per chat - "hit CAT 2x and
   // the target word didn't count it"). This checks every row/column for
-  // the exact target word as a contiguous substring (forward or
-  // reversed, matching scanLineForWords' own reversed-match rule),
+  // the exact target word as a contiguous substring read left-to-right or top-to-bottom,
   // independent of whatever the tokenizer separately reported.
   boardContainsTargetWord() {
     if (!this.targetWord) return false;
-    const reversedTarget = this.targetWord.split('').reverse().join('');
     const lineHasTarget = (letters) => {
       const line = letters.join('');
-      return line.includes(this.targetWord) || line.includes(reversedTarget);
+      return line.includes(this.targetWord);
     };
     for (let row = 0; row < BOARD_SIZE; row++) {
       const letters = [];
@@ -1666,53 +1688,9 @@ export class BoardScene extends Phaser.Scene {
     return button;
   }
 
-  // Scans a full row/column of letters left-to-right (or top-to-bottom) and
-  // greedily takes the longest dictionary word at each position, then jumps
-  // past it - so overlapping substrings don't all score separately. Checks
-  // BOTH reading directions (matches PLAN.md §2's "row or column, either
-  // reading direction" and hasValidSwap/wouldSwapCreateWord's own
-  // lineHasWord, which already checked both) - this used to be forward-only,
-  // which meant a swap hasValidSwap() considered "legal" (because it forms
-  // a backward-reading word) could actually bounce back with zero effect
-  // when played, since this function never saw the reverse match. That
-  // let a board pass the auto-reshuffle safety-net check while having zero
-  // swaps that actually cleared anything - found via playtest simulation,
-  // reproducible in ~1-11% of trials depending on level. When a reverse
-  // match wins, the reported word is the correctly-spelled dictionary word
-  // (not the on-board reversed letters), matching how checkWinCondition
-  // compares against `targetWord`.
+  // Longest non-overlapping words, read left-to-right or top-to-bottom only.
   scanLineForWords(letters) {
-    const found = [];
-    let i = 0;
-    while (i < letters.length) {
-      let matchedLen = 0;
-      const maxLen = Math.min(MAX_WORD_LENGTH, letters.length - i);
-      for (let len = maxLen; len >= MIN_WORD_LENGTH; len--) {
-        const segment = letters.slice(i, i + len).join('');
-        if (WORD_SET.has(segment)) {
-          found.push({ start: i, length: len, word: segment, wasReversed: false });
-          matchedLen = len;
-          break;
-        }
-        const reversed = segment.split('').reverse().join('');
-        if (WORD_SET.has(reversed)) {
-          // wasReversed: this word matched via the on-board letters read
-          // backward (e.g. board shows B-O-L, credited word is LOB). The
-          // clear/score logic doesn't need this - `word` is already the
-          // correctly-spelled dictionary word - but a future kids-mode
-          // clear animation can use this flag to visually flip the tiles
-          // or show "BOL -> LOB!" before clearing, so kids always see the
-          // word spelled correctly at the moment it's credited, rather
-          // than silently crediting a word they never saw in order. See
-          // update.md "Next up" for the reasoning.
-          found.push({ start: i, length: len, word: reversed, wasReversed: true });
-          matchedLen = len;
-          break;
-        }
-      }
-      i += matchedLen > 0 ? matchedLen : 1;
-    }
-    return found;
+    return scanWordLine(letters);
   }
 
   findWordMatches() {
@@ -1956,7 +1934,11 @@ export class BoardScene extends Phaser.Scene {
 
   tweenPromise(tweenConfig) {
     return new Promise((resolve) => {
-      this.tweens.add({ ...tweenConfig, onComplete: resolve });
+      const { onComplete, ...config } = tweenConfig;
+      this.tweens.add({ ...config, onComplete: (...args) => {
+        onComplete?.(...args);
+        resolve();
+      } });
     });
   }
 

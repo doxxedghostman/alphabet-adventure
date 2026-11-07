@@ -3,7 +3,7 @@ import { APP_BG_COLOR } from '../config.js';
 import pkg from '../../package.json';
 import { resetProgress } from '../utils/progressStore.js';
 import { isMusicOn, isSfxOn, isHapticsOn, setMusicOn, setSfxOn, setHapticsOn } from '../utils/settingsStore.js';
-import { isSignedIn, getDisplayName, getAvatarUrl, signInWithGoogle, signOut, onAuthChange } from '../utils/authStore.js';
+import { isSignedIn, getDisplayName, getAvatarUrl, signInWithGoogle, signOut, onAuthChange, getSyncStatus } from '../utils/authStore.js';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
 import { playGroup, setMusicEnabled } from '../utils/music.js';
 import { hapticLight } from '../utils/haptics.js';
@@ -284,7 +284,7 @@ export class SettingsScene extends Phaser.Scene {
   addAccountRows(y) {
     if (isSignedIn()) {
       y = this.addSignedInRow(y);
-      y = this.addStaticRow(y, 'Status', 'Data is synced');
+      y = this.addStaticRow(y, 'Status', ({ synced: 'Data is synced', pending: 'Syncing...', error: 'Saved on device; sync pending' })[getSyncStatus()] || 'Saved on device');
       return y;
     }
 

@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { APP_BG_COLOR, APP_BG_COLOR_RGB } from '../config.js';
-import { getGems } from '../utils/currencyStore.js';
+import { getGems, onGemsChanged } from '../utils/currencyStore.js';
 import { getLivesStatus, MAX_LIVES } from '../utils/livesStore.js';
 import { showRewardedAd, formatAdError } from '../utils/adsStore.js';
 import { syncLocalProgressToCloud, getAvatarUrl, isSignedIn } from '../utils/authStore.js';
@@ -89,6 +89,7 @@ export class HomeHubScene extends Phaser.Scene {
     this.load.image('rewardPopupBomb', 'assets/booster-bomb.png');
     this.load.image('rewardPopupShuffle', 'assets/booster-shuffle.png');
     this.load.image('rewardPopupLife', 'assets/icon-life.png');
+    this.load.image('rewardPopupLens', 'assets/icon-lens.png');
 
     // Real profile photo (Google avatar) to overlay on the baked-in
     // avatar badge when signed in - same pattern as Settings' signed-in
@@ -269,7 +270,12 @@ export class HomeHubScene extends Phaser.Scene {
     // --- Gem count, in the gap between the gem and gear badges.
     const gemGapStart = gemPos.x + gemPos.d / 2 + 6;
     const gemGapEnd = gearPos.x - gearPos.d / 2 - 4;
-    renderMetalNumber(gemGapStart, gemPos.y + 2, `${getGems()}`, gemGapEnd - gemGapStart);
+    let gemDigits = renderMetalNumber(gemGapStart, gemPos.y + 2, `${getGems()}`, gemGapEnd - gemGapStart);
+    const unsubscribeGems = onGemsChanged(() => {
+      gemDigits.forEach((text) => text.destroy());
+      gemDigits = renderMetalNumber(gemGapStart, gemPos.y + 2, `${getGems()}`, gemGapEnd - gemGapStart);
+    });
+    this.events.once('shutdown', unsubscribeGems);
 
     // --- Settings: no icon to draw (it's baked in) - just an invisible
     // hit zone sized to the gear badge so tapping it still navigates.

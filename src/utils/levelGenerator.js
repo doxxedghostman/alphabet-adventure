@@ -3,6 +3,7 @@
 // while scoring swaps clear and refill cells with random letters.
 import { BOARD_SIZE, MIN_WORD_LENGTH, MAX_WORD_LENGTH, randomLetter } from '../config.js';
 import { WORD_SET } from '../data/wordlist.js';
+import { lineHasWord } from './wordRules.js';
 
 function shuffleArray(items) {
   for (let i = items.length - 1; i > 0; i--) {
@@ -12,19 +13,9 @@ function shuffleArray(items) {
   return items;
 }
 
-function hasWordInLine(letters) {
-  for (let start = 0; start < letters.length; start++) {
-    for (let length = MIN_WORD_LENGTH; length <= MAX_WORD_LENGTH && start + length <= letters.length; length++) {
-      const segment = letters.slice(start, start + length).join('');
-      if (WORD_SET.has(segment) || WORD_SET.has([...segment].reverse().join(''))) return true;
-    }
-  }
-  return false;
-}
-
 function boardHasWord(grid) {
   for (let i = 0; i < BOARD_SIZE; i++) {
-    if (hasWordInLine(grid[i]) || hasWordInLine(grid.map((row) => row[i]))) return true;
+    if (lineHasWord(grid[i]) || lineHasWord(grid.map((row) => row[i]))) return true;
   }
   return false;
 }

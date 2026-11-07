@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
 import { addWoodPanel, preloadWoodPanel } from './woodPanel.js';
-import { getGems } from './currencyStore.js';
+import { getGems, onGemsChanged } from './currencyStore.js';
 import { getAvatarUrl, isSignedIn } from './authStore.js';
 import { getBoosters } from './boosterStore.js';
 
@@ -197,13 +197,16 @@ export function createBoardHud(scene, layout, opts) {
     .image(gemX, layout.barCY + 1, 'hudGem')
     .setDisplaySize(gemW, gemW * (174 / 200))
     .setDepth(HUD_DEPTH);
-  scene.add
+  const gemText = scene.add
     .text(gemX + 34 * s, layout.barCY + 1, String(getGems()), {
       ...textStyle(30 * s, '#ffdf70', '#5a2f0b', 5 * s),
       shadow: { offsetX: 0, offsetY: 2, color: '#000000', blur: 3, fill: true },
     })
     .setOrigin(0, 0.5)
     .setDepth(HUD_DEPTH);
+
+  const unsubscribeGems = onGemsChanged(() => gemText.setText(String(getGems())));
+  scene.events.once('shutdown', unsubscribeGems);
 
   // Gear = pause.
   const gearD = 58 * s;

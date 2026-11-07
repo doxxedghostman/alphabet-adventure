@@ -21,15 +21,15 @@
 // pull off, but it never claims a path works when it might not.
 //
 // Mirrors BoardScene.js rules exactly where it matters:
-// - scanLineForWords: forward AND reverse substrings (post Milestone 9 fix)
+// - scanLineForWords: left-to-right / top-to-bottom substrings only
 // - collapseAndRefill: survivors keep relative order, shift to the BOTTOM
 //   of the column, new/poisoned cells enter at the TOP
 // - cascades chain until no more matches - but here, only KNOWN matches
 //   ever chain; a poisoned cell coincidentally completing a word in real
 //   play is a bonus the search doesn't (and can't) rely on
 
-import { BOARD_SIZE, MIN_WORD_LENGTH, MAX_WORD_LENGTH } from '../src/config.js';
-import { WORD_SET } from '../src/data/wordlist.js';
+import { BOARD_SIZE } from '../src/config.js';
+import { scanWordLine } from '../src/utils/wordRules.js';
 
 export const POISONED = null; // sentinel: "cell's real letter is unknown"
 
@@ -42,45 +42,13 @@ export function cloneBoard(grid) {
 // Scans one line (row or column, array of cell values - letters or
 // POISONED) for dictionary words. A POISONED cell acts as an opaque break:
 // it splits the line into known-only segments, and only those segments are
-// searched - we never guess what a poisoned cell might spell. Matches both
-// reading directions (mirrors the real scanLineForWords post-Milestone-9).
-// Returns [{ start, length, word, wasReversed }, ...] in scan order, same
+// searched - we never guess what a poisoned cell might spell. Matches the same forward-only rule as the real board.
+// Returns [{ start, length, word }, ...] in scan order, same
 // greedy longest-match-then-jump-past behavior as the real game.
 export function scanLineForWordsSymbolic(letters) {
-  const found = [];
-  let i = 0;
-  while (i < letters.length) {
-    let matchedLen = 0;
-    if (letters[i] !== POISONED) {
-      // maxLen is capped by both MAX_WORD_LENGTH and the next poisoned
-      // cell (or line end), whichever comes first - never scan across a
-      // poisoned cell.
-      let boundary = i;
-      while (boundary < letters.length && letters[boundary] !== POISONED) boundary++;
-      const maxLen = Math.min(MAX_WORD_LENGTH, boundary - i);
-      for (let len = maxLen; len >= MIN_WORD_LENGTH; len--) {
-        const segment = letters.slice(i, i + len).join('');
-        if (WORD_SET.has(segment)) {
-          found.push({ start: i, length: len, word: segment, wasReversed: false });
-          matchedLen = len;
-          break;
-        }
-        const reversed = segment.split('').reverse().join('');
-        if (WORD_SET.has(reversed)) {
-          found.push({ start: i, length: len, word: reversed, wasReversed: true });
-          matchedLen = len;
-          break;
-        }
-      }
-    }
-    i += matchedLen > 0 ? matchedLen : 1;
-  }
-  return found;
+  return scanWordLine(letters);
 }
 
-// Full-board scan. Returns { matchedCells: Set<"r,c">, wordsFound: string[] }
-// exactly like BoardScene.js's findWordMatches (the real name there is
-// inline in attemptSwap/resolveAutoMatches - this is the shared shape).
 export function findWordMatchesSymbolic(grid) {
   const matchedCells = new Set();
   const wordsFound = [];
@@ -182,7 +150,7 @@ export function allLegalMovesSymbolic(grid) {
 }
 
 // Does `targetWord` appear as a straight run of KNOWN cells (any reading
-// direction), forward or reverse-credited exactly like the real game's
+// direction), forward-credited exactly like the real game's
 // checkWinCondition would see it via wordsFound?
 export function targetWordPresentSymbolic(grid, targetWord) {
   for (let row = 0; row < BOARD_SIZE; row++) {

@@ -17,9 +17,8 @@
 import { Browser } from '@capacitor/browser';
 import { App } from '@capacitor/app';
 import { supabase } from './supabaseClient.js';
-import { getCompletedLevelIds, setCompletedLevelIds } from './progressStore.js';
-import { getSettings, setMusicOn, setSfxOn, setHapticsOn } from './settingsStore.js';
-import { getGems } from './currencyStore.js';
+import { setGemAccount, onGemsChanged } from './currencyStore.js';
+import { syncProfile } from './cloudProgress.js';
 
 // Google actively blocks its OAuth consent screen from loading inside an
 // embedded WebView (the exact environment this Capacitor app runs in) -
@@ -59,23 +58,40 @@ export function isSignedIn() {
   return cachedUser !== null;
 }
 
-/** Pushes current local progress (completed levels + gems) up to this
- * user's cloud profile - a no-op for guests. Called after anything
- * that changes either (BoardScene on level win, CalendarScene on
- * claim) so the Leaderboard (which reads wordswoop_profiles directly,
- * not local storage) stays current for signed-in players. Fire-and-
- * forget, same as initAuth() - a failed sync shouldn't interrupt
- * gameplay, it just means the leaderboard lags until the next
- * successful call. */
-export async function syncLocalProgressToCloud() {
-  if (!cachedUser) return;
+let syncQueue = Promise.resolve();
+let syncState = 'idle';
+let settingsUserId = null;
+let retryTimer;
+let authInitialized = false;
+export function getSyncStatus() { return syncState; }
 
-  const { error } = await supabase
-    .from('wordswoop_profiles')
-    .update({ completed_level_ids: getCompletedLevelIds(), gems: getGems() })
-    .eq('id', cachedUser.id);
+export function syncLocalProgressToCloud() {
+  const userId = cachedUser?.id;
+  if (!userId) return Promise.resolve(false);
+  syncState = 'pending';
+  const run = async () => {
+    if (cachedUser?.id !== userId) return false;
+    try {
+      const synced = await syncProfile(supabase, userId, () => cachedUser?.id === userId, settingsUserId !== userId);
+      if (cachedUser?.id === userId) {
+        if (synced) settingsUserId = userId;
+        syncState = synced ? 'synced' : 'idle';
+        notifyListeners();
+      }
+      return synced;
+    } catch (error) {
+      console.warn('syncLocalProgressToCloud: keeping local progress for retry', error);
+      if (cachedUser?.id === userId) { syncState = 'error'; notifyListeners(); }
+      return false;
+    }
+  };
+  syncQueue = syncQueue.then(run, run);
+  return syncQueue;
+}
 
-  if (error) console.warn('syncLocalProgressToCloud: failed to sync', error);
+function scheduleSync() {
+  clearTimeout(retryTimer);
+  retryTimer = setTimeout(() => syncLocalProgressToCloud(), 250);
 }
 
 /** Google's profile picture URL, checking both key names Supabase might
@@ -98,24 +114,24 @@ export function getDisplayName() {
  * the redirect back from Google. Everything after this is push-based
  * via onAuthChange(). */
 export async function initAuth() {
-  const { data } = await supabase.auth.getSession();
-  cachedUser = data.session?.user ?? null;
-  notifyListeners();
-
-  supabase.auth.onAuthStateChange(async (event, session) => {
-    const wasSignedIn = cachedUser !== null;
+  if (authInitialized) return;
+  authInitialized = true;
+  const acceptSession = (session) => {
+    const previousId = cachedUser?.id;
     cachedUser = session?.user ?? null;
+    if (cachedUser?.id !== previousId) { settingsUserId = null; syncState = 'idle'; }
+    setGemAccount(cachedUser?.id ?? null);
     notifyListeners();
-
-    // Only run the merge the moment someone goes from signed-out to
-    // signed-in (covers both "just completed the Google redirect" and
-    // "session restored on a fresh load isn't a new sign-in" - the
-    // latter already has its cloud state, nothing local to reconcile
-    // against a session that was already synced).
-    if (!wasSignedIn && cachedUser) {
-      await mergeGuestProgressIntoCloud(cachedUser.id);
-    }
-  });
+    if (cachedUser && cachedUser.id !== previousId) scheduleSync();
+  };
+  const { data, error } = await supabase.auth.getSession();
+  if (!error) acceptSession(data.session);
+  // Do network work after the callback returns, and restore cloud state on
+  // every app launch, not only the first interactive sign-in.
+  supabase.auth.onAuthStateChange((_event, session) => acceptSession(session));
+  onGemsChanged((kind) => { if (kind === 'local' && cachedUser) scheduleSync(); });
+  if (typeof window !== 'undefined') window.addEventListener('online', scheduleSync);
+  App.addListener('appStateChange', ({ isActive }) => { if (isActive) scheduleSync(); });
 
   // Catches the deep link back from the system browser once Google
   // sign-in completes (see AUTH_REDIRECT_URL above). Registered once -
@@ -168,57 +184,4 @@ export async function signOut() {
   const { error } = await supabase.auth.signOut();
   if (error) console.warn('signOut failed', error);
   return { error };
-}
-
-/** Runs once, right after a guest's first sign-in. Per chat: merge, not
- * overwrite - union local + cloud completed levels (a guest could have
- * real progress worth keeping), and only push local settings up if this
- * is genuinely the account's first sync (cloud row untouched since
- * creation); otherwise the cloud's own settings win and get pulled down
- * locally, so a returning user's saved preferences aren't clobbered by
- * whatever the new device's local defaults happen to be. */
-async function mergeGuestProgressIntoCloud(userId) {
-  const { data: profile, error } = await supabase
-    .from('wordswoop_profiles')
-    .select('completed_level_ids, settings, created_at, updated_at')
-    .eq('id', userId)
-    .single();
-
-  if (error || !profile) {
-    console.warn('mergeGuestProgressIntoCloud: could not load profile', error);
-    return;
-  }
-
-  const localCompleted = getCompletedLevelIds();
-  const cloudCompleted = new Set(profile.completed_level_ids || []);
-  const merged = [...new Set([...localCompleted, ...cloudCompleted])];
-
-  // The auto-provisioning trigger sets created_at === updated_at at
-  // creation time; if a settings write already happened since (on any
-  // device), they'll have drifted apart. Cheap way to tell "never
-  // touched" apart from "already synced once" without a separate flag
-  // column.
-  const isFirstSync = profile.created_at === profile.updated_at;
-  const settingsToSave = isFirstSync ? getSettings() : profile.settings;
-
-  const { error: updateError } = await supabase
-    .from('wordswoop_profiles')
-    .update({ completed_level_ids: merged, settings: settingsToSave })
-    .eq('id', userId);
-
-  if (updateError) {
-    console.warn('mergeGuestProgressIntoCloud: failed to write merged profile', updateError);
-    return;
-  }
-
-  // Write the merged/pulled state back to local storage too, so both
-  // sides agree after this - completed levels always merge upward;
-  // settings only get overwritten locally when they came FROM the
-  // cloud (i.e. this wasn't the first sync).
-  setCompletedLevelIds(merged);
-  if (!isFirstSync && settingsToSave) {
-    if (typeof settingsToSave.musicOn === 'boolean') setMusicOn(settingsToSave.musicOn);
-    if (typeof settingsToSave.sfxOn === 'boolean') setSfxOn(settingsToSave.sfxOn);
-    if (typeof settingsToSave.hapticsOn === 'boolean') setHapticsOn(settingsToSave.hapticsOn);
-  }
 }

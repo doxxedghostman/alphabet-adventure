@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { bindHardwareBack } from '../utils/hardwareBack.js';
 import { addWoodPanel, preloadWoodPanel } from '../utils/woodPanel.js';
+import { syncLocalProgressToCloud } from '../utils/authStore.js';
 import { getGems } from '../utils/currencyStore.js';
 import { getBoosters, MAX_BOOSTERS } from '../utils/boosterStore.js';
 import { OFFER_CAPS, recordWatch, watchesRemaining } from '../utils/shopStore.js';
@@ -34,6 +35,7 @@ export class ShopScene extends Phaser.Scene {
     this.load.image('rewardPopupBomb', 'assets/booster-bomb.png');
     this.load.image('rewardPopupShuffle', 'assets/booster-shuffle.png');
     this.load.image('rewardPopupLife', 'assets/icon-life.png');
+    this.load.image('rewardPopupLens', 'assets/icon-lens.png');
   }
 
   create() {
@@ -194,7 +196,10 @@ export class ShopScene extends Phaser.Scene {
       console.warn('ShopScene: rewarded ad failed', error);
       result = { granted: false, reason: 'error', error };
     }
-    if (result.granted) recordWatch(offer.key);
+    if (result.granted) {
+      recordWatch(offer.key);
+      syncLocalProgressToCloud();
+    }
     if (this.visit !== visit) return;
     this.pendingOffer = null;
     if (result.granted) {

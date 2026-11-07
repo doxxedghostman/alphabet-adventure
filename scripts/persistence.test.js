@@ -77,6 +77,7 @@ function board() {
     getNextLevelId: () => 5, addGems() {}, syncLocalProgressToCloud() {}, loseLife() {},
   });
   const scene = new Scene();
+  scene.events = { once() {} };
   for (const name of ['computeBoardGeometry', 'createBoardBackdrop', 'createBoardFrame', 'setupInput', 'deselectTile', 'showEndPopup']) scene[name] = () => {};
   scene.createHud = () => { scene.hudState = { score: scene.score, moves: scene.movesLeft }; scene.hud = { setMoves() {} }; };
   scene.createTile = (row, col, letter) => ({ row, col, letter });
@@ -92,7 +93,7 @@ test('reopening the saved level restores exact cells, moves and score before HUD
   scene.create({ levelId: 4, worldId: 1, levelNum: 4 });
   assert.deepEqual(scene.grid.map(row => row.map(tile => tile.letter)), letters);
   assert.deepEqual(scene.hudState, { score: 420, moves: 7 });
-  assert.equal(scene.solvabilityChecks, undefined);
+  assert.equal(scene.solvabilityChecks, 1);
   scene.goBack();
   assert.deepEqual(sessions.getSession(), attempt());
 });

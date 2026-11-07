@@ -2,6 +2,7 @@ const REWARD_PRESENTATION = {
   gems: { texture: 'rewardPopupGem', label: 'Gems!' },
   bomb: { texture: 'rewardPopupBomb', label: 'Bomb!' },
   shuffle: { texture: 'rewardPopupShuffle', label: 'Shuffle!' },
+  lens: { texture: 'rewardPopupLens', label: 'Lens!' },
   life: { texture: 'rewardPopupLife', label: 'Extra Life!' },
 };
 
